@@ -219,3 +219,10 @@ Four portable tests cover change accounting, xattr-only differences, tampered
 manifests/exclusions and refusal on Mac before descriptor I/O. Six actual Linux
 filesystem/xattr tests cover bytes/links/FIFO/exclusion, xattrs, external aliases,
 quotas, interruption and mutation; they are skipped locally and require CI.
+
+The container reader now treats trailing members as opaque after the required
+version/control/data triple, including names resembling alternate control/data
+compression formats. It preserves the selected required payload rather than
+confusing a trailing extension with a second required payload. A regression
+covers that case. Independent acceptance selects the bound required data member;
+it does not choose a payload by scanning for any matching filename suffix.

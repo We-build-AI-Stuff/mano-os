@@ -71,7 +71,9 @@ def bind(raw, *, expected_sha256, expected_bytes, checkpoint=None):
                    sha256=hashlib.sha256(view[start:end]).hexdigest())
         names.add(name)
         members.append(row)
-        if name == 'debian-binary' or name in CONTROL or name in DATA:
+        if len(required) == 3:
+            extra.append(name)
+        elif name == 'debian-binary' or name in CONTROL or name in DATA:
             required.append(row)
         elif len(required) < 3 and not name.startswith('_'):
             raise ValueError('Unknown required Debian container member')

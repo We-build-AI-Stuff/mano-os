@@ -71,6 +71,15 @@ class PackageContainerTests(unittest.TestCase):
                   ('control.tar/', b'y'), ('data.tar/', b'z'), ('future', b'any')])
         self.assertEqual(self.bind(raw)['additional_members'], ['_future', 'future'])
 
+    def test_trailing_known_names_are_opaque_after_the_required_payload(self):
+        raw = ar([('debian-binary', b'2.0\n'), ('control.tar', b'x'),
+                  ('data.tar', b'y'), ('control.tar.xz', b'opaque'),
+                  ('data.tar.gz', b'also opaque')])
+        result = self.bind(raw)
+        self.assertEqual(result['control']['name'], 'control.tar')
+        self.assertEqual(result['data']['name'], 'data.tar')
+        self.assertEqual(result['additional_members'], ['control.tar.xz', 'data.tar.gz'])
+
     def test_incompatible_version_invalid_padding_and_truncation_fail(self):
         wrong_version = ar([('debian-binary', b'3.0\n'), ('control.tar', b'x'),
                             ('data.tar', b'y')])
