@@ -52,8 +52,8 @@ def verify():
             raise PermissionError('Retargetable package socketpair was not denied')
     first, second = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
     with first, second:
-        first.settimeout(.2)
-        second.settimeout(.2)
+        # Keep blocking mode for negative probes: Python's timeout wrapper can
+        # poll for readiness before accept(), hiding the syscall's EPERM.
         for operation in (
                 lambda: first.connect('/run/mano-approval/human.sock'),
                 lambda: first.connect('\0mano-package-boundary-no-peer'),
@@ -66,6 +66,8 @@ def verify():
                     raise
             else:
                 raise PermissionError('Named package IPC operation was not denied')
+        first.settimeout(.2)
+        second.settimeout(.2)
         _transfer(first, second, b'package-private-pair')
         _transfer(second, first, b'private-reply')
     return dict(host_named_ipc_denied=True, anonymous_stream_socketpair_works=True,

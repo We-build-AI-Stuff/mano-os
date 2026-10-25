@@ -415,3 +415,20 @@ writable. No real loader configuration write is attempted. This closes a
 specific preload-name route; loader cache, other library selection/configuration
 and persistence closure remain separate unfinished gates. Six source-binding
 tests and static checks pass. Fresh native enforcement evidence is required.
+
+
+Native run40162256102 at483c04c failed the pre-effect invalid-plan boundary
+probe with TimeoutError during the new IPC check. The pair had a Python timeout
+enabled before the negative accept test; Python polls for readiness before
+calling accept, so it timed out without reaching the syscall denial. Keep the
+negative operations in blocking mode, then enable the finite timeout only for
+the positive pair transfer. Missing filters still fail on any result other than
+EPERM. A regression verifies accept is called before timeout setup. No syscall
+filter or acceptance assertion is relaxed. Fresh native validation remains
+required; the failed run does not verify package execution or preload rules.
+
+The prior6d head passed full independent54hash/45flag/package acceptance after
+all three CI checks. Six originals and four numeric crops were actually viewed:
+pending/effective900 before and120 after are fully readable. The focus/text
+normalization fixes the observed headless clipping; no physical input or GTK
+root-cause proof is claimed. Hash receipts remain in the workspace outputs.

@@ -79,3 +79,13 @@ class PackageIpcTests(unittest.TestCase):
         self.second.recv.side_effect = [b'']
         with self.assertRaisesRegex(PermissionError, 'closed early'):
             package_ipc._transfer(self.first, self.second, b'expected')
+
+    def test_negative_accept_reaches_syscall_before_timeout_wrapper_is_enabled(self):
+        def denied_accept():
+            self.first.settimeout.assert_not_called()
+            self.second.settimeout.assert_not_called()
+            raise PermissionError(errno.EPERM, 'native accept denial')
+        self.first.accept.side_effect = denied_accept
+        self.assertTrue(package_ipc.verify()['host_named_ipc_denied'])
+        self.first.settimeout.assert_called_once_with(.2)
+        self.second.settimeout.assert_called_once_with(.2)

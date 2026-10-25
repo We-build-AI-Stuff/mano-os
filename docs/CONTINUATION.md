@@ -1,3 +1,22 @@
+## Native IPC probe correction prepared
+483c04cb6e1ab74b13b2ebf812ec6366a800001f CI40162256102 FAILED securitylab,
+qualitySUCCESS; mergegatecorrectlyFAILED. Invalid-planpre-effectsetupprobe failed
+TimeoutError atapproval-ipc, stdoutempty, allobservedcapsets219/securebits43.
+Python timeoutwrapper polledbeforeaccept, so neverreachedblockedacceptsyscall.
+Negativeprobes nowkeepblockingmode, onlypositivepairtransferenables.2stimeout.
+NineIPCregressionsPASS includingaccept-before-timeout. StrictEPERM preserved;
+no filter/boundaryassertion loosened. NeedfreshnativeCI beforeanyacceptance.
+Rawlog outputs/pr134-483c04c-native-failure.log (preservedANSIoriginal). ghapi
+joblogsrequire --allow-escape-sequences; priorfetchfailureswerenativeCLIANSI
+outputguard, notmissinglog. Failureartifact12586903178 1908600bytes serverSHA
+c37c6b67a7963f2f2d8ef56e732605af9b682c107326e89a3d90781c5d352af5.
+Separateinventory-onlyinspection pendingdownload; notfullCIacceptance.
+Prior6d head FULL54hash45flag/nativepackage/17helper/keyring ACCEPTED. Allsix
+freshoriginals+fourcrops ACTUALLYVIEWED, 900before/120after pending/effective all
+readable. outputs/acceptance-pr134-helper-policy/inspection.json. Headlessdisplay
+correctionobserved, rawaccessibletextbuffersEMPTY; noGTKrootcause/physicalproof.
+OriginalgoalACTIVE/fullclosureunfinished; PR134notmergeeligible.
+
 ## Absent preload name protection prepared (native pending)
 Profiledeny /etc/ld.so.preload wkl closes future-name creation when nooriginal
 fileexists. BoundpolicySHA65688ec392ba2e35c87cc14b26eefe3457783e11a6f6ef10759a8a22e3b85876.
