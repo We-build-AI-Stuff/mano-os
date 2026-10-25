@@ -1,3 +1,16 @@
+## Static ELF dependency inventory prepared (CI observation, not enforcement)
+BeforeBroker/package-maintainerprobes, scripts/probe_package_elf_inventory.py
+usesreadelfon22fixedhelpers+Debianstdlib/apt Pythonextensions; followsALLexisting
+ldconfig-p cachecandidates, recordsSHA/symlinks/interpreters/DT_NEEDED/SONAME/
+RPATH/RUNPATH andloaderconfiginputs. DoesNOTexecuteinventoriedfiles. Strictbound
+512files/256MiBtotal/64MiBeach/15scommands. Binutils explicitCIguestdependency.
+Allactualresolution/pluginclosure/writeprotection/fullclosure flagsFALSE.
+SevenparserregressionsPASS; actualnativeinventoryUNVERIFIED pendingfreshCI.
+Independentfullartifacthelperhasoptional --package-elf-inventory, enableONLYfor
+nextheadwhichactuallyexportsreport, notcurrent6d/historical4695.
+Localfullsuite563/48skips finishedsuccessfully, butsourcechangedduringrun: NOT
+exactheadproof. NextheadfreshqualityCIrequired. Session4967terminalsuccess.
+
 ## Socket restriction prepared; native verification pending
 Current pushed head6d308fa4b10bed265262f3a8c06708f66fd83ab7 CI40160330966:
 quality SUCCESS, security-lab stillIN_PROGRESS atpreparation. Letfinishbeforepush

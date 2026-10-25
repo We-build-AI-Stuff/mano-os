@@ -387,3 +387,19 @@ Eight mocked local regressions pass, including inherited-socket rejection,
 missing-filter rejection, strict errno checking and the positive pair control.
 Native compilation/filter enforcement and real APT/dpkg compatibility still
 require a fresh disposable Debian run. No native execution occurred on the Mac.
+
+
+CI also records a static ELF inventory before Broker/package-maintainer probes.
+It uses readelf to inspect fixed helper binaries and Debian Python extensions,
+records their interpreter, DT_NEEDED, SONAME, RPATH/RUNPATH and symlink targets,
+and follows all matching entries from the existing ldconfig -p cache listing.
+Each observed file and loader configuration input has a SHA256. No inventoried
+program or library is executed. File/count/time/byte quotas bound collection.
+The report explicitly does not prove actual loader selection, dynamic plugins,
+write protection or complete runtime closure; cache candidates can differ from
+the loader's selected file. Missing cache candidates remain visible.
+Seven local parser tests pass; collection still needs disposable Debian CI.
+
+ELF segment/interpreter and dynamic-tag definitions:
+https://gabi.xinuos.com/elf/07-pheader.html
+https://gabi.xinuos.com/elf/08-dynamic.html
