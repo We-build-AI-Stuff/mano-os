@@ -1,8 +1,9 @@
 """CI-only static ELF dependency inventory before package-maintainer execution.
 
 Fixed readelf and ldconfig -p tools run. Dependency targets are inspected as
-bytes, without invoking them to infer their dependencies. Cache candidates are not proof of actual resolution,
-dlopen/plugin completeness, immutability or a trusted execution closure.
+bytes, without invoking them to infer their dependencies. Cache candidates are
+not proof of actual resolution, dlopen/plugin completeness, immutability or a
+trusted execution closure.
 """
 
 import hashlib
