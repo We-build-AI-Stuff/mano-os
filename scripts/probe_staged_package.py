@@ -138,7 +138,10 @@ def acquire():
             print(json.dumps(dict(event='staging-ci-candidate-denied',
                                   name=name, apt_name=item.name, architecture=version.architecture,
                                   version=version.version, bytes=version.size,
-                                  sha256_present=isinstance(digest, str), origins=origins,
+                                  sha256=(digest[:128] if isinstance(digest, str) else None),
+                                  record_identity={key: version.record.get(key) for key in
+                                                   ('Package', 'Version', 'Architecture')},
+                                  origins=origins,
                                   failed_fields=[key for key, ok in checks.items() if not ok])),
                   file=sys.stderr, flush=True)
             raise ValueError('Bounded authenticated Debian candidate required')

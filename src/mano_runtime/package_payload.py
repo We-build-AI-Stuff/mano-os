@@ -20,7 +20,8 @@ STANDARD_PAX = {'path', 'linkpath', 'size', 'uid', 'gid', 'uname', 'gname',
 
 
 def path_name(value, *, directory=False):
-    if not isinstance(value, str) or '\0' in value or len(value.encode('utf8')) > 4096:
+    if (not isinstance(value, str) or value.startswith('/') or '\0' in value
+            or len(value.encode('utf8')) > 4096):
         raise ValueError('Bounded UTF8 archive path required')
     if value.startswith('./'):
         value = value[2:]
@@ -58,6 +59,8 @@ package collisions, removals, candidate mutations, conffiles and authority scope
                 check()
                 if len(entries) >= max_entries:
                     raise ValueError('Package payload entry budget')
+                if not member.name:
+                    raise ValueError('Empty normalized archive member name')
                 name = path_name(member.name, directory=member.isdir())
                 if name in entries:
                     raise ValueError('Duplicate canonical package payload path')

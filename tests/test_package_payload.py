@@ -77,6 +77,11 @@ class PackagePayloadTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Duplicate'):
             payload.inventory(archive([file('./same'), file('same')]))
 
+    def test_absolute_directory_root_is_not_normalized_into_relative_root(self):
+        for name in ('/', '/etc/'):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                payload.inventory(archive([(name, tarfile.DIRTYPE, '', {})]))
+
     def test_spaces_and_utf8_names_are_preserved_as_literal_data(self):
         value = payload.inventory(archive([file('usr/share/naïve name.txt')]))
         self.assertIn('usr/share/naïve name.txt', value['entries'])
