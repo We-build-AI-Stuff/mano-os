@@ -2,7 +2,7 @@
 BeforeBroker/package-maintainerprobes, scripts/probe_package_elf_inventory.py
 usesreadelfon22fixedhelpers+Debianstdlib/apt Pythonextensions; followsALLexisting
 ldconfig-p cachecandidates, recordsSHA/symlinks/interpreters/DT_NEEDED/SONAME/
-RPATH/RUNPATH andloaderconfiginputs. DoesNOTexecuteinventoriedfiles. Strictbound
+RPATH/RUNPATH andloaderconfiginputs. Fixedreadelf/ldconfig-p toolsexecute; no targetexecutionfordependencyresolution. Strictbound
 512files/256MiBtotal/64MiBeach/15scommands. Binutils explicitCIguestdependency.
 Allactualresolution/pluginclosure/writeprotection/fullclosure flagsFALSE.
 SevenparserregressionsPASS; actualnativeinventoryUNVERIFIED pendingfreshCI.

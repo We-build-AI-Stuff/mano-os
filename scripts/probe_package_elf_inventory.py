@@ -1,7 +1,7 @@
 """CI-only static ELF dependency inventory before package-maintainer execution.
 
-No inventoried executable/library is run. readelf inspects bytes; ldconfig -p
-prints the existing cache. Cache candidates are not proof of actual resolution,
+Fixed readelf and ldconfig -p tools run. Dependency targets are inspected as
+bytes, without invoking them to infer their dependencies. Cache candidates are not proof of actual resolution,
 dlopen/plugin completeness, immutability or a trusted execution closure.
 """
 
@@ -134,7 +134,9 @@ def main():
                 ldconfig_cache_listing_sha256=hashlib.sha256(cache_raw.encode()).hexdigest(),
                 observed_input_bytes=total,
                 scope='static ELF requirements and cache candidates before Broker probes',
-                inventoried_programs_executed=False, actual_resolution_verified=False,
+                uses_target_execution_for_dependency_resolution=False,
+                fixed_inventory_tools_executed=['/usr/bin/readelf', '/usr/sbin/ldconfig'],
+                actual_resolution_verified=False,
                 dlopen_plugin_closure_verified=False, write_protection_verified=False,
                 complete_trusted_runtime_closure_verified=False)
 

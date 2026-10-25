@@ -393,8 +393,9 @@ CI also records a static ELF inventory before Broker/package-maintainer probes.
 It uses readelf to inspect fixed helper binaries and Debian Python extensions,
 records their interpreter, DT_NEEDED, SONAME, RPATH/RUNPATH and symlink targets,
 and follows all matching entries from the existing ldconfig -p cache listing.
-Each observed file and loader configuration input has a SHA256. No inventoried
-program or library is executed. File/count/time/byte quotas bound collection.
+Each observed file and loader configuration input has a SHA256. The fixed
+readelf and ldconfig -p tools execute; dependency targets are inspected as bytes
+instead of being launched to infer their dependencies. File/count/time/byte quotas bound collection.
 The report explicitly does not prove actual loader selection, dynamic plugins,
 write protection or complete runtime closure; cache candidates can differ from
 the loader's selected file. Missing cache candidates remain visible.
