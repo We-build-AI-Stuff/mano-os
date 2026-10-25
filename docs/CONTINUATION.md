@@ -1,3 +1,20 @@
+## Direct ELF search candidate collection prepared locally
+Currentpushedfc9e01da051e529c3ab9de7eb83bcbc09d59b5a6 CI40162914482:
+qualitySUCCESS, securitylabIN_PROGRESS atlastcheck. Do notpushuntilterminal;
+workflowcancelsonpush. CorrectedIPC/preload compatibility stillnativepending.
+Nextsource extendsstaticELFinventory toownabsoluteRPATH/RUNPATH+canonicalobject
+ORIGIN dirs; RUNPATHprecedence. Empty/relative/unknownLIB/PLATFORM entries remain
+unsupported; inheritedRPATH/hwcaps explicitlyFALSE. DirectexistingELFcandidates
+enterboundedgraph; unresolvedcache names separatelyretaincachegap, newcombined
+unresolvedfield reflectsneitherdirectnorcached. No actualresolution/protectionclaim.
+Twelveparser/searchtests prepared; previousnativecache-onlycomponent22/49/124
+remainsvalidhistorical, notproofnewcollector. Nativecollectornewsourceunverified.
+Independentfullacceptancehelper optional --package-elf-direct-search addedONLYfor
+futurehead. Currentfc9 acceptance MUSTOMITit, retaining3newIPC/ELF/preloadoptions.
+Futureheadacceptance requiresALLFOURnewoptions. HelpercrosschecksrawRPATH/RUNPATH,
+ORIGINexpansions, directedges/reachability andsystemdprivatecandidates.
+OriginalgoalACTIVE, fullclosureunfinished/no mergeeligible. NativeONLYinCI.
+
 ## Native IPC probe correction prepared
 483c04cb6e1ab74b13b2ebf812ec6366a800001f CI40162256102 FAILED securitylab,
 qualitySUCCESS; mergegatecorrectlyFAILED. Invalid-planpre-effectsetupprobe failed

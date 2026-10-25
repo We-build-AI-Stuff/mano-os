@@ -30,7 +30,8 @@ def dynamic_names(text):
         tag = re.search(r'\((NEEDED|SONAME|RPATH|RUNPATH)\)', line)
         if tag:
             value = re.search(r'\[([^\]\r\n]*)\]\s*$', line)
-            if value is None or not value[1] or len(value[1]) > 4096:
+            if (value is None or len(value[1]) > 4096 or
+                    (not value[1] and tag[1] not in {'RPATH', 'RUNPATH'})):
                 raise ValueError('Malformed readelf dynamic string')
             result[tag[1].lower()].append(value[1])
     for key in ('soname', 'rpath', 'runpath'):
@@ -49,6 +50,25 @@ def cache_entries(text):
             raise ValueError('Malformed ldconfig cache entry')
         entries.setdefault(match[1], set()).add(match[2])
     return {key: sorted(value) for key, value in sorted(entries.items())}
+
+
+def direct_search_paths(names, *, canonical):
+    """Absolute direct-object candidates only; never simulate inherited RPATH."""
+    paths, unsupported = [], []
+    # RUNPATH takes precedence when both tags exist. Do not expand a relative
+    # entry against the collector's cwd, or guess $LIB/$PLATFORM/hwcap variants.
+    for value in names['runpath'] or names['rpath']:
+        for entry in value.split(':'):
+            expanded = re.sub(r'\$\{ORIGIN\}|\$ORIGIN(?=/|$)',
+                              str(Path(canonical).parent), entry)
+            if not expanded.startswith('/') or '$' in expanded:
+                unsupported.append(entry)
+                continue
+            directory = os.path.normpath(expanded)
+            if directory not in paths:
+                paths.append(directory)
+    return dict(directories=paths, unsupported_entries=unsupported,
+                inherited_rpath_evaluated=False, hardware_capabilities_evaluated=False)
 
 
 def command(argv):
@@ -90,7 +110,7 @@ def main():
     if not extensions or not any('/apt_pkg' in path for path in extensions):
         raise ValueError('Expected Debian Python extension inventory absent')
     pending = set(ROOTS) | set(extensions)
-    files, unresolved = {}, {}
+    files, unresolved, unresolved_direct = {}, {}, {}
     total = 0
     while pending:
         name = min(pending)
@@ -106,10 +126,20 @@ def main():
         raw = command(['/usr/bin/readelf', '--wide', '--program-headers', '--dynamic',
                        record['canonical']])
         names = dynamic_names(raw)
+        search = direct_search_paths(names, canonical=record['canonical'])
+        direct = {}
+        for needed in names['needed']:
+            candidates = []
+            if '/' not in needed:
+                candidates = [str(Path(directory) / needed)
+                              for directory in search['directories']
+                              if (Path(directory) / needed).is_file()]
+            direct[needed] = candidates
         interpreters = re.findall(r'\[Requesting program interpreter: ([^\]\n]+)\]', raw)
         if len(interpreters) > 1:
             raise ValueError('Multiple ELF interpreters')
         record.update(names, interpreters=interpreters, readelf=raw,
+                      direct_search=search, direct_search_candidates=direct,
                       cache_candidates={needed: cache.get(needed, [])
                                         for needed in names['needed']})
         files[name] = record
@@ -120,7 +150,10 @@ def main():
         for needed, candidates in record['cache_candidates'].items():
             if not candidates:
                 unresolved.setdefault(needed, []).append(name)
+            if not candidates and not direct[needed]:
+                unresolved_direct.setdefault(needed, []).append(name)
             pending.update(candidates)
+            pending.update(direct[needed])
     configuration = {}
     for path in sorted({Path('/etc/ld.so.cache'), Path('/etc/ld.so.conf')} |
                        set(Path('/etc/ld.so.conf.d').glob('*.conf'))):
@@ -132,6 +165,7 @@ def main():
     return dict(schema_version='1.0', source_revision=revision, roots=list(ROOTS),
                 python_extension_roots=extensions, files=files,
                 loader_configuration=configuration, unresolved_cache_names=unresolved,
+                unresolved_direct_and_cache_names=unresolved_direct,
                 ldconfig_cache_listing_sha256=hashlib.sha256(cache_raw.encode()).hexdigest(),
                 observed_input_bytes=total,
                 scope='static ELF requirements and cache candidates before Broker probes',

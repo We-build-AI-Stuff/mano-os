@@ -432,3 +432,20 @@ all three CI checks. Six originals and four numeric crops were actually viewed:
 pending/effective900 before and120 after are fully readable. The focus/text
 normalization fixes the observed headless clipping; no physical input or GTK
 root-cause proof is claimed. Hash receipts remain in the workspace outputs.
+
+
+The failed483c04c run yielded a separately inspected static inventory of22helper
+roots,49Python extensions and124candidate files. It left libsystemd-shared-257.so
+outside the cache even though systemctl, systemd-sysusers and systemd-tmpfiles
+record its private RUNPATH. The next collector follows direct absolute search
+paths and canonical-object ORIGIN expansions, while RUNPATH takes precedence
+over RPATH. Relative/empty entries and unknown LIB/PLATFORM tokens are reported
+as unsupported instead of being resolved against the collector's working directory.
+Inherited RPATH and hardware-capability searches remain explicitly unevaluated.
+Every observed direct candidate joins the same bounded ELF/hash graph. Cache-only
+unresolved names remain visible separately from names missing both direct and
+cache candidates. This records candidates, not the loader's selected object or
+write protection. New-source native collection still requires fresh CI.
+
+Search ordering and token semantics reference:
+https://manpages.debian.org/trixie/manpages/ld.so.8.en.html
