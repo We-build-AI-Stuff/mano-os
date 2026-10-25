@@ -22,6 +22,7 @@ from mano_broker.package_solver import canonical, forecast, prepare_apt_root
 from mano_protocol.actions import unique_object
 from mano_protocol.stop_state import STATE_FILE, snapshot
 from mano_runtime.package_attempts import guard
+from mano_runtime.package_path_policy import verify_label
 from mano_runtime.package_python import OPTIONAL as PYTHON_OPTIONAL
 from mano_runtime.package_python import REQUIRED as PYTHON_REQUIRED
 from mano_runtime.package_python import verify_readonly
@@ -93,6 +94,8 @@ def boundary():
     guard()
     if os.getpid() != 2:
         raise PermissionError('Private package PID namespace required')
+    BOUNDARY_CHECK = 'package-path-policy'
+    verify_label()
     status = dict(line.split(':', 1) for line in Path('/proc/self/status').read_text().splitlines()
                   if ':' in line)
     BOUNDARY_CHECK = 'native-restrictions'
@@ -206,6 +209,7 @@ def boundary():
                 runtime_infrastructure_readonly=True,
                 trusted_service_configuration_readonly=True,
                 existing_python_paths_readonly=True,
+                package_path_policy_enforced=True,
                 ordinary_thread_creation=True,
                 capabilities=capabilities, securebits=securebits,
                 run_device=run_device,

@@ -288,6 +288,18 @@ try:
         for file in (CODE / package).rglob("*.py"):
             file.chmod(0o444)
         (CODE / package).chmod(0o555)
+    path_policy = Path('/etc/apparmor.d/mano-package-worker')
+    assert not path_policy.exists()
+    shutil.copyfile(ROOT / 'packaging/apparmor/mano-package-worker', path_policy)
+    path_policy.chmod(0o444)
+    installed.append(path_policy)
+    from mano_runtime.administration import load_package_path_policy
+
+    load_package_path_policy()
+    from probe_package_policy_names import run as verify_package_policy_names
+
+    (ROOT / 'evidence/package-path-policy-names.json').write_text(
+        json.dumps(verify_package_policy_names(), indent=2) + '\n')
     GUARD.parent.mkdir(mode=0o755, exist_ok=True)
     subprocess.run(["cc", "-std=c11", "-O2", "-Wall", "-Wextra", "-Werror",
         "-fstack-protector-strong", "-D_FORTIFY_SOURCE=2",

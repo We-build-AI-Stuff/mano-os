@@ -69,6 +69,9 @@ class PermissionsWindow(Gtk.Window):
             column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
             column.append(Gtk.Label(label=label, xalign=0))
             spin = Gtk.SpinButton.new_with_range(1, maximum, 1)
+            # Keep the complete limit visible with the prompt's larger control
+            # font, including when a submitted request disables the editor.
+            spin.set_width_chars(max(4, len(str(maximum)) + 2))
             spin.update_property([Gtk.AccessibleProperty.LABEL], [label])
             spin.set_value(default)
             spin.set_hexpand(True)

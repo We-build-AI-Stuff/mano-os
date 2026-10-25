@@ -301,6 +301,13 @@ print(json.dumps(control_request('prompt_context',dict(prompt_id=json.load(sys.s
                 ).returncode
                 != 0
             )
+        package_domain = Path('/sys/fs/cgroup/mano.slice/mano-package.slice')
+        assert (not package_domain.exists() or
+                'populated 0' in (package_domain / 'cgroup.events').read_text())
+        # Do not unload a profile as cleanup and risk unconfine-on-removal.
+        # Measure the kernel object's retention separately from stopped tasks.
+        policy_retained = ('mano-package-worker (enforce)' in
+                           Path('/sys/kernel/security/apparmor/profiles').read_text().splitlines())
         shutil.copyfile(package, OUT / package.name)
         report = dict(
             schema_version="1.0",
@@ -326,6 +333,8 @@ print(json.dumps(control_request('prompt_context',dict(prompt_id=json.load(sys.s
             policy_data_preserved_on_reinstall=True,
             reinstall_no_old_authority=True,
             package_removed_services_stopped_data_preserved=True,
+            package_domain_empty_on_remove=True,
+            kernel_package_path_policy_retained_on_remove=policy_retained,
             old_lab_environment_disabled=True,
             physical_input_provenance=None,
             paid_model_execution=False,

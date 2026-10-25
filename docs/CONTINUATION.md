@@ -1,3 +1,39 @@
+## Prepared real worker path-policy integration (native validation required)
+PriorHEAD1eb04362d7240b27911e203c7c044c135b564caf CI40068585791 ALL3SUCCESS.
+Fullindependent54hash/45flag acceptance PASSED, plus syntheticAppArmor mechanism,
+completepackageproofchain. Artifact12551270539 SHA
+2d34a59a67a6980e52326d8e7f3b97b28428c687f6ab4da5b82c53ea768a8dbe
+outputs/pr134-path-policy-security.json/.zip. SIX freshoriginals+FOUR numericcrops
+actuallyviewed; hashreceipt acceptance-pr134-path-policy/inspection.json.
+Pendingafter-stock durationclipslastdigit; effective120visible. Headlessonly.
+
+Currentintegration: fixedpackagedAppArmorprofile mano-package-worker protects
+Pythoninterpreteralias/versionnames, module/searchtrees includingabsentzip names,
+policy/sourcecache/loader/aa-exec/label-controlpaths. DoesNOTyetprotectcomplete
+ELF/helper/loadercache/persistenceclosure. Fixedaa-exec betweenbwrap/nativeguard;
+preflight requiresactualenforcelabel; Rootparent requiresexactnewbool. Kernel
+capabilitysets9controller/6worker remainunchanged. No newpublicRootloader/capability.
+TrustedRootpackageconfiguration validatesownedregularsingle-link boundedpolicy
+bytes againstfixedSHA, thenfeedsverifiedstdin toexistingDebianparser; normal
+AppArmorbootservice loadsprofile. Disabledkernelpolicy refuses. Runtimepackage
+shipsprofileandAppArmordependency; manualCIFixture usesexactsamebytes/loader.
+PrivateCI namespace substituteswritable/usr/bin,/usr/lib withsyntheticinodes while
+realinterpreter/libs remainRO. It testsrealprofilealiasunlink/replace,futurePython
+write/chmod,hardlinkalias,absentzip,andprofile-clearingdenials; ordinarysibling
+write/rename/link/chmod mustwork. No realhostinterpreterwriteattempt. This isname
+ruleevidence, NOT completeworkercontext; actualRoot/PAM/Stop flows mustpass too.
+Runtime-removalprobe checksmanagedRootdomainempty andmeasuresretainedkernelpolicy
+separately; cleanupdoesnotunloadpolicy and riskunconfine-active-tasks. No complete
+kernelpolicyunloadclaim. Allproductionchanges arenativeUNVERIFIED untilnewCI.
+
+PermissionsUI requests2sparecharacterpositions so pendingnumericlimitisn'tclipped;
+actualrenderingUNVERIFIED. Futurepopupmaymove/resizenaturally: inspectfreshfull
+images beforechoosingnumericcropcoordinates; old255,340,500,412maynotfitnewlayout.
+CI shellsyntaxstep nowloopsall scripts; priorbash -n scripts/*.sh checkedonlyfirst.
+Local563tests48Linuxskips PASS; Ruff,compileall,eachshellsyntax,diffchecksPASS.
+No nativeRoot/VM/AppArmor execution onMac. Threeunrelatedduplicatespreserved.
+Originalv2.1goalACTIVE/incomplete; PR134DRAFT/notmergeeligible, allgatesretained.
+
 ## Current source: report framing correction and synthetic policy experiment
 CI40066848533 atb3c50de ALL3SUCCESS. Artifact12549468984,13307876B,
 SHA d2ce4650e4b2d5659c517f06de180a3e71c1657e782c595208c7d1fb6e7e3070

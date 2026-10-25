@@ -60,6 +60,8 @@ def build(wheelhouse, output, *, revision=None, epoch=None):
             for source in package.rglob("*.py"):
                 copy(source, "/usr/lib/mano-os/" + str(source.relative_to(ROOT / "src")))
         copy(ROOT / 'packaging/runtime/empty-credential', '/usr/lib/mano-os/empty-credential')
+        copy(ROOT / 'packaging/apparmor/mano-package-worker',
+             '/etc/apparmor.d/mano-package-worker')
         binaries = {
             "mano_approve.c": ("/usr/libexec/mano-approve", ["json-c", "libsystemd"], ["-lpam"]),
             "mano_package_guard.c": ("/usr/libexec/mano-package-guard", ["libseccomp"], []),
@@ -236,7 +238,7 @@ def build(wheelhouse, output, *, revision=None, epoch=None):
             "python3-jsonschema, python3-apt, gpgv, debian-archive-keyring, "
             "btrfs-progs, snapper, gir1.2-gtk-4.0, "
             "systemd (>= 257), libc6 (>= 2.41), libpam0g, libpam-modules, "
-            "libjson-c5, libsystemd0, libseccomp2, "
+            "libjson-c5, libsystemd0, libseccomp2, apparmor, "
             "bubblewrap (>= 0.12.0-1~deb13u1), xdg-dbus-proxy (>= 0.1.6-1+deb13u3), "
             "acl, passwd, util-linux, dbus-user-session, at-spi2-core, sway, foot, grim, "
             "fonts-dejavu-core, ca-certificates\n"

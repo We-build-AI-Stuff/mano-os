@@ -21,6 +21,7 @@ from mano_protocol.packages import result_digest
 from mano_protocol.stop_state import snapshot
 from mano_protocol.transport import receive
 from mano_runtime import package_archives, package_attempts, package_catalog, package_logs, recovery
+from mano_runtime.package_path_policy import PROFILE as PATH_PROFILE
 from mano_runtime.package_python import OPTIONAL as PYTHON_OPTIONAL
 from mano_runtime.package_python import REQUIRED as PYTHON_REQUIRED
 from mano_runtime.package_resolution import current_plan, expected
@@ -243,7 +244,8 @@ def sandbox(archives, body):
                              'MANO_PACKAGE_GENERATION': str(body['native_generation']),
                              'MANO_PACKAGE_EXPIRES': repr(body['expires'])}).items():
         argv += ['--setenv', key, value]
-    return argv + ['--chdir', '/', '/usr/libexec/mano-package-guard']
+    return argv + ['--chdir', '/', '/usr/bin/aa-exec', '-p', PATH_PROFILE, '--',
+                   '/usr/libexec/mano-package-guard']
 
 
 def launcher_failure(output):
@@ -355,7 +357,8 @@ def _run_child(plan, archives, body, broker_fd, emit):
                                 'capabilities', 'network', 'protected-objects', 'secrets',
                                 'mount-ancestry', 'runtime-infrastructure', 'credential-mask',
                                 'runtime-tmpfs', 'approval-ipc', 'thread-creation',
-                                'service-configuration', 'existing-python-paths'}:
+                                'service-configuration', 'existing-python-paths',
+                                'package-path-policy'}:
                             diagnostic['check'] = detail['check']
                             state = detail.get('kernel_state')
                             allowed = {'pid', 'NoNewPrivs', 'Seccomp', 'CapEff', 'CapPrm',
@@ -382,7 +385,8 @@ def _run_child(plan, archives, body, broker_fd, emit):
                   'host_shadow_hidden', 'approval_ipc_hidden', 'protected_ancestors_mounted',
                   'no_new_privileges', 'seccomp_active', 'native_stop_authority_readonly',
                   'runtime_infrastructure_readonly', 'ordinary_thread_creation',
-                  'trusted_service_configuration_readonly', 'existing_python_paths_readonly'}
+                  'trusted_service_configuration_readonly', 'existing_python_paths_readonly',
+                  'package_path_policy_enforced'}
         caps = {'CapEff', 'CapPrm', 'CapInh', 'CapBnd', 'CapAmb'}
         if (set(witness) != fields | {'namespaces', 'capabilities', 'securebits', 'run_device'}
                 or any(witness[key] is not True for key in fields)

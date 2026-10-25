@@ -1,0 +1,41 @@
+# Filesystem-name protection layered over the fixed namespace/native guard.
+# This does not yet protect the complete ELF/helper/loader dependency closure.
+profile mano-package-worker flags=(mediate_deleted) {
+  /** mrwlkix,
+  capability chown,
+  capability dac_override,
+  capability fowner,
+  capability fsetid,
+  capability setuid,
+  capability setgid,
+  # Needed only by the fixed native guard; absent after its bounding-set drop.
+  capability setpcap,
+  network,
+  signal,
+  ptrace (readby) peer=unconfined,
+
+  # Protect the name as well as the target of the system interpreter symlink.
+  deny /{usr/,}bin/python3{,.*} wkl,
+  deny /usr/ w,
+  deny /usr/bin/ w,
+  deny /usr/lib/ w,
+  deny /usr/lib/python3*/ w,
+  deny /usr/lib/python3*/** wkl,
+  # Python searches this name even when no zip exists at sandbox construction.
+  deny /usr/lib/python3*.zip wkl,
+  deny /usr/local/ w,
+  deny /usr/local/** wkl,
+  deny /etc/python3* wkl,
+  deny /etc/python3*/ w,
+  deny /etc/python3*/** wkl,
+
+  # No script can change the policy, its loader or its current execution label.
+  deny /{usr/,}bin/aa-exec wkl,
+  deny /{usr/,}sbin/apparmor_parser wkl,
+  deny /etc/apparmor.d/ w,
+  deny /etc/apparmor.d/** wkl,
+  deny /var/cache/apparmor/ w,
+  deny /var/cache/apparmor/** wkl,
+  deny /proc/**/attr/** w,
+  deny /sys/kernel/security/** w,
+}

@@ -301,3 +301,45 @@ complete database/Stop/Broker-death/commit-reply-loss/installed-runtime apply
 witnesses, which remain narrower evidence than complete artifact acceptance.
 A fresh native run must verify clean report framing and the synthetic path-policy
 experiment before either change is accepted.
+
+
+The synthetic AppArmor mechanism at 1eb0436 passed native CI40068585791 and
+independent full artifact inspection (54 hashes/45 regression flags). All six
+fresh GUI captures and four numeric crops were viewed; the pending stock duration
+still clips its last digit. These remain headless observations.
+
+The next integration enters the fixed mano-package-worker profile between
+bubblewrap and the unchanged native capability/seccomp guard. The worker must
+read the exact enforced kernel label before APT runs, and the Root parent requires
+that boundary flag. The profile protects interpreter aliases/version names,
+existing Python module trees and absent zip search entries, plus its own source,
+cache, loader and label-control paths. Child execution inherits confinement;
+profile transitions are not granted. Controller and worker capabilities are not
+increased. Namespace masks, native Stop, resource limits and journal rules remain.
+
+Only trusted Root package configuration loads policy. It checks Root-owned parents,
+a regular single-link source that others cannot modify, bounded complete bytes and the fixed
+packaged SHA256, then supplies the verified bytes on stdin to Debian's existing
+parser with fixed arguments and no cache use. The package depends on AppArmor and
+the transaction unit orders itself after the existing OS AppArmor boot service.
+Disabled kernel support fails closed; a unit property alone is not accepted as
+proof. No model-selected policy, path, parser option or new privileged loader API
+is introduced.
+
+A CI-only namespace fixture tests the real profile's path patterns on synthetic
+inodes substituted at /usr/bin and /usr/lib. The real interpreter and libraries
+are mounted read-only. Alias replacement/removal, a future interpreter stand-in,
+hard-link aliases, missing zip names and attempts to clear the execution profile
+must be denied while ordinary sibling operations work. This checks name rules;
+the actual package/PAM/Stop/installed-runtime flows must independently prove the
+real worker context. No real host interpreter write is attempted.
+
+Runtime removal checks that the managed Root domain drained and reports whether
+the inactive kernel policy remains. Cleanup does not unload a policy and risk
+unconfining active tasks. Complete kernel-policy removal is not claimed. The
+shared ELF/helper/loader-cache and wider persistence closure remain unfinished;
+this change does not make the draft merge eligible. Fresh native validation is
+required for the integration and the numeric-field sizing change.
+
+Parser stdin and cache behavior reference:
+https://manpages.debian.org/trixie/apparmor/apparmor_parser.8.en.html
