@@ -101,7 +101,9 @@ class RootApplyAdmissionTests(unittest.TestCase):
             'protected_ancestors_mounted', 'no_new_privileges', 'seccomp_active',
             'native_stop_authority_readonly', 'runtime_infrastructure_readonly',
             'ordinary_thread_creation', 'trusted_service_configuration_readonly',
-            'existing_python_paths_readonly', 'package_path_policy_enforced'), True)
+            'existing_python_paths_readonly', 'package_path_policy_enforced',
+            'host_named_ipc_denied', 'anonymous_stream_socketpair_works',
+            'inherited_socket_fds_absent'), True)
         witness['namespaces'] = {kind: kind + ':[123]' for kind in
                                 ('mnt', 'net', 'ipc', 'pid', 'cgroup')}
         witness['capabilities'] = dict.fromkeys(('CapEff', 'CapPrm', 'CapInh',

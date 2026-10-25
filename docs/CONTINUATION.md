@@ -1,3 +1,18 @@
+## Socket restriction prepared; native verification pending
+Current pushed head6d308fa4b10bed265262f3a8c06708f66fd83ab7 CI40160330966:
+quality SUCCESS, security-lab stillIN_PROGRESS atpreparation. Letfinishbeforepush
+becauseworkflowcancelsolderrunsonpush. No current6d artifactacceptanceyet.
+Nextsource deniesnamed socket/connect/bind/listen/accept/accept4; onlyanonymous
+AF_UNIX protocol0 streamsocketpairs remain, includingCLOEXEC/NONBLOCK. Nonstream
+pairs denied topreventdatagramretargeting. Pre-effectmodule checksnoinherited
+socketfds, strictEPERMfornamedops/nonstreampairs, bidirectionalpairbytes. Root
+exactframerequiresthreenewtrueflags. Eightmockedregressions+Ruff/diff PASS.
+Nativefiltercompile/enforcement andAPT/dpkgcompatibility UNVERIFIED untilnewCI.
+Independentartifacthelpermustexpectnewfieldsfornewhead, nothistorical6d.
+PR134actuallyisDraft=false; titleDraftstale. Do notreverthumanreadiness. Still
+unresolvedELF/library/loader/persistenceandfullcompatibilitygates: no mergeeligible.
+Userreviewoverrideauthorized, noCI/evidencebypass; no reviewer notifications.
+
 ## Next helper-name and permission-display correction prepared
 Prior4695e992e083fb7601074336f52e648e7a013aec CI40157068510 ALL3SUCCESS.
 Artifact12585523188 ZIP13369891B SHA

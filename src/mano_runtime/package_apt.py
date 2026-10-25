@@ -22,6 +22,7 @@ from mano_broker.package_solver import canonical, forecast, prepare_apt_root
 from mano_protocol.actions import unique_object
 from mano_protocol.stop_state import STATE_FILE, snapshot
 from mano_runtime.package_attempts import guard
+from mano_runtime.package_ipc import verify as verify_ipc
 from mano_runtime.package_path_policy import verify_label
 from mano_runtime.package_python import OPTIONAL as PYTHON_OPTIONAL
 from mano_runtime.package_python import REQUIRED as PYTHON_REQUIRED
@@ -162,15 +163,7 @@ def boundary():
     if len(run_rows) != 1 or run_rows[0][run_rows[0].index('-') + 1] != 'tmpfs':
         raise PermissionError('Private runtime tmpfs required')
     BOUNDARY_CHECK = 'approval-ipc'
-    with socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET) as connection:
-        connection.settimeout(.2)
-        try:
-            connection.connect('/run/mano-approval/human.sock')
-        except OSError as error:
-            if error.errno not in {errno.ENOENT, errno.ENOTDIR, errno.EACCES, errno.EPERM}:
-                raise
-        else:
-            raise PermissionError('Host approval IPC reachable from package worker')
+    ipc = verify_ipc()
     BOUNDARY_CHECK = 'mount-ancestry'
     if 'ro' not in mounts.get('/', []) or any(path not in mounts for path in
             ('/usr', '/usr/lib', '/usr/bin', '/etc', '/var', '/var/lib')):
@@ -203,6 +196,7 @@ def boundary():
         BOUNDARY_KERNEL['python_path_index'] = index
         verify_readonly(path)
     return dict(network_socket_denied=True, protected_code_readonly=True,
+                **ipc,
                 cgroup_control_readonly=True, host_shadow_hidden=True, approval_ipc_hidden=True,
                 protected_ancestors_mounted=True, no_new_privileges=True, seccomp_active=True,
                 native_stop_authority_readonly=True,

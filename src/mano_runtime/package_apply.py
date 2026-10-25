@@ -386,7 +386,8 @@ def _run_child(plan, archives, body, broker_fd, emit):
                   'no_new_privileges', 'seccomp_active', 'native_stop_authority_readonly',
                   'runtime_infrastructure_readonly', 'ordinary_thread_creation',
                   'trusted_service_configuration_readonly', 'existing_python_paths_readonly',
-                  'package_path_policy_enforced'}
+                  'package_path_policy_enforced', 'host_named_ipc_denied',
+                  'anonymous_stream_socketpair_works', 'inherited_socket_fds_absent'}
         caps = {'CapEff', 'CapPrm', 'CapInh', 'CapBnd', 'CapAmb'}
         if (set(witness) != fields | {'namespaces', 'capabilities', 'securebits', 'run_device'}
                 or any(witness[key] is not True for key in fields)

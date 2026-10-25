@@ -95,7 +95,10 @@ int main(int argc, char **argv) {
         "ptrace", "process_vm_readv", "process_vm_writev", "pidfd_getfd",
         "bpf", "perf_event_open", "io_uring_setup", "keyctl", "add_key", "request_key",
         "reboot", "kexec_load", "kexec_file_load", "init_module", "finit_module",
-        "delete_module", "iopl", "ioperm", "swapon", "swapoff", NULL
+        "delete_module", "iopl", "ioperm", "swapon", "swapoff",
+        /* No pathname/abstract host IPC, including sockets outside /run.
+           Only anonymous connected AF_UNIX stream pairs remain available. */
+        "socket", "connect", "bind", "listen", "accept", "accept4", NULL
     };
     for (int i = 0; denied[i]; ++i) {
         int nr = seccomp_syscall_resolve_name(denied[i]);
@@ -112,10 +115,19 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i < sizeof(flags)/sizeof(flags[0]); ++i)
         if (seccomp_rule_add(filter, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(clone), 1,
             SCMP_A0(SCMP_CMP_MASKED_EQ, flags[i], flags[i])) < 0) fail("package clone rule");
-    int families[] = {AF_INET, AF_INET6, AF_NETLINK, AF_PACKET};
-    for (size_t i = 0; i < sizeof(families)/sizeof(families[0]); ++i)
-        if (seccomp_rule_add(filter, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(socket), 1,
-            SCMP_A0(SCMP_CMP_EQ, families[i])) < 0) fail("package network rule");
+    if (seccomp_rule_add(filter, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(socketpair), 1,
+            SCMP_A0(SCMP_CMP_NE, AF_UNIX)) < 0 ||
+        seccomp_rule_add(filter, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(socketpair), 1,
+            SCMP_A2(SCMP_CMP_NE, 0)) < 0)
+        fail("package anonymous socketpair rules");
+    /* Linux socket types occupy the low four bits; other bits must be valid
+       CLOEXEC/NONBLOCK flags or the kernel rejects them. Deny every non-stream
+       type, including datagrams that could retarget a sendto/sendmsg peer. */
+    for (unsigned int type = 0; type < 16; ++type)
+        if (type != SOCK_STREAM && seccomp_rule_add(filter, SCMP_ACT_ERRNO(EPERM),
+                SCMP_SYS(socketpair), 1,
+                SCMP_A1(SCMP_CMP_MASKED_EQ, 15, type)) < 0)
+            fail("package socketpair stream type rule");
     if (seccomp_load(filter) < 0) fail("package seccomp load");
     seccomp_release(filter);
     errno = 0;

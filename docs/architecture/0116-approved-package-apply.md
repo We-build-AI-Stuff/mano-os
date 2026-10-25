@@ -370,3 +370,20 @@ with static and syntax checks. The broad local rerun is still reading dependency
 caches and is not reported complete; the new required quality job reruns the full
 suite. No native helper-name/keyring enforcement or display correction is claimed
 until the fresh CI artifact and rendered captures are inspected.
+
+
+The next socket restriction closes the named Unix-socket route beyond masked
+/run paths. The native filter denies socket, connect, bind, listen, accept and
+accept4. It permits only AF_UNIX/protocol-zero anonymous stream socketpairs;
+non-stream types are denied so datagram sendto/sendmsg cannot select a host peer.
+CLOEXEC/NONBLOCK stream flags remain usable. The pre-effect worker checks there
+are no inherited socket descriptors, requires EPERM for named socket creation,
+pathname and abstract connection/binding/listening/acceptance and non-stream
+pairs, and transfers exact bytes in both directions over an anonymous pair.
+The parent requires all three new boundary booleans. These checks do not prove
+all host IPC or the shared-library/loader/persistence closure.
+
+Eight mocked local regressions pass, including inherited-socket rejection,
+missing-filter rejection, strict errno checking and the positive pair control.
+Native compilation/filter enforcement and real APT/dpkg compatibility still
+require a fresh disposable Debian run. No native execution occurred on the Mac.
