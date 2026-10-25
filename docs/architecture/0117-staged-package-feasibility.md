@@ -1,6 +1,6 @@
 # Staged package and loader-cache feasibility
 
-Status: native diagnostics identified an empty cloud-mirror origin site; canonical signed-catalog input prepared. Production integration and publication remain undecided.
+Status: native producer reported staging success; raw evidence transfer failed. Independent acceptance, production integration and publication remain incomplete.
 
 The current package worker writes selected live /usr, /etc and /var trees.
 Filename rules protect specific authority paths but do not establish complete
@@ -242,3 +242,20 @@ the exact clone sequence and reject eight ancestry/identity/property failures.
 They do not execute btrfs locally. Native baseline evidence requires fresh CI and
 explicit --staged-readonly-baseline independent acceptance; older artifacts must
 not be interpreted as containing a read-only source baseline.
+
+
+## Native producer success and evidence-transfer failure
+
+Run40176846496 atbe69678 passed quality but failed when tar attempted to create
+an archive containing the literal name staged-*. The preserved producer report
+records successful dpkg/ldconfig execution, matching libncurses6/sl payload paths
+(15 and33 entries), unchanged live inputs, drained child domain and no publication.
+The raw staged artifacts are absent from the uploaded ZIP. Those statements are
+producer evidence only; independent raw-evidence acceptance has not passed.
+
+The driver now reads the report's bounded artifact/hash map, validates fixed
+staged basenames, and sends exact NUL-delimited filenames to remote GNU tar with
+--null --verbatim-files-from --files-from=-. It no longer relies on creation-mode
+wildcards. Invalid paths/options/control bytes/hashes fail before list output;
+pipefail preserves errors across the transfer. Three portable regressions and
+a Linux GNU tar archive-content regression cover this contract.

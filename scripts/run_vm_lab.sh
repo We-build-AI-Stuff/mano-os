@@ -258,8 +258,10 @@ PY
   ssh "${ssh_opts[@]}" lab@127.0.0.1 \
     'sudo env PYTHONPATH=/opt/mano-lab/src python3 /opt/mano-lab/scripts/probe_staged_package.py' \
     > "$repo_root/evidence/package-staging-feasibility.json"
-  ssh "${ssh_opts[@]}" lab@127.0.0.1 \
-    'sudo tar -cf - -C /opt/mano-lab/evidence --wildcards "staged-*"' \
+  python3 "$repo_root/scripts/staged_artifact_names.py" \
+    "$repo_root/evidence/package-staging-feasibility.json" \
+    | ssh "${ssh_opts[@]}" lab@127.0.0.1 \
+    'sudo tar -cf - -C /opt/mano-lab/evidence --null --verbatim-files-from --files-from=-' \
     | tar -xf - -C "$repo_root/evidence"
   ssh "${ssh_opts[@]}" lab@127.0.0.1 \
     'sudo env PYTHONPATH=/opt/mano-lab/src PYTHONDONTWRITEBYTECODE=1 python3 /opt/mano-lab/scripts/probe_runtime_package.py' \

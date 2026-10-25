@@ -1,3 +1,39 @@
+## Current prepared evidence-transfer fix and baseline groundwork
+
+PR134 remains open; merge commits/admin review override are authorized, but all
+exact-head CI and security evidence still apply. main is65fdfc02e3dbb18f791a92374a24690ae4e1ba87.
+Run40176846496 atbe69678 failed evidence transfer: tar tried literal staged-*.
+Its producer report records successful dpkg/ldconfig, matching48payload paths for
+libncurses6/sl and unchanged live inputs. Raw staged files are absent from ZIP;
+this is NOT independently accepted native staging or successful CI.
+Artifact12593043183 size2898839 SHA256
+aa0fba56b178ce6077ad302ab9fa415baad3bce8355982851e8bdcb96150e96d
+is byte-verified/preserved with the raw job log in outputs.
+
+Current changes replace globs with validated manifest-derived NUL filenames for
+GNU tar. They also include Linux tree/xattr observation and change accounting
+(not yet integrated), trailing-member compatibility, and a read-only baseline
+before a distinct writable candidate. Baseline ancestry/properties/status are
+checked; actual native evidence for these new changes remains pending.
+665 local tests complete:610passed/55skipped. Seven new Linux-only tests among
+those skips cover six tree/xattr cases and the GNU tar transfer regression.
+Ruff, compilation, shell syntax and diff checks pass. Fresh CI is required.
+
+For this new baseline/observer source, independent acceptance must include all
+prior45flags and package/ELF/staging options plus --package-container-binding,
+--candidate-payload-observation and --staged-readonly-baseline. Do not apply the
+new baseline option to historical be69678 or earlier evidence. The independent
+payload reader checks raw archive inventory; candidate path matching remains a
+producer/controller report, not independent whole-filesystem validation.
+
+No candidate publication, complete baseline/unlisted-mutation policy, production
+staging guard/PAM or complete privileged runtime closure exists yet. Full v2.1
+phases0–7 and physical/input/8GB/signed image/recovery gates remain incomplete.
+Only disposable Debian CI runs Linux Root/VM work; no local VM/model downloads.
+Disk~17.6GiBfree/92%; warned. Preserve three unrelated untracked duplicate files.
+Older continuation entries below are historical; outputs/CONTINUATION.md carries
+latest run/head updates and raw artifact acceptance instructions.
+
 ## Current native failure and prepared diagnostics
 Remote7eeabfe42c24dd90ab5f33c85a812322d6a2359b CI40171677448 TERMINALFAILURE:
 qualitySUCCESS; securitylab121103634317/mergegateFAILED. NewCIcloneexperiment
