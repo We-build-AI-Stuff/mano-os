@@ -1,4 +1,5 @@
 import contextlib
+import hashlib
 import importlib.util
 import sys
 import tempfile
@@ -6,6 +7,8 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
+
+from test_package_container import ar
 
 SCRIPTS = Path(__file__).resolve().parents[1] / 'scripts'
 sys.path.insert(0, str(SCRIPTS))
@@ -16,6 +19,34 @@ SPEC.loader.exec_module(probe)
 
 
 class StagedProbeSafetyTests(unittest.TestCase):
+    def test_acquisition_binds_container_before_archive_is_written(self):
+        raw = ar([('debian-binary', b'2.0\n'), ('control.tar', b'x'), ('data.tar', b'y')])
+        for data in (raw, b'not a Debian package'):
+            with self.subTest(valid=data == raw), tempfile.TemporaryDirectory() as temporary:
+                base = Path(temporary)
+                (base / 'archives').mkdir()
+                item = self.apt_item()
+                item.is_installed, item.marked_delete = False, False
+                item.mark_install = MagicMock()
+                item.candidate.size = len(data)
+                item.candidate.uri = 'https://deb.debian.org/debian/pool/s/sl/sl.deb'
+                item.candidate.record['SHA256'] = hashlib.sha256(data).hexdigest()
+                cache = MagicMock()
+                cache.__getitem__.return_value = item
+                cache.get_changes.return_value = [item]
+                opener = MagicMock()
+                opener.open.return_value.__enter__.return_value.read.return_value = data
+                with patch.object(probe, 'BASE', base), \
+                        patch.object(probe.urllib.request, 'build_opener', return_value=opener):
+                    if data == raw:
+                        records = probe.acquire_from(cache)
+                        self.assertTrue(records[0]['container']['expected_identity_matched'])
+                        self.assertEqual((base / 'archives/sl.deb').read_bytes(), raw)
+                    else:
+                        with self.assertRaisesRegex(ValueError, 'ar container'):
+                            probe.acquire_from(cache)
+                        self.assertFalse((base / 'archives/sl.deb').exists())
+
     @contextlib.contextmanager
     def private_cache(self):
         cache = MagicMock(broken_count=0, dpkg_journal_dirty=False)

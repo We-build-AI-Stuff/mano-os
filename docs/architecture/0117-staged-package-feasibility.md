@@ -138,3 +138,25 @@ Fifteen local filesystem regressions cover matching bytes/links, same-size conte
 substitution, copied hard links, mode changes, symlink and FIFO substitution,
 parent aliases, missing paths, manifest changes, unsupported metadata, unlisted
 file evidence limits, interruption, concurrent metadata changes and root FD type.
+
+## Archive-to-container identity binding
+
+`mano_runtime.package_container.bind` requires immutable bounded bytes and the
+expected whole-archive SHA256/length before parsing common ar member framing.
+It records member offsets, sizes and hashes, requires ordered Debian version,
+control and data members, and preserves documented gzip/xz/zstd/bzip2/lzma names
+without decompressing or executing anything. It rejects duplicates, long-name
+extensions, malformed numeric headers, missing padding and truncation. Additional
+underscore/trailing members are recorded rather than interpreted as effects.
+The format contract is documented at
+https://manpages.debian.org/trixie/dpkg-dev/deb.5.en.html .
+
+The CI acquisition probe calls this binding before writing an authenticated
+archive and retains the result in each archive record. The expectations still
+come from the verified catalog; matching caller-supplied values is not itself
+signature verification. Payload inventory, candidate filesystem verification and
+publication authority remain false. Ten container test methods include all
+24 documented control/data compression combinations; an acquisition regression
+checks both a bound container and a hash-matching malformed container that must
+not reach archive custody. Native confirmation and independent artifact binding
+acceptance are still required. No production executor changes are included.

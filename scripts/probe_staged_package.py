@@ -24,6 +24,7 @@ from mano_broker.package_catalog import load
 from mano_broker.package_solver import fingerprint, prepare_apt_root
 from mano_runtime import recovery
 from mano_runtime.package_apply import NoRedirect, archive_url
+from mano_runtime.package_container import bind as bind_container
 from mano_runtime.package_postconditions import MAX_STATUS, database
 
 BASE = Path('/.snapshots/.mano-staged-package-ci')
@@ -188,13 +189,14 @@ def acquire_from(cache):
             data = response.read(version.size + 1)
         if len(data) != version.size or sha(data) != digest:
             raise ValueError('Signed-index archive identity mismatch')
+        container = bind_container(data, expected_sha256=digest, expected_bytes=version.size)
         path = BASE / 'archives' / (name + '.deb')
         with path.open('xb') as stream:
             stream.write(data)
         path.chmod(0o400)
         records.append(dict(name=name, architecture=version.architecture,
                             version=version.version, sha256=digest, bytes=len(data),
-                            filename=path.name, url=url))
+                            filename=path.name, url=url, container=container))
     return records
 
 
@@ -333,6 +335,7 @@ def main():
     return dict(schema_version='1.0', source_revision=revision,
                 scope='CI-only btrfs package/cache staging feasibility; no publication',
                 source=source, candidate=stage, archives=records, worker=proof,
+                archive_container_identity_bound=True,
                 host_namespaces=host_namespaces,
                 live_input_sha256=before, live_inputs_unchanged=True,
                 candidate_database_transition_verified=True,
