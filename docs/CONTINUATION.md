@@ -1,3 +1,25 @@
+## Fixed ELF name protection prepared locally; native unverified
+Currentremote stillfc9e01d CI40162914482 qualitySUCCESS/securitylabIN_PROGRESS.
+Local4638073 direct-search inventory alreadycommittedUNPUSHED; furtherELFpolicy
+changesprepared. DO NOTpushuntilcurrentrunterminal (cancel-in-progress workflow).
+Fixedprofileprotects52SONAMEfamilies observed inpreviousnative22/49/124inventory
+pluslibsystemd-shared-*.so*, under /{usr/,}lib{,64}/{,**/}. Directoryanchorsfor
+x86_64-linux-gnu/systemd/lib64. PolicySHA
+cc0aa58e44abf1f9124d129135d7ecd3de700fe7d4573ce161e3741bc3e525d0.
+Source4785bytes beforeextraanchor, remainsbelow8192bound. SixsourcebindingtestsPASS.
+Privatefixture has53nested dummyELFleaves+rootlibc (54inodes), plusabsentfuture
+libcname. 55writedenials required, plusunlink/chmod/hardlink/replace. Allsynthetic
+bytes unchanged; actualsharedlibs RO. EmbeddedPROGRAM compile PASS. No nativeproofyet.
+Futurefullacceptance nowrequiresFIVEoptions beyondoldbaseline:
+--package-ipc --package-elf-inventory --package-preload-policy
+--package-elf-direct-search --package-elf-name-policy.
+Currentfc9artifact MUSTOMITlastTWO (itonlyhasoldcacheinventory/preload/IPC).
+Independenthelperfetchesfutureexact-head ELF_LEAVES viaASTliteral(noexecution),
+checks53safeuniquebasenames and55actualerrnos plus4aliasops/hash. SourceprofileSHA
+boundseparately. Direct-search helpercrosschecksrawtags/paths/graph. No complete
+closure/realinodeimmutability/loadercache/plugin/persistence protection claim.
+Runtime-libraryupdate/upgrade compatibility stillrequired; no successbyshrinkinggoal.
+
 ## Direct ELF search candidate collection prepared locally
 Currentpushedfc9e01da051e529c3ab9de7eb83bcbc09d59b5a6 CI40162914482:
 qualitySUCCESS, securitylabIN_PROGRESS atlastcheck. Do notpushuntilterminal;

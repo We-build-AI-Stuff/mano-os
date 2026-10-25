@@ -449,3 +449,20 @@ write protection. New-source native collection still requires fresh CI.
 
 Search ordering and token semantics reference:
 https://manpages.debian.org/trixie/manpages/ld.so.8.en.html
+
+
+A further fixed path-policy layer protects52observed ELF SONAME families and the
+private systemd-shared family, including future suffixes under the Debian library
+trees. It also anchors the existing architecture/systemd/lib64 directories against
+renaming. Policy bytes remain bound to the packaged SHA and are loaded before
+worker execution. The existing permission/capability/Stop boundaries remain.
+
+A private namespace substitutes54dummy ELF-name files plus an absent future
+name. Real libraries remain read-only. It requires55write denials plus unlink,
+replacement, chmod and hard-link denials on a stand-in libc name, with original
+bytes unchanged. These are filename-rule observations, not write attempts on real
+shared libraries, complete alias/inode protection or full execution closure.
+Loader-cache redirection, additional plugins/search paths and wider persistence
+still require protection. Protected runtime-library updates and broader package
+compatibility remain explicit validation work; no general upgrade claim is made.
+Fresh native CI and inspection of the real package flows are required.

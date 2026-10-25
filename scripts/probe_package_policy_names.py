@@ -21,6 +21,61 @@ HELPERS = (
     '/usr/bin/systemd-tmpfiles', '/usr/bin/umount', '/usr/sbin/runuser',
     '/usr/sbin/usermod', '/usr/sbin/apparmor_parser', '/usr/lib/apt/apt-helper',
 )
+ELF_LEAVES = (
+    'ld-linux-x86-64.so.999',
+    'libacl.so.999',
+    'libapt-pkg.so.999',
+    'libapt-private.so.999',
+    'libattr.so.999',
+    'libaudit.so.999',
+    'libblkid.so.999',
+    'libboost_thread.so.999',
+    'libbsd.so.999',
+    'libbtrfs.so.999',
+    'libbz2.so.999',
+    'libc.so.999',
+    'libcap-ng.so.999',
+    'libcap.so.999',
+    'libcrypt.so.999',
+    'libcrypto.so.999',
+    'libdb-5.3.so.999',
+    'libdbus-1.so.999',
+    'libexpat.so.999',
+    'libffi.so.999',
+    'libgcc_s.so.999',
+    'libgcrypt.so.999',
+    'libgpg-error.so.999',
+    'libjson-c.so.999',
+    'liblz4.so.999',
+    'liblzma.so.999',
+    'liblzo2.so.999',
+    'libm.so.999',
+    'libmd.so.999',
+    'libmount.so.999',
+    'libncursesw.so.999',
+    'libpam.so.999',
+    'libpam_misc.so.999',
+    'libpanelw.so.999',
+    'libpcre2-8.so.999',
+    'libreadline.so.999',
+    'libselinux.so.999',
+    'libsemanage.so.999',
+    'libsepol.so.999',
+    'libsmartcols.so.999',
+    'libsnapper.so.999',
+    'libsqlite3.so.999',
+    'libssl.so.999',
+    'libstdc++.so.999',
+    'libsystemd.so.999',
+    'libtinfo.so.999',
+    'libudev.so.999',
+    'libuuid.so.999',
+    'libxml2.so.999',
+    'libxxhash.so.999',
+    'libz.so.999',
+    'libzstd.so.999',
+    'libsystemd-shared-999.so.999',
+)
 PROGRAM = r'''
 import errno,json,os,stat,sys
 from pathlib import Path
@@ -67,8 +122,23 @@ for name in json.loads(sys.argv[1]):
   assert e.errno in {errno.EACCES,errno.EPERM},(name,e.errno)
   helper_denials[name]=e.errno
  else:raise AssertionError('Privileged helper name was writable: '+name)
+elf_denials={}
+for name in json.loads(sys.argv[2]):
+ try:Path(name).write_text('changed')
+ except OSError as e:
+  assert e.errno in {errno.EACCES,errno.EPERM},(name,e.errno)
+  elf_denials[name]=e.errno
+ else:raise AssertionError('Trusted ELF name was writable: '+name)
+denied('elf_alias_unlink',lambda:Path('/usr/lib/libc.so.999').unlink())
+denied('elf_mode_change',lambda:Path('/usr/lib/libc.so.999').chmod(0o777))
+denied('elf_hardlink_alias',lambda:os.link('/usr/lib/libc.so.999',
+                                        '/usr/lib/ordinary.elf-alias'))
+Path('/usr/lib/ordinary.elf-replacement').write_text('ordinary')
+denied('elf_alias_replace',lambda:os.replace('/usr/lib/ordinary.elf-replacement',
+                                          '/usr/lib/libc.so.999'))
 print(json.dumps(dict(denials=denials,ordinary_sibling_operations=True,
                      helper_denials=helper_denials,
+                     elf_denials=elf_denials,
                      enforced_label='mano-package-worker (enforce)')))
 '''
 
@@ -89,6 +159,16 @@ def run():
     keyrings.mkdir(mode=0o700)
     configuration.mkdir(mode=0o700)
     (library / 'apt').mkdir(mode=0o700)
+    elf_directory = library / 'mano-elf-fixture'
+    elf_directory.mkdir(mode=0o700)
+    elf_payload = b'Synthetic trusted ELF name; never executed\n'
+    elf_standins = [elf_directory / leaf for leaf in ELF_LEAVES]
+    # Include the directory root form as well as a nested search-directory name.
+    elf_standins.append(library / 'libc.so.999')
+    for path in elf_standins:
+        path.write_bytes(elf_payload)
+    elf_paths = ['/usr/lib/' + str(path.relative_to(library)) for path in elf_standins]
+    elf_paths.append('/usr/lib/mano-elf-fixture/libc.so.absent')
     helper_payload = b'Synthetic privileged helper; never executed\n'
     standins = {}
     for name in HELPERS:
@@ -115,7 +195,7 @@ def run():
     argv += ['--clearenv', '--setenv', 'PATH', '/usr/bin:/bin',
              '--setenv', 'LANG', 'C.UTF-8', '--setenv', 'PYTHONDONTWRITEBYTECODE', '1',
              '--chdir', '/', '/usr/bin/aa-exec', '-p', 'mano-package-worker', '--',
-             '/usr/bin/python3.13', '-c', PROGRAM, json.dumps(HELPERS)]
+             '/usr/bin/python3.13', '-c', PROGRAM, json.dumps(HELPERS), json.dumps(elf_paths)]
     child = subprocess.run(argv, check=False, capture_output=True, text=True, timeout=15)
     assert child.returncode == 0, (child.stdout[-4096:], child.stderr[-4096:])
     proof = json.loads(child.stdout)
@@ -126,12 +206,15 @@ def run():
     assert all(path.read_bytes() == helper_payload for path in standins.values())
     assert (keyrings / 'debian-archive-keyring.pgp').read_bytes() == keyring_payload
     assert not (configuration / 'ld.so.preload').exists()
+    assert all(path.read_bytes() == elf_payload for path in elf_standins)
+    assert not (elf_directory / 'libc.so.absent').exists()
     return dict(scope='real package profile name rules on private CI substitute inodes',
                 policy_sha256=POLICY_SHA256, proof=proof,
                 synthetic_payload_sha256=hashlib.sha256(payload).hexdigest(),
                 synthetic_payload_mode=original_mode,
                 synthetic_helpers_sha256=hashlib.sha256(helper_payload).hexdigest(),
                 synthetic_keyring_sha256=hashlib.sha256(keyring_payload).hexdigest(),
+                synthetic_elf_names_sha256=hashlib.sha256(elf_payload).hexdigest(),
                 host_interpreter_write_attempted=False,
                 production_worker_full_context_verified=False,
                 complete_trusted_runtime_closure_verified=False)
