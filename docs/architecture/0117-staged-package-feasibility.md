@@ -195,3 +195,27 @@ inside the fresh private experiment directory before taking the snapshot. Both
 shadow paths use that read-only bind source. Existing files or symlinks are
 refused; tests verify no reused target is modified. This fixes the identified
 missing-source dependency without claiming later native steps have passed.
+
+## Tree observation and change accounting groundwork
+
+`mano_runtime.package_tree` adds Linux-only descriptor-relative observation for
+future baseline/candidate comparison. It opens directories and regular files
+without following symlinks, records content hashes, uid/gid/mode/times, literal
+symlink targets, special-object types, hard-link relationships and hashes of
+all visible extended attributes, including ACL/capability metadata. It refuses
+foreign filesystem boundaries, detects inode metadata changes while reading,
+and imposes entry/depth/content/metadata/xattr budgets. It explicitly excludes
+.snapshots and reports hard links whose aliases were not all observed.
+
+Its delta function returns all observed additions, removals and modifications;
+it does not whitelist generated state or grant effect authority. Snapshot
+custody, immutable roots and full filesystem validation remain unverified. The
+scanner is not yet wired into the native clone probe. Before using it there,
+create and independently check a read-only baseline clone, run scans under fixed
+resource/Stop limits, and account for every resulting change without dropping
+unknown mutations. Exclusions and unobserved aliases must remain explicit.
+
+Four portable tests cover change accounting, xattr-only differences, tampered
+manifests/exclusions and refusal on Mac before descriptor I/O. Six actual Linux
+filesystem/xattr tests cover bytes/links/FIFO/exclusion, xattrs, external aliases,
+quotas, interruption and mutation; they are skipped locally and require CI.
