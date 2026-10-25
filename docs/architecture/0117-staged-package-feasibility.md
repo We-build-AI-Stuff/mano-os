@@ -160,3 +160,27 @@ publication authority remain false. Ten container test methods include all
 checks both a bound container and a hash-matching malformed container that must
 not reach archive custody. Native confirmation and independent artifact binding
 acceptance are still required. No production executor changes are included.
+
+## Unprivileged inventory worker and listed-path integration
+
+The CI prototype now inventories each acquired archive before creating the clone.
+A fixed systemd unit runs the observer as nobody with an empty capability bounding
+set, NoNewPrivileges, read-only system paths, hidden homes, private network/tmp/
+devices, 512 MiB memory, 16 tasks and a 25-second lifetime. The observer refuses
+non-Linux, root or unmarked contexts and checks all five capability sets are zero.
+It also bounds address space to 384 MiB and CPU to 12 seconds before reading input.
+It binds the archive SHA/length, copies bytes to a fully sealed memfd and invokes
+only fixed dpkg-deb --fsys-tarfile on that descriptor. Tar inventory consumes the
+pipe without extraction or maintainer execution; the decompressor is reaped or
+killed on every failure. Only bounded zero padding may follow the tar terminator.
+
+After the package unit drains, the controller uses an owned candidate root FD to
+compare the inventoried paths. Worker observations are preserved as individual
+hashed artifacts. This integrates previously separate components but is still
+native-unverified. It does not verify unlisted mutations, baseline changes, shared
+directory metadata, timestamps, merged-package ownership, adversarial confinement,
+production native guard/PAM, or publication. All such authority flags stay false.
+Three worker-admission tests refuse Mac/root/unmarked/privileged contexts without
+native execution; an adapter regression verifies complete capabilities and fixed
+unit limits and rejects malformed privilege/authority evidence. These local tests
+do not prove Debian decompression or systemd confinement works.

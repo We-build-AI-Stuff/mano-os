@@ -19,6 +19,42 @@ SPEC.loader.exec_module(probe)
 
 
 class StagedProbeSafetyTests(unittest.TestCase):
+    def test_payload_adapter_requires_complete_unprivileged_worker_evidence(self):
+        import json
+
+        record = dict(filename='sl.deb', sha256='a' * 64, bytes=3,
+                      container={'archive_sha256': 'a' * 64})
+        valid = dict(uid=65534, capabilities={key: 0 for key in
+                     ('CapEff', 'CapPrm', 'CapInh', 'CapBnd', 'CapAmb')},
+                     no_new_privileges=True, sealed_archive_observed=True,
+                     container=record['container'], address_space_limit_bytes=384 * 1024**2,
+                     cpu_limit_seconds=12, production_guard_used=False,
+                     production_pam_used=False, archive_signature_verified=False,
+                     publication_authorized=False)
+        cases = [{}, {'uid': 0}, {'uid': True}, {'capabilities': {}},
+                 {'no_new_privileges': False}, {'sealed_archive_observed': False},
+                 {'container': {}}, {'cpu_limit_seconds': 0}, {'publication_authorized': True}]
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            (base / 'archives').mkdir()
+            (base / 'archives/sl.deb').write_bytes(b'raw')
+            for changes in cases:
+                with self.subTest(changes=changes), patch.object(probe, 'BASE', base), \
+                        patch.object(probe, 'run', return_value=json.dumps(valid | changes)) as run:
+                    if changes:
+                        with self.assertRaises(ValueError):
+                            probe.payload_observation(record)
+                    else:
+                        self.assertEqual(probe.payload_observation(record), valid)
+                        command = run.call_args.args[0]
+                        for option in ('--property=User=nobody',
+                                       '--property=CapabilityBoundingSet=',
+                                       '--property=NoNewPrivileges=yes',
+                                       '--property=MemoryMax=536870912',
+                                       '--property=RuntimeMaxSec=25'):
+                            self.assertIn(option, command)
+                        self.assertEqual(run.call_args.kwargs['input'], b'raw')
+
     def test_acquisition_binds_container_before_archive_is_written(self):
         raw = ar([('debian-binary', b'2.0\n'), ('control.tar', b'x'), ('data.tar', b'y')])
         for data in (raw, b'not a Debian package'):

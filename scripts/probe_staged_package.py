@@ -24,6 +24,7 @@ from mano_broker.package_catalog import load
 from mano_broker.package_solver import fingerprint, prepare_apt_root
 from mano_runtime import recovery
 from mano_runtime.package_apply import NoRedirect, archive_url
+from mano_runtime.package_candidate import compare_payload
 from mano_runtime.package_container import bind as bind_container
 from mano_runtime.package_postconditions import MAX_STATUS, database
 
@@ -209,6 +210,40 @@ def candidate_read(candidate, relative, maximum):
     return recovery.read(path, maximum)
 
 
+def payload_observation(record):
+    """Unprivileged bounded parser; sealed archive input, no extraction."""
+    program = ('import sys;sys.path.insert(0,"/opt/mano-lab/src");'
+               'from mano_runtime.package_payload_worker import main;main()')
+    command = ['/usr/bin/systemd-run', '--quiet', '--pipe', '--wait', '--collect',
+               '--unit=mano-payload-observer-ci.service', '--slice=mano-package.slice',
+               '--property=User=nobody', '--property=NoNewPrivileges=yes',
+               '--property=CapabilityBoundingSet=', '--property=MemoryMax=536870912',
+               '--property=TasksMax=16', '--property=RuntimeMaxSec=25',
+               '--property=KillMode=control-group', '--property=Restart=no',
+               '--property=LimitCORE=0', '--property=LimitNOFILE=64',
+               '--property=ProtectSystem=strict', '--property=ProtectHome=yes',
+               '--property=PrivateTmp=yes', '--property=PrivateDevices=yes',
+               '--property=PrivateNetwork=yes', '--setenv=MANO_DISPOSABLE_CI=1',
+               '/usr/bin/python3', '-I', '-B', '-c', program,
+               record['sha256'], str(record['bytes'])]
+    raw = (BASE / 'archives' / record['filename']).read_bytes()
+    value = json.loads(run(command, input=raw, timeout=35))
+    if (type(value['uid']) is not int or value['uid'] <= 0
+            or set(value['capabilities']) != {'CapEff', 'CapPrm', 'CapInh', 'CapBnd', 'CapAmb'}
+            or any(type(cap) is not int or cap != 0 for cap in value['capabilities'].values())
+            or value['no_new_privileges'] is not True
+            or value['sealed_archive_observed'] is not True
+            or value['container'] != record['container']
+            or value['address_space_limit_bytes'] != 384 * 1024**2
+            or value['cpu_limit_seconds'] != 12):
+        raise ValueError('Bounded unprivileged archive observation required')
+    for key in ('production_guard_used', 'production_pam_used',
+                'archive_signature_verified', 'publication_authorized'):
+        if value[key] is not False:
+            raise ValueError('CI observer cannot grant authority')
+    return value
+
+
 def main():
     if sys.platform != 'linux':
         raise PermissionError('Disposable Debian CI only')
@@ -227,6 +262,7 @@ def main():
     before = live_inputs()
     before_status = recovery.read(Path('/var/lib/dpkg/status'), MAX_STATUS)
     records = acquire()
+    observations = {record['name']: payload_observation(record) for record in records}
     (BASE / 'probe.py').write_text(PROGRAM)
     (BASE / 'probe.py').chmod(0o400)
     (BASE / 'fixture.c').write_text('int mano_stage_fixture(void) { return 42; }\n')
@@ -300,6 +336,13 @@ def main():
                 raise ValueError('Candidate package did not settle')
             if sha((BASE / 'archives' / record['filename']).read_bytes()) != record['sha256']:
                 raise ValueError('Read-only archive custody changed')
+        candidate_fd = os.open(candidate, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            for record in records:
+                record['payload_comparison'] = compare_payload(
+                    candidate_fd, observations[record['name']]['payload'])
+        finally:
+            os.close(candidate_fd)
         if candidate_read(candidate, str(CANARY).lstrip('/'), 4096) != b'candidate-only\n':
             raise ValueError('Candidate mutation missing')
         tar_data = run(['/usr/bin/dpkg-deb', '--fsys-tarfile', str(BASE / 'archives/sl.deb')])
@@ -329,6 +372,9 @@ def main():
     for record in records:
         record['artifact'] = 'staged-archive-' + record['filename']
         artifacts[record['artifact']] = (BASE / 'archives' / record['filename']).read_bytes()
+        record['payload_observation_artifact'] = 'staged-payload-' + record['name'] + '.json'
+        artifacts[record['payload_observation_artifact']] = json.dumps(
+            observations[record['name']], sort_keys=True, allow_nan=False).encode()
     for name, data in artifacts.items():
         with (Path('/opt/mano-lab/evidence') / name).open('xb') as stream:
             stream.write(data)
@@ -336,6 +382,7 @@ def main():
                 scope='CI-only btrfs package/cache staging feasibility; no publication',
                 source=source, candidate=stage, archives=records, worker=proof,
                 archive_container_identity_bound=True,
+                candidate_inventoried_payload_paths_match=True,
                 host_namespaces=host_namespaces,
                 live_input_sha256=before, live_inputs_unchanged=True,
                 candidate_database_transition_verified=True,
