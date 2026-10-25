@@ -61,3 +61,26 @@ References for the fixed privilege-drop and metadata interfaces:
 
 Local safety tests and compilation do not establish native feasibility. Require
 a fresh successful Debian CI report before any claim about the clone experiment.
+
+
+## Payload inventory groundwork
+
+mano_runtime.package_payload inventories an uncompressed tar stream without
+filesystem extraction, command execution or symlink traversal. It records regular
+file hashes, byte counts, numeric ownership/modes/timestamps, literal symlinks and
+resolved in-archive hardlink provenance. Canonical path, duplicate, object-type,
+entry/byte/metadata budgets and interruption checks reject ambiguous inputs.
+Unknown PAX security attributes, hardlink metadata conflicts and symlink-parent
+ambiguity remain explicit unsupported metadata. They are not permission grants.
+
+This module is not yet wired into production or the native staging probe. Its
+caller must bind verified immutable archive identity, isolate the parser under
+process memory/CPU limits, and independently compare the candidate and baseline.
+Tar library extension-header parsing precedes the per-entry checks; these budgets
+are not a claim of constant-memory parsing or a substitute for that worker limit.
+The result explicitly sets signature verification, candidate verification and
+publication authority to false. Merged-package collisions, conffiles, removals,
+aliases and generated state still require a candidate-aware validation contract.
+Sixteen focused local tests cover traversal, duplicates, link chains/cycles,
+unsupported metadata, resource quotas, truncation and revocation. Native use and
+complete candidate validation remain unverified.

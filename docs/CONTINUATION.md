@@ -1,3 +1,15 @@
+## Prepared payload inventory component (not yet wired/native verified)
+Currentremote7eeabfe42c24dd90ab5f33c85a812322d6a2359b CI40171677448:
+qualitySUCCESS, security-labIN_PROGRESS. Let SAMErunfinishbeforepush (workflowcancelsolder).
+Localpackage_payload.py inventories uncompressedtar logicalentries withoutFS
+extraction/execution/symlinklookup. Filehashes/ownership/mode/mtime, literallinks,
+forwardhardlinks, strictcanonicalpaths/duplicates/types andpayload/metadata quotas.
+UnknownPAX attrs/linkmetadata conflicts/symlinkparent ambiguity preservedasunsupported.
+Cooperativecheckpointsincludinghardlinkresolution, no signature/candidate/pubauthority.
+Must run in boundedparserworker: tar extensionheader allocations precedeentrychecks.
+SixteenfocusedlocaltestsPASS. No production/staging integration or completecandidate
+validation yet. Broader publication/activation and originalgoalremainunfinished.
+
 # mano-OS current continuation
 
 ## Scope and rules
