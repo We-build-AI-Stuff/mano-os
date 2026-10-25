@@ -184,3 +184,14 @@ Three worker-admission tests refuse Mac/root/unmarked/privileged contexts withou
 native execution; an adapter regression verifies complete capabilities and fixed
 unit limits and rejects malformed privilege/authority evidence. These local tests
 do not prove Debian decompression or systemd confinement works.
+
+## Native credential-mask lifecycle failure
+
+Run40175533325 at2dbc4b6 got past candidate admission, archive acquisition and
+clone creation but failed when bubblewrap could not find the shared fixture asset
+/usr/lib/mano-os/empty-credential. Package installation was not reached. The
+prototype now creates its own empty file with exclusive creation and mode0400
+inside the fresh private experiment directory before taking the snapshot. Both
+shadow paths use that read-only bind source. Existing files or symlinks are
+refused; tests verify no reused target is modified. This fixes the identified
+missing-source dependency without claiming later native steps have passed.

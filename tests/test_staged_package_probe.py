@@ -19,6 +19,26 @@ SPEC.loader.exec_module(probe)
 
 
 class StagedProbeSafetyTests(unittest.TestCase):
+    def test_private_credential_mask_is_empty_readonly_and_refuses_reuse(self):
+        with tempfile.TemporaryDirectory() as temporary, \
+                patch.object(probe, 'BASE', Path(temporary)):
+            path = probe.credential_mask()
+            self.assertEqual(path, Path(temporary) / 'empty-credential')
+            self.assertEqual(path.read_bytes(), b'')
+            self.assertEqual(path.stat().st_mode & 0o777, 0o400)
+            with self.assertRaises(FileExistsError):
+                probe.credential_mask()
+
+    def test_credential_mask_refuses_an_existing_symlink_without_touching_target(self):
+        with tempfile.TemporaryDirectory() as temporary, \
+                patch.object(probe, 'BASE', Path(temporary)):
+            target = Path(temporary) / 'preserved'
+            target.write_bytes(b'preserved')
+            (Path(temporary) / 'empty-credential').symlink_to(target)
+            with self.assertRaises(FileExistsError):
+                probe.credential_mask()
+            self.assertEqual(target.read_bytes(), b'preserved')
+
     def test_payload_adapter_requires_complete_unprivileged_worker_evidence(self):
         import json
 

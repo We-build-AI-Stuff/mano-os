@@ -210,6 +210,15 @@ def candidate_read(candidate, relative, maximum):
     return recovery.read(path, maximum)
 
 
+def credential_mask():
+    """Create a fresh private empty inode; never depend on a removable fixture."""
+    path = BASE / 'empty-credential'
+    with path.open('xb'):
+        pass
+    path.chmod(0o400)
+    return path
+
+
 def payload_observation(record):
     """Unprivileged bounded parser; sealed archive input, no extraction."""
     program = ('import sys;sys.path.insert(0,"/opt/mano-lab/src");'
@@ -256,6 +265,7 @@ def main():
         raise ValueError('Synthetic fixture library must be absent from live root')
     BASE.mkdir(mode=0o700)  # Refuse reuse; retain all experiment state in this VM.
     (BASE / 'archives').mkdir(mode=0o700)
+    empty = credential_mask()
     with CANARY.open('xb') as stream:
         stream.write(b'live-host-only\n')
     CANARY.chmod(0o600)
@@ -290,8 +300,8 @@ def main():
                 '--tmpfs', '/.snapshots', '--ro-bind', str(BASE / 'archives'), '/run/archives',
                 '--ro-bind', str(BASE / 'probe.py'), '/run/probe.py',
                 '--ro-bind', str(BASE / 'fixture.so'), '/run/stage-fixture.so',
-                '--ro-bind', '/usr/lib/mano-os/empty-credential', '/etc/shadow',
-                '--ro-bind', '/usr/lib/mano-os/empty-credential', '/etc/gshadow',
+                '--ro-bind', str(empty), '/etc/shadow',
+                '--ro-bind', str(empty), '/etc/gshadow',
                 '--clearenv', '--setenv', 'PATH', ENV['PATH'], '--setenv', 'LANG', ENV['LANG'],
                 '--setenv', 'PYTHONDONTWRITEBYTECODE', '1', '--chdir', '/',
                 '/usr/bin/setpriv', '--no-new-privs', '--bounding-set=' + CAPS,
