@@ -27,6 +27,8 @@ from mano_runtime.package_apply import NoRedirect, archive_url
 from mano_runtime.package_candidate import compare_payload
 from mano_runtime.package_container import bind as bind_container
 from mano_runtime.package_postconditions import MAX_STATUS, database
+from mano_runtime.package_tree import delta as tree_delta
+from mano_runtime.package_tree_worker import REQUIRED_CAPS as TREE_CAPS
 
 BASE = Path('/.snapshots/.mano-staged-package-ci')
 CANARY = Path('/usr/share/.mano-staged-ci-control')
@@ -274,6 +276,43 @@ def payload_observation(record):
     return value
 
 
+def tree_observation(role):
+    if role not in {'baseline', 'candidate'}:
+        raise ValueError('Fixed snapshot role required')
+    program = ('import sys;sys.path.insert(0,"/opt/mano-lab/src");'
+               'from mano_runtime.package_tree_worker import main;main()')
+    command = ['/usr/bin/systemd-run', '--quiet', '--pipe', '--wait', '--collect',
+               '--unit=mano-tree-' + role + '-ci.service', '--slice=mano-package.slice',
+               '--property=User=root', '--property=NoNewPrivileges=yes',
+               '--property=CapabilityBoundingSet=CAP_DAC_READ_SEARCH CAP_SYS_ADMIN',
+               '--property=MemoryMax=536870912', '--property=TasksMax=8',
+               '--property=RuntimeMaxSec=90', '--property=KillMode=control-group',
+               '--property=Restart=no', '--property=LimitCORE=0', '--property=LimitNOFILE=256',
+               '--property=ProtectSystem=strict', '--property=ProtectHome=yes',
+               '--property=PrivateTmp=yes', '--property=PrivateDevices=yes',
+               '--property=PrivateNetwork=yes', '--setenv=MANO_DISPOSABLE_CI=1',
+               '/usr/bin/python3', '-I', '-B', '-c', program, role]
+    value = json.loads(run(command, timeout=100))
+    expected_group = '/mano.slice/mano-package.slice/mano-tree-' + role + '-ci.service'
+    if (type(value['uid']) is not int or value['uid'] != 0 or value['observed_role'] != role
+            or value['no_new_privileges'] is not True
+            or value['trusted_controller_collector'] is not True
+            or value['address_space_limit_bytes'] != 384 * 1024**2
+            or value['cpu_limit_seconds'] != 60
+            or value['cgroup_path'] != expected_group
+            or value['memory_max_bytes'] != 512 * 1024**2 or value['pids_max'] != 8
+            or any(type(cap) is not int for cap in value['capabilities'].values())
+            or value['capabilities'] != dict(CapEff=TREE_CAPS, CapPrm=TREE_CAPS,
+                CapBnd=TREE_CAPS, CapInh=0, CapAmb=0)):
+        raise ValueError('Fixed trusted collector context required')
+    for key in ('full_root_verified', 'immutable_root_verified',
+                'production_guard_used', 'adversarial_confinement_verified',
+                'candidate_filesystem_verified', 'publication_authorized'):
+        if value[key] is not False:
+            raise ValueError('Tree collector cannot grant authority')
+    return value
+
+
 def main():
     if sys.platform != 'linux':
         raise PermissionError('Disposable Debian CI only')
@@ -310,6 +349,7 @@ def main():
         baseline_status = candidate_read(baseline, 'var/lib/dpkg/status', MAX_STATUS)
         if baseline_status != before_status:
             raise ValueError('Read-only baseline package state changed')
+        baseline_tree = tree_observation('baseline')
         argv = ['/usr/bin/bwrap', '--die-with-parent', '--new-session', '--unshare-pid',
                 '--unshare-net', '--unshare-ipc', '--unshare-uts', '--unshare-cgroup',
                 '--bind', str(candidate), '/', '--proc', '/proc', '--dev', '/dev',
@@ -359,6 +399,12 @@ def main():
         if (run(['/usr/bin/btrfs', 'property', 'get', str(baseline), 'ro']) != baseline_property
                 or candidate_read(baseline, 'var/lib/dpkg/status', MAX_STATUS) != baseline_status):
             raise ValueError('Baseline custody changed during staged experiment')
+        candidate_tree = tree_observation('candidate')
+        baseline_after = tree_observation('baseline')
+        if (baseline_after['manifest_sha256'] != baseline_tree['manifest_sha256']
+                or baseline_after['entries'] != baseline_tree['entries']):
+            raise ValueError('Baseline tree changed during staged experiment')
+        changes = tree_delta(baseline_tree, candidate_tree)
         after = candidate_read(candidate, 'var/lib/dpkg/status', MAX_STATUS)
         old, new = database(before_status), database(after)
         approved = {(r['name'], r['architecture']) for r in records}
@@ -404,6 +450,10 @@ def main():
         'staged-fixture.so': (BASE / 'fixture.so').read_bytes(),
         'staged-baseline-property': baseline_property,
         'staged-baseline-status': baseline_status,
+        'staged-tree-baseline.json': json.dumps(baseline_tree, sort_keys=True).encode(),
+        'staged-tree-baseline-after.json': json.dumps(baseline_after, sort_keys=True).encode(),
+        'staged-tree-candidate.json': json.dumps(candidate_tree, sort_keys=True).encode(),
+        'staged-tree-changes.json': json.dumps(changes, sort_keys=True).encode(),
     }
     for record in records:
         record['artifact'] = 'staged-archive-' + record['filename']
@@ -418,6 +468,7 @@ def main():
                 scope='CI-only btrfs package/cache staging feasibility; no publication',
                 source=source, candidate=stage, archives=records, worker=proof,
                 live_source=live_source, source_read_only=True,
+                tree_observation_reported=True, tree_changes_authorized=False,
                 archive_container_identity_bound=True,
                 candidate_inventoried_payload_paths_match=True,
                 host_namespaces=host_namespaces,

@@ -19,6 +19,37 @@ SPEC.loader.exec_module(probe)
 
 
 class StagedProbeSafetyTests(unittest.TestCase):
+    def test_tree_adapter_requires_fixed_role_privileges_and_kernel_limits(self):
+        import json
+
+        caps = dict(CapEff=probe.TREE_CAPS, CapPrm=probe.TREE_CAPS,
+                    CapBnd=probe.TREE_CAPS, CapInh=0, CapAmb=0)
+        valid = dict(uid=0, observed_role='baseline', no_new_privileges=True,
+                     trusted_controller_collector=True, address_space_limit_bytes=384 * 1024**2,
+                     cpu_limit_seconds=60, capabilities=caps, memory_max_bytes=512 * 1024**2,
+                     pids_max=8, cgroup_path='/mano.slice/mano-package.slice/'
+                     'mano-tree-baseline-ci.service', full_root_verified=False,
+                     immutable_root_verified=False, production_guard_used=False,
+                     adversarial_confinement_verified=False, candidate_filesystem_verified=False,
+                     publication_authorized=False)
+        for changes in ({}, {'uid': 1000}, {'observed_role': 'candidate'}, {'memory_max_bytes': 0},
+                        {'pids_max': 0}, {'publication_authorized': True},
+                        {'capabilities': caps | {'CapInh': False}}):
+            with self.subTest(changes=changes), patch.object(probe, 'run',
+                    return_value=json.dumps(valid | changes)) as run:
+                if changes:
+                    with self.assertRaises(ValueError):
+                        probe.tree_observation('baseline')
+                else:
+                    self.assertEqual(probe.tree_observation('baseline'), valid)
+                    command = run.call_args.args[0]
+                    self.assertIn('--property=MemoryMax=536870912', command)
+                    self.assertIn('--property=RuntimeMaxSec=90', command)
+        with patch.object(probe, 'run') as run:
+            with self.assertRaises(ValueError):
+                probe.tree_observation('../outside')
+            run.assert_not_called()
+
     def clone_metadata(self):
         return [dict(uuid='live', parent_uuid='-', subvolume_id=1),
                 dict(uuid='baseline', parent_uuid='live', subvolume_id=2),

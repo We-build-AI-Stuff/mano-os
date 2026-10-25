@@ -259,3 +259,29 @@ staged basenames, and sends exact NUL-delimited filenames to remote GNU tar with
 wildcards. Invalid paths/options/control bytes/hashes fail before list output;
 pipefail preserves errors across the transfer. Three portable regressions and
 a Linux GNU tar archive-content regression cover this contract.
+
+## Trusted tree collector integration (native unverified)
+
+The prototype now scans the read-only baseline before package work, scans the
+candidate after package drainage, then scans the baseline again. Both baseline
+manifests must agree. It exports all three manifests and the complete observed
+change report; additions/removals/modifications are not whitelisted or authorized.
+The fixed .snapshots exclusion and unobserved hard-link aliases remain explicit.
+This does not establish complete candidate validation or publication eligibility.
+
+The collector is trusted controller code, not an adversarial executor. It accepts
+only baseline/candidate roles under the private Root-owned experiment directory.
+Its CI-only guard refuses Mac, non-Root, unmarked/non-VM contexts, unexpected
+capabilities and missing NoNewPrivileges. It retains DAC_READ_SEARCH and SYS_ADMIN
+to read otherwise-hidden trusted.* extended-attribute names. That privilege is
+part of its trusted computing base; no adversarial confinement claim is made.
+It executes trusted live-system Python code, never code from the candidate.
+
+The fixed transient unit has a read-only system view, hidden homes, private
+network/tmp/devices, 512 MiB memory, eight tasks and a 90-second runtime. The worker
+checks its exact kernel cgroup path, memory.max and pids.max, and separately sets
+384 MiB address-space, 60-second CPU, zero file-size/core limits. Six admission
+regressions and an adapter regression test wrong roles, contexts, capabilities,
+limits and private-directory ownership without running a Root collector locally.
+Native scans, resource feasibility and independent tree-artifact acceptance are
+still required. Production guard/PAM and change-authorization flags remain false.
