@@ -113,3 +113,28 @@ fetches indexes through host mirror configuration. Official-site, trusted-origin
 archive hash, size, architecture and raw-record identity checks remain required.
 Four additional local tests cover private cache setup, unsettled state, changed
 custody and invalid catalog rejection. Native confirmation is still required.
+
+## Descriptor-relative payload path comparison
+
+`mano_runtime.package_candidate.compare_payload` accepts an already-owned root
+file descriptor and an inventoried manifest. It verifies manifest integrity and
+requires supported metadata. Each parent component opens with directory and
+no-follow flags; leaf metadata uses no-follow lookup. Regular files must match
+size, SHA256, ownership and permissions and retain stable inode metadata through
+reading. Symlinks must match literal targets; hard links must share the expected
+regular file's device and inode. Cancellation propagates and the caller's root
+file descriptor remains owned by the caller.
+
+The caller must drain writers and retain exclusive private custody. This helper
+observes only listed payload paths. It does not scan unlisted mutations, compare
+baseline changes, resolve merged-package conflicts, verify timestamps or shared
+directory metadata, authenticate an archive, or authorize publication. Those
+fields remain explicitly false. Parent symlinks are refused, including legitimate
+merged-/usr aliases until a baseline-aware policy exists. This helper is not yet
+wired into production or the staging probe; immutable archive binding and the
+resource-limited inventory worker remain necessary before integration.
+
+Fifteen local filesystem regressions cover matching bytes/links, same-size content
+substitution, copied hard links, mode changes, symlink and FIFO substitution,
+parent aliases, missing paths, manifest changes, unsupported metadata, unlisted
+file evidence limits, interruption, concurrent metadata changes and root FD type.
