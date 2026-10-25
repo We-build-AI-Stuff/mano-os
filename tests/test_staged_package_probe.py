@@ -19,6 +19,42 @@ SPEC.loader.exec_module(probe)
 
 
 class StagedProbeSafetyTests(unittest.TestCase):
+    def clone_metadata(self):
+        return [dict(uuid='live', parent_uuid='-', subvolume_id=1),
+                dict(uuid='baseline', parent_uuid='live', subvolume_id=2),
+                dict(uuid='candidate', parent_uuid='baseline', subvolume_id=3)]
+
+    def test_clone_pair_checks_ancestry_and_kernel_readonly_properties(self):
+        metadata = self.clone_metadata()
+        outputs = [b'', b'ro=true\n', b'', b'ro=false\n']
+        with patch.object(probe.recovery, 'subvolume', side_effect=metadata), \
+                patch.object(probe, 'run', side_effect=outputs) as run:
+            self.assertEqual(probe.clone_pair(), (*metadata, b'ro=true\n'))
+            commands = [call.args[0] for call in run.call_args_list]
+            self.assertEqual(commands[0], ['/usr/bin/btrfs', 'subvolume', 'snapshot', '-r', '/',
+                                           str(probe.BASE / 'baseline')])
+            self.assertEqual(commands[2], ['/usr/bin/btrfs', 'subvolume', 'snapshot',
+                                           str(probe.BASE / 'baseline'),
+                                           str(probe.BASE / 'candidate')])
+
+    def test_clone_pair_rejects_wrong_ancestry_reused_ids_or_wrong_properties(self):
+        for phase, field, value in ((1, 'parent_uuid', 'wrong'), (1, 'uuid', 'live'),
+                                    (1, 'subvolume_id', 1), (2, 'parent_uuid', 'live'),
+                                    (2, 'uuid', 'baseline'), (2, 'subvolume_id', 1),
+                                    (1, 'property', b'ro=false\n'),
+                                    (2, 'property', b'ro=true\n')):
+            metadata = self.clone_metadata()
+            outputs = [b'', b'ro=true\n', b'', b'ro=false\n']
+            if field == 'property':
+                outputs[1 if phase == 1 else 3] = value
+            else:
+                metadata[phase][field] = value
+            with self.subTest(phase=phase, field=field, value=value), \
+                    patch.object(probe.recovery, 'subvolume', side_effect=metadata), \
+                    patch.object(probe, 'run', side_effect=outputs):
+                with self.assertRaises(ValueError):
+                    probe.clone_pair()
+
     def test_private_credential_mask_is_empty_readonly_and_refuses_reuse(self):
         with tempfile.TemporaryDirectory() as temporary, \
                 patch.object(probe, 'BASE', Path(temporary)):

@@ -226,3 +226,19 @@ compression formats. It preserves the selected required payload rather than
 confusing a trailing extension with a second required payload. A regression
 covers that case. Independent acceptance selects the bound required data member;
 it does not choose a payload by scanning for any matching filename suffix.
+
+## Read-only baseline before candidate creation
+
+The native probe now first creates a read-only btrfs baseline from the live root,
+then a distinct writable candidate from that baseline. It checks kernel ro=true/
+ro=false properties, unique UUIDs/subvolume IDs and both parent relationships.
+The baseline package status must match the pre-effect bytes, and its read-only
+property and status are rechecked after the package worker drains. Raw property
+and status bytes are exported. No snapshots are published or deleted.
+
+This prepares stable inputs for the tree scanner but does not yet run that scanner
+or establish whole-tree immutability/validation. Two mocked-command tests verify
+the exact clone sequence and reject eight ancestry/identity/property failures.
+They do not execute btrfs locally. Native baseline evidence requires fresh CI and
+explicit --staged-readonly-baseline independent acceptance; older artifacts must
+not be interpreted as containing a read-only source baseline.

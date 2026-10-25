@@ -219,6 +219,27 @@ def credential_mask():
     return path
 
 
+def clone_pair():
+    """Preserve an immutable baseline before making the writable candidate."""
+    baseline, candidate = BASE / 'baseline', BASE / 'candidate'
+    live = recovery.subvolume(Path('/'))
+    run(['/usr/bin/btrfs', 'subvolume', 'snapshot', '-r', '/', str(baseline)])
+    source = recovery.subvolume(baseline)
+    readonly = run(['/usr/bin/btrfs', 'property', 'get', str(baseline), 'ro'])
+    if (source['uuid'] == live['uuid'] or source['parent_uuid'] != live['uuid']
+            or source['subvolume_id'] == live['subvolume_id'] or readonly.strip() != b'ro=true'):
+        raise ValueError('Distinct read-only baseline required')
+    run(['/usr/bin/btrfs', 'subvolume', 'snapshot', str(baseline), str(candidate)])
+    stage = recovery.subvolume(candidate)
+    writable = run(['/usr/bin/btrfs', 'property', 'get', str(candidate), 'ro'])
+    if (stage['parent_uuid'] != source['uuid']
+            or stage['uuid'] in {source['uuid'], live['uuid']}
+            or stage['subvolume_id'] in {source['subvolume_id'], live['subvolume_id']}
+            or writable.strip() != b'ro=false'):
+        raise ValueError('Distinct writable COW clone required')
+    return live, source, stage, readonly
+
+
 def payload_observation(record):
     """Unprivileged bounded parser; sealed archive input, no extraction."""
     program = ('import sys;sys.path.insert(0,"/opt/mano-lab/src");'
@@ -284,11 +305,11 @@ def main():
     with recovery.locked():
         if live_inputs() != before:
             raise ValueError('Live baseline changed before staged snapshot')
-        source = recovery.subvolume(Path('/'))
-        run(['/usr/bin/btrfs', 'subvolume', 'snapshot', '/', str(candidate)])
-        stage = recovery.subvolume(candidate)
-        if stage['uuid'] == source['uuid'] or stage['parent_uuid'] != source['uuid']:
-            raise ValueError('Distinct writable COW clone required')
+        live_source, source, stage, baseline_property = clone_pair()
+        baseline = BASE / 'baseline'
+        baseline_status = candidate_read(baseline, 'var/lib/dpkg/status', MAX_STATUS)
+        if baseline_status != before_status:
+            raise ValueError('Read-only baseline package state changed')
         argv = ['/usr/bin/bwrap', '--die-with-parent', '--new-session', '--unshare-pid',
                 '--unshare-net', '--unshare-ipc', '--unshare-uts', '--unshare-cgroup',
                 '--bind', str(candidate), '/', '--proc', '/proc', '--dev', '/dev',
@@ -335,6 +356,9 @@ def main():
             raise ValueError('Live package or loader inputs changed in staged experiment')
         if FIXTURE_LIBRARY.exists() or FIXTURE_LIBRARY.is_symlink():
             raise ValueError('Synthetic fixture library appeared in live root')
+        if (run(['/usr/bin/btrfs', 'property', 'get', str(baseline), 'ro']) != baseline_property
+                or candidate_read(baseline, 'var/lib/dpkg/status', MAX_STATUS) != baseline_status):
+            raise ValueError('Baseline custody changed during staged experiment')
         after = candidate_read(candidate, 'var/lib/dpkg/status', MAX_STATUS)
         old, new = database(before_status), database(after)
         approved = {(r['name'], r['architecture']) for r in records}
@@ -378,6 +402,8 @@ def main():
         'staged-loader-cache-listing': listing,
         'staged-fixture.c': (BASE / 'fixture.c').read_bytes(),
         'staged-fixture.so': (BASE / 'fixture.so').read_bytes(),
+        'staged-baseline-property': baseline_property,
+        'staged-baseline-status': baseline_status,
     }
     for record in records:
         record['artifact'] = 'staged-archive-' + record['filename']
@@ -391,6 +417,7 @@ def main():
     return dict(schema_version='1.0', source_revision=revision,
                 scope='CI-only btrfs package/cache staging feasibility; no publication',
                 source=source, candidate=stage, archives=records, worker=proof,
+                live_source=live_source, source_read_only=True,
                 archive_container_identity_bound=True,
                 candidate_inventoried_payload_paths_match=True,
                 host_namespaces=host_namespaces,
