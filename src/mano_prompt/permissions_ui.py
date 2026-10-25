@@ -136,6 +136,13 @@ class PermissionsWindow(Gtk.Window):
         if self.worker.busy or not self.alive or not self.valid():
             return
         try:
+            # Accessibility activation need not move focus like a pointer click.
+            # Leave the editor and show the exact numeric values being submitted,
+            # with no selected digit/caret obscuring the pending request.
+            self.ask.grab_focus()
+            for spin in self.limits.values():
+                spin.set_text(str(spin.get_value_as_int()))
+                spin.select_region(0, 0)
             mode = next(key for key, button in self.choices.items() if button.get_active())
             args = dict(mode=mode, **{key: spin.get_value_as_int()
                                      for key, spin in self.limits.items()})

@@ -1,3 +1,31 @@
+## Next helper-name and permission-display correction prepared
+Prior4695e992e083fb7601074336f52e648e7a013aec CI40157068510 ALL3SUCCESS.
+Artifact12585523188 ZIP13369891B SHA
+f38f71d5f13bd0095413e252f6f95be3d86834a222c652f6eae0219ced225f48
+freshmetadata/bytesverified. Full54hash45flag+actualworker/installedworkerlabel,
+realprofileprivate-namefixture, allpackage/PAM/Stop/Brokerdeath/commitreplyloss/
+recovery/removaldomainchecks PASSED. outputs/pr134-worker-policy-security.json/.zip.
+SIXfreshGUIoriginals+FOURcrops actuallyVIEWED/hash-preserved:
+acceptance-pr134-worker-policy/inspection.json. WidthchangeDIDNOTfixafter-stock
+pendingvalue: renders12 whileeffective120clear. No fixed-display claim.
+
+Preparednextsource extendsprofilewithfixedRoothelpernames usedbycatalog/recovery/
+runtimelifecycle, all/usr/lib/apt andarchivekeyrings. BoundsourceSHAupdated.
+Privatefixture substitutes17helperfiles pluskeyring andchecksMACwritedenials and
+unchangeddummybytes; no realhelper/interpreterwrites. DoesNOTverifytransitiveELF/
+loader/helperaliasclosure. Alloriginalprivate-namecases retained.
+Permissionsbutton nowmovesfocusoutofeditor,normalizesdisplayfromnumericvalue and
+clearsselection beforepreparingrequest. No authority/PAM policychange. Stock
+AT-SPI contractrecordsrawtextbuffers+numericvalues forpending/effective captures
+withoutinjectingobserver/appcode. Rootcauseofremainingrenderdefect notyetproven;
+thisdisplaycorrectionrequiresfreshnativecapture, notanotherwidth-onlyclaim.
+Ruff/privateembeddedprogram/shell/diff and6policy-bindingtestsPASS. Full563test
+localrerun stillprogressesthroughdependencycachefiles; no passclaim untilterminal.
+FreshrequiredCI willrunalltests; prior4695fullsuite563/48skips remains historical.
+Do notrunNative/AppArmoronMac. CompleteELF/helper/loader/persistenceclosure and
+hostUnixIPCdenial stillunfinished; no mergeeligible. No signed/liveprovider/
+physicalreleaseclaims. OriginalgoalACTIVE.
+
 ## Prepared real worker path-policy integration (native validation required)
 PriorHEAD1eb04362d7240b27911e203c7c044c135b564caf CI40068585791 ALL3SUCCESS.
 Fullindependent54hash/45flag acceptance PASSED, plus syntheticAppArmor mechanism,

@@ -343,3 +343,30 @@ required for the integration and the numeric-field sizing change.
 
 Parser stdin and cache behavior reference:
 https://manpages.debian.org/trixie/apparmor/apparmor_parser.8.en.html
+
+
+The real worker integration at 4695e99 passed CI40157068510 and independent full
+inspection: 54 hashes/45 regression flags, actual and installed worker label,
+private name-rule fixture, package/PAM/Stop/Broker-death/commit-reply-loss/recovery
+flows and removal-domain checks. All six fresh captures and four numeric crops
+were viewed. The width increase did not fix one pending stock duration rendering
+as 12 instead of complete 120; the effective display remains correct. The next UI
+change moves focus from the editor, normalizes the displayed numeric value and
+clears selection before request preparation. Accessibility text-buffer diagnostics
+will accompany fresh pixel inspection; no successful display fix is claimed yet.
+
+The next path-policy increment protects the fixed privileged helper command names
+used by catalog, recovery and runtime administration, the APT helper directory and
+archive-keyring inputs. A private namespace supplies seventeen synthetic helper
+files and a dummy archive keyring at those paths, requiring write denials and
+unchanged bytes. It never writes real helper/interpreter files. Protecting these
+names is not a transitive ELF, symlink-target, loader-cache or persistence closure.
+The known unverified host Unix IPC surface remains a separate required review;
+no exploit or complete IPC denial is claimed from static inspection. These changes
+require a fresh native run and do not make the draft merge eligible.
+
+The expanded policy's ownership/content binding passes six local tests, together
+with static and syntax checks. The broad local rerun is still reading dependency
+caches and is not reported complete; the new required quality job reruns the full
+suite. No native helper-name/keyring enforcement or display correction is claimed
+until the fresh CI artifact and rendered captures are inspected.

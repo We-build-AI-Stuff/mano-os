@@ -14,8 +14,15 @@ from pathlib import Path
 from probe_package_plans import guard
 
 BASE = Path('/run/mano-lab-policy-names')
+HELPERS = (
+    '/usr/bin/btrfs', '/usr/bin/bwrap', '/usr/bin/dpkg-deb', '/usr/bin/dpkg-query',
+    '/usr/bin/findmnt', '/usr/bin/gpgv', '/usr/bin/mount', '/usr/bin/passwd',
+    '/usr/bin/snapper', '/usr/bin/systemctl', '/usr/bin/systemd-sysusers',
+    '/usr/bin/systemd-tmpfiles', '/usr/bin/umount', '/usr/sbin/runuser',
+    '/usr/sbin/usermod', '/usr/sbin/apparmor_parser', '/usr/lib/apt/apt-helper',
+)
 PROGRAM = r'''
-import errno,json,os,stat
+import errno,json,os,stat,sys
 from pathlib import Path
 assert Path('/proc/self/attr/current').read_text().strip()=='mano-package-worker (enforce)'
 assert not os.statvfs('/usr/bin').f_flag & os.ST_RDONLY
@@ -43,7 +50,17 @@ denied('hardlink_write_alias',lambda:os.link('/usr/bin/python3.999','/usr/bin/or
 denied('absent_zip_entry',lambda:Path('/usr/lib/python313.zip').write_text('changed'))
 denied('clear_execution_profile',lambda:Path('/proc/self/attr/current').write_text(
                                             'changeprofile unconfined'))
+denied('archive_keyring_write',lambda:Path(
+ '/usr/share/keyrings/debian-archive-keyring.pgp').write_text('changed'))
+helper_denials={}
+for name in json.loads(sys.argv[1]):
+ try:Path(name).write_text('changed')
+ except OSError as e:
+  assert e.errno in {errno.EACCES,errno.EPERM},(name,e.errno)
+  helper_denials[name]=e.errno
+ else:raise AssertionError('Privileged helper name was writable: '+name)
 print(json.dumps(dict(denials=denials,ordinary_sibling_operations=True,
+                     helper_denials=helper_denials,
                      enforced_label='mano-package-worker (enforce)')))
 '''
 
@@ -54,9 +71,22 @@ def run():
 
     BASE.mkdir(mode=0o700)
     binary = BASE / 'bin'
+    system_binary = BASE / 'sbin'
     library = BASE / 'lib'
+    keyrings = BASE / 'keyrings'
     binary.mkdir(mode=0o700)
+    system_binary.mkdir(mode=0o700)
     library.mkdir(mode=0o700)
+    keyrings.mkdir(mode=0o700)
+    (library / 'apt').mkdir(mode=0o700)
+    helper_payload = b'Synthetic privileged helper; never executed\n'
+    standins = {}
+    for name in HELPERS:
+        relative = name.removeprefix('/usr/')
+        standins[name] = BASE / relative
+        standins[name].write_bytes(helper_payload)
+    keyring_payload = b'CI-only synthetic archive trust input\n'
+    (keyrings / 'debian-archive-keyring.pgp').write_bytes(keyring_payload)
     payload = b'Synthetic future interpreter; never executed\n'
     (binary / 'python3.999').write_bytes(payload)
     (binary / 'python3').symlink_to('python3.13')
@@ -65,14 +95,16 @@ def run():
             '--unshare-net', '--unshare-ipc', '--unshare-uts', '--unshare-cgroup',
             '--ro-bind', '/', '/', '--proc', '/proc', '--dev', '/dev',
             '--tmpfs', '/run', '--tmpfs', '/tmp', '--tmpfs', '/root', '--tmpfs', '/home',
-            '--bind', str(binary), '/usr/bin', '--bind', str(library), '/usr/lib']
+            '--bind', str(binary), '/usr/bin', '--bind', str(system_binary), '/usr/sbin',
+            '--bind', str(library), '/usr/lib',
+            '--bind', str(keyrings), '/usr/share/keyrings']
     for path in ('/usr/bin/python3.13', '/usr/bin/aa-exec', '/usr/lib/python3.13',
                  '/usr/lib/python3', '/usr/lib/x86_64-linux-gnu'):
         argv += ['--ro-bind', path, path]
     argv += ['--clearenv', '--setenv', 'PATH', '/usr/bin:/bin',
              '--setenv', 'LANG', 'C.UTF-8', '--setenv', 'PYTHONDONTWRITEBYTECODE', '1',
              '--chdir', '/', '/usr/bin/aa-exec', '-p', 'mano-package-worker', '--',
-             '/usr/bin/python3.13', '-c', PROGRAM]
+             '/usr/bin/python3.13', '-c', PROGRAM, json.dumps(HELPERS)]
     child = subprocess.run(argv, check=False, capture_output=True, text=True, timeout=15)
     assert child.returncode == 0, (child.stdout[-4096:], child.stderr[-4096:])
     proof = json.loads(child.stdout)
@@ -80,10 +112,14 @@ def run():
     assert (binary / 'python3.999').stat().st_mode & 0o7777 == original_mode
     assert os.readlink(binary / 'python3') == 'python3.13'
     assert not (library / 'python313.zip').exists()
+    assert all(path.read_bytes() == helper_payload for path in standins.values())
+    assert (keyrings / 'debian-archive-keyring.pgp').read_bytes() == keyring_payload
     return dict(scope='real package profile name rules on private CI substitute inodes',
                 policy_sha256=POLICY_SHA256, proof=proof,
                 synthetic_payload_sha256=hashlib.sha256(payload).hexdigest(),
                 synthetic_payload_mode=original_mode,
+                synthetic_helpers_sha256=hashlib.sha256(helper_payload).hexdigest(),
+                synthetic_keyring_sha256=hashlib.sha256(keyring_payload).hexdigest(),
                 host_interpreter_write_attempted=False,
                 production_worker_full_context_verified=False,
                 complete_trusted_runtime_closure_verified=False)

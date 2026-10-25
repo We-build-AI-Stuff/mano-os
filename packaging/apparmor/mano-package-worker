@@ -29,6 +29,16 @@ profile mano-package-worker flags=(mediate_deleted) {
   deny /etc/python3*/ w,
   deny /etc/python3*/** wkl,
 
+  # Fixed privileged helpers used for catalog, recovery and runtime lifecycle.
+  # Protect command names; this is not their transitive ELF/loader closure.
+  deny /{usr/,}bin/{btrfs,bwrap,dpkg-deb,dpkg-query,findmnt,gpgv*,mount,passwd,snapper,systemctl,systemd-sysusers,systemd-tmpfiles,umount} wkl,
+  deny /{usr/,}sbin/{runuser,usermod} wkl,
+  deny /usr/lib/apt/ w,
+  deny /usr/lib/apt/** wkl,
+  # The signed catalog's trust input must not be replaced by a package script.
+  deny /usr/share/keyrings/ w,
+  deny /usr/share/keyrings/** wkl,
+
   # No script can change the policy, its loader or its current execution label.
   deny /{usr/,}bin/aa-exec wkl,
   deny /{usr/,}sbin/apparmor_parser wkl,
