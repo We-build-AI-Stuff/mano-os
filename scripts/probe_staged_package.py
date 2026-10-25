@@ -276,7 +276,7 @@ def payload_observation(record):
     return value
 
 
-def tree_observation(role):
+def tree_observation(role, *, admission_only=False):
     if role not in {'baseline', 'candidate'}:
         raise ValueError('Fixed snapshot role required')
     program = ('import sys;sys.path.insert(0,"/opt/mano-lab/src");'
@@ -285,6 +285,7 @@ def tree_observation(role):
                '--unit=mano-tree-' + role + '-ci.service', '--slice=mano-package.slice',
                '--property=User=root', '--property=NoNewPrivileges=yes',
                '--property=CapabilityBoundingSet=CAP_DAC_READ_SEARCH CAP_SYS_ADMIN',
+               '--property=AmbientCapabilities=CAP_DAC_READ_SEARCH CAP_SYS_ADMIN',
                '--property=MemoryMax=536870912', '--property=TasksMax=8',
                '--property=RuntimeMaxSec=90', '--property=KillMode=control-group',
                '--property=Restart=no', '--property=LimitCORE=0', '--property=LimitNOFILE=256',
@@ -292,18 +293,21 @@ def tree_observation(role):
                '--property=PrivateTmp=yes', '--property=PrivateDevices=yes',
                '--property=PrivateNetwork=yes', '--setenv=MANO_DISPOSABLE_CI=1',
                '/usr/bin/python3', '-I', '-B', '-c', program, role]
+    if admission_only:
+        command.append('--admission-only')
     value = json.loads(run(command, timeout=100))
     expected_group = '/mano.slice/mano-package.slice/mano-tree-' + role + '-ci.service'
     if (type(value['uid']) is not int or value['uid'] != 0 or value['observed_role'] != role
             or value['no_new_privileges'] is not True
             or value['trusted_controller_collector'] is not True
+            or value['admission_only'] is not admission_only
             or value['address_space_limit_bytes'] != 384 * 1024**2
             or value['cpu_limit_seconds'] != 60
             or value['cgroup_path'] != expected_group
             or value['memory_max_bytes'] != 512 * 1024**2 or value['pids_max'] != 8
             or any(type(cap) is not int for cap in value['capabilities'].values())
-            or value['capabilities'] != dict(CapEff=TREE_CAPS, CapPrm=TREE_CAPS,
-                CapBnd=TREE_CAPS, CapInh=0, CapAmb=0)):
+            or value['capabilities'] != dict.fromkeys(
+                ('CapEff', 'CapPrm', 'CapBnd', 'CapInh', 'CapAmb'), TREE_CAPS)):
         raise ValueError('Fixed trusted collector context required')
     for key in ('full_root_verified', 'immutable_root_verified',
                 'production_guard_used', 'adversarial_confinement_verified',
@@ -488,4 +492,13 @@ def main():
 
 
 if __name__ == '__main__':
-    print(json.dumps(main(), sort_keys=True))
+    if sys.argv[1:] == ['--check-tree-admission']:
+        if sys.platform != 'linux':
+            raise PermissionError('Disposable Debian CI only')
+        guard()
+        recovery.root_guard()
+        print(json.dumps(tree_observation('baseline', admission_only=True), sort_keys=True))
+    elif sys.argv[1:]:
+        raise ValueError('Fixed staging or admission probe only')
+    else:
+        print(json.dumps(main(), sort_keys=True))

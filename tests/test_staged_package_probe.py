@@ -23,8 +23,8 @@ class StagedProbeSafetyTests(unittest.TestCase):
         import json
 
         caps = dict(CapEff=probe.TREE_CAPS, CapPrm=probe.TREE_CAPS,
-                    CapBnd=probe.TREE_CAPS, CapInh=0, CapAmb=0)
-        valid = dict(uid=0, observed_role='baseline', no_new_privileges=True,
+                    CapBnd=probe.TREE_CAPS, CapInh=probe.TREE_CAPS, CapAmb=probe.TREE_CAPS)
+        valid = dict(uid=0, observed_role='baseline', admission_only=False, no_new_privileges=True,
                      trusted_controller_collector=True, address_space_limit_bytes=384 * 1024**2,
                      cpu_limit_seconds=60, capabilities=caps, memory_max_bytes=512 * 1024**2,
                      pids_max=8, cgroup_path='/mano.slice/mano-package.slice/'
@@ -45,6 +45,14 @@ class StagedProbeSafetyTests(unittest.TestCase):
                     command = run.call_args.args[0]
                     self.assertIn('--property=MemoryMax=536870912', command)
                     self.assertIn('--property=RuntimeMaxSec=90', command)
+                    ambient = ('--property=AmbientCapabilities='
+                               'CAP_DAC_READ_SEARCH CAP_SYS_ADMIN')
+                    self.assertIn(ambient, command)
+                    with patch.object(probe, 'run', return_value=json.dumps(
+                            valid | {'admission_only': True})) as admission_run:
+                        observed = probe.tree_observation('baseline', admission_only=True)
+                        self.assertIs(observed['admission_only'], True)
+                        self.assertEqual(admission_run.call_args.args[0][-1], '--admission-only')
         with patch.object(probe, 'run') as run:
             with self.assertRaises(ValueError):
                 probe.tree_observation('../outside')

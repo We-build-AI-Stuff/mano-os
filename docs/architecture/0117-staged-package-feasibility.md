@@ -285,3 +285,27 @@ regressions and an adapter regression test wrong roles, contexts, capabilities,
 limits and private-directory ownership without running a Root collector locally.
 Native scans, resource feasibility and independent tree-artifact acceptance are
 still required. Production guard/PAM and change-authorization flags remain false.
+
+
+## Collector admission diagnostics and explicit inheritance
+
+Run 40221230798 at 80c371c passed quality but failed at the first collector guard
+before package execution. The combined capability/NoNewPrivileges assertion failed;
+actual values were not logged, so the individual failing field is unproven. The
+failed artifact and raw log are preserved without an acceptance claim.
+
+The unit now explicitly requests the same DAC_READ_SEARCH/SYS_ADMIN pair in its
+ambient set as in its bounding set. The contract requires exactly that two-bit
+mask in all five capability sets, with NoNewPrivileges enabled. Effective,
+permitted and bounding privileges are not expanded. Inheritance is explicit for
+fixed trusted helper execution; this is still trusted Root inspection code, not
+an adversarial sandbox. Denial diagnostics emit only selected capability/NNP
+metadata. No arbitrary process status, user input or credential values are logged.
+
+A fixed admission-only mode checks the same privilege and kernel resource context
+without opening the private directory or any snapshot. CI runs it after the first
+btrfs boot verification, before the expensive Broker/PAM test chain. Successful
+context is exported separately; real scans must explicitly report admission_only
+as false. Independent acceptance rejects an admission record masquerading as a
+scan. Local mocked checks and synthetic acceptance are not native confirmation
+of the admission correction or the actual collector.

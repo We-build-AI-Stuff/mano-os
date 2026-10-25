@@ -1,3 +1,5 @@
+import io
+import json
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -8,7 +10,8 @@ from mano_runtime import package_tree_worker as worker
 class TreeCollectorAdmissionTests(unittest.TestCase):
     def status(self, **changes):
         values = dict(CapEff=worker.REQUIRED_CAPS, CapPrm=worker.REQUIRED_CAPS,
-                      CapBnd=worker.REQUIRED_CAPS, CapInh=0, CapAmb=0, NoNewPrivs=1)
+                      CapBnd=worker.REQUIRED_CAPS, CapInh=worker.REQUIRED_CAPS,
+                      CapAmb=worker.REQUIRED_CAPS, NoNewPrivs=1)
         values.update(changes)
         return '\n'.join(key+': '+(str(value) if key == 'NoNewPrivs' else format(value, 'x'))
                          for key, value in values.items())
@@ -37,7 +40,7 @@ class TreeCollectorAdmissionTests(unittest.TestCase):
 
     def test_fixed_kernel_capability_shape_and_nnp_are_required(self):
         cases = [{}, {'CapEff': 0}, {'CapBnd': worker.REQUIRED_CAPS | 1},
-                 {'CapInh': worker.REQUIRED_CAPS}, {'CapAmb': worker.REQUIRED_CAPS},
+                 {'CapInh': 0}, {'CapAmb': 0},
                  {'NoNewPrivs': 0}]
         for changes in cases:
             with self.subTest(changes=changes), \
@@ -46,10 +49,15 @@ class TreeCollectorAdmissionTests(unittest.TestCase):
                     patch.dict(worker.os.environ, {'MANO_DISPOSABLE_CI': '1'}), \
                     patch.object(worker.Path, 'read_text',
                         side_effect=['mano-phase0-ci', self.status(**changes)]), \
-                    patch.object(worker.subprocess, 'check_output', return_value='kvm\n'):
+                    patch.object(worker.subprocess, 'check_output', return_value='kvm\n'), \
+                    patch.object(worker.sys, 'stderr', io.StringIO()) as errors:
                 if changes:
                     with self.assertRaises(PermissionError):
                         worker.guard()
+                    detail = json.loads(errors.getvalue())
+                    self.assertEqual(set(detail), {'event','expected_capabilities',
+                                                   'capabilities','no_new_privileges'})
+                    self.assertEqual(detail['event'], 'tree-collector-privilege-denied')
                 else:
                     self.assertEqual(worker.guard()['CapBnd'], worker.REQUIRED_CAPS)
 
@@ -91,3 +99,22 @@ class TreeCollectorAdmissionTests(unittest.TestCase):
                 opened.assert_called_once()
                 scan.assert_not_called()
                 close.assert_called_once_with(10)
+
+    def test_admission_only_checks_context_without_opening_any_snapshot(self):
+        caps = dict.fromkeys(('CapEff','CapPrm','CapInh','CapBnd','CapAmb'),worker.REQUIRED_CAPS)
+        group = '0::/mano.slice/mano-package.slice/mano-tree-baseline-ci.service'
+        output = io.StringIO()
+        with patch.object(worker, 'guard', return_value=caps), \
+                patch.object(worker.sys, 'argv', ['worker','baseline','--admission-only']), \
+                patch.object(worker.resource, 'setrlimit'), \
+                patch.object(worker.Path, 'read_text', side_effect=[group,'536870912','8']), \
+                patch.object(worker.os, 'geteuid', return_value=0), \
+                patch.object(worker.os, 'open') as opened, \
+                patch.object(worker, 'scan') as scan, patch.object(worker.sys, 'stdout', output):
+            worker.main()
+            value = json.loads(output.getvalue())
+            self.assertIs(value['admission_only'],True)
+            self.assertNotIn('entries',value)
+            self.assertIs(value['publication_authorized'],False)
+            opened.assert_not_called()
+            scan.assert_not_called()

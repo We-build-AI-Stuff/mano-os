@@ -143,6 +143,11 @@ set -e
 ssh "${ssh_opts[@]}" lab@127.0.0.1 \
   'sudo tar -cf - -C /opt/mano-lab/evidence .' | tar -xf - -C "$repo_root/evidence"
 if [ "$result" != 0 ]; then exit "$result"; fi
+# Fail collector admission before the expensive Broker/PAM transaction suite.
+# This only observes fixed privilege/cgroup context; it never opens a candidate.
+ssh "${ssh_opts[@]}" lab@127.0.0.1 \
+  'sudo env PYTHONPATH=/opt/mano-lab/src python3 /opt/mano-lab/scripts/probe_staged_package.py --check-tree-admission' \
+  > "$repo_root/evidence/tree-collector-admission.json"
 set +e
 PYTHONPATH="$repo_root/src" python3 "$repo_root/scripts/serial_rescue.py" \
   --socket "$lab_dir/serial-btrfs.sock" --key "$lab_dir/key" \
