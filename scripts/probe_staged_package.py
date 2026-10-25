@@ -92,6 +92,31 @@ def live_inputs():
             for path in sorted(paths)}
 
 
+def candidate_checks(name, architecture, version, digest, size, origins):
+    """Keep source admission explicit; public metadata is diagnostic, not consent."""
+    return dict(
+        name=isinstance(name, str) and bool(re.fullmatch('[a-z0-9][a-z0-9+.-]{1,63}', name)),
+        architecture=architecture in {'amd64', 'all'},
+        version=isinstance(version, str) and bool(re.fullmatch(
+            r'[A-Za-z0-9.+:~_-]{1,256}', version)),
+        sha256=isinstance(digest, str) and bool(re.fullmatch('[a-f0-9]{64}', digest)),
+        size=type(size) is int and 0 < size <= 10 * 1024**2,
+        trusted_origin=any(row['trusted'] is True and row['site'] in {
+            'deb.debian.org', 'security.debian.org'} for row in origins))
+
+
+def candidate_admission(item):
+    version = item.candidate
+    name, digest = item.shortname, version.record.get('SHA256')
+    origins = [dict(site=origin.site, trusted=origin.trusted) for origin in version.origins]
+    checks = candidate_checks(name, version.architecture, version.version,
+                              digest, version.size, origins)
+    checks['record_identity'] = (version.record.get('Package') == name and
+                                 version.record.get('Version') == version.version and
+                                 version.record.get('Architecture') == version.architecture)
+    return name, version, digest, origins, checks
+
+
 def acquire():
     import apt
     import apt.progress.base
@@ -107,26 +132,26 @@ def acquire():
     records = []
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
     for item in changes:
-        version = item.candidate
-        digest = version.record.get('SHA256')
-        if (not re.fullmatch('[a-z0-9][a-z0-9+.-]{1,63}', item.name)
-                or version.architecture not in {'amd64', 'all'}
-                or not re.fullmatch(r'[A-Za-z0-9.+:~_-]{1,256}', version.version)
-                or not isinstance(digest, str) or not re.fullmatch('[a-f0-9]{64}', digest)
-                or not 0 < version.size <= 10 * 1024**2
-                or not any(origin.trusted and origin.site in {
-                    'deb.debian.org', 'security.debian.org'} for origin in version.origins)):
+        name, version, digest, origins, checks = candidate_admission(item)
+        if not all(checks.values()):
+            # Fixed CI package metadata only; no URI credentials, keys or plans.
+            print(json.dumps(dict(event='staging-ci-candidate-denied',
+                                  name=name, apt_name=item.name, architecture=version.architecture,
+                                  version=version.version, bytes=version.size,
+                                  sha256_present=isinstance(digest, str), origins=origins,
+                                  failed_fields=[key for key, ok in checks.items() if not ok])),
+                  file=sys.stderr, flush=True)
             raise ValueError('Bounded authenticated Debian candidate required')
         url = archive_url(version.uri)
         with opener.open(url, timeout=20) as response:
             data = response.read(version.size + 1)
         if len(data) != version.size or sha(data) != digest:
             raise ValueError('Signed-index archive identity mismatch')
-        path = BASE / 'archives' / (item.name + '.deb')
+        path = BASE / 'archives' / (name + '.deb')
         with path.open('xb') as stream:
             stream.write(data)
         path.chmod(0o400)
-        records.append(dict(name=item.name, architecture=version.architecture,
+        records.append(dict(name=name, architecture=version.architecture,
                             version=version.version, sha256=digest, bytes=len(data),
                             filename=path.name, url=url))
     return records

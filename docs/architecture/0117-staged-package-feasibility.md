@@ -1,6 +1,6 @@
 # Staged package and loader-cache feasibility
 
-Status: CI experiment prepared; production integration and publication undecided.
+Status: native candidate admission failed; diagnostics prepared. Production integration and publication remain undecided.
 
 The current package worker writes selected live /usr, /etc and /var trees.
 Filename rules protect specific authority paths but do not establish complete
@@ -81,6 +81,18 @@ are not a claim of constant-memory parsing or a substitute for that worker limit
 The result explicitly sets signature verification, candidate verification and
 publication authority to false. Merged-package collisions, conffiles, removals,
 aliases and generated state still require a candidate-aware validation contract.
-Sixteen focused local tests cover traversal, duplicates, link chains/cycles,
+Seventeen focused local tests cover traversal, duplicates, link chains/cycles,
 unsupported metadata, resource quotas, truncation and revocation. Native use and
 complete candidate validation remain unverified.
+
+
+## Native admission failure
+
+Run40171677448 at7eeabfe passed quality but failed before download/clone work at
+the combined candidate admission check. The log did not identify the failing
+field; no underlying authentication/identity cause is claimed yet. The next
+source records only public candidate metadata and the exact failed field names
+on stderr, while preserving official-origin, trust, size, SHA and architecture
+requirements. It uses APT's documented shortname for the archive filename and
+checks raw Package/Version/Architecture record identity independently. Ten local
+admission/safety tests pass; fresh native diagnostics remain required.

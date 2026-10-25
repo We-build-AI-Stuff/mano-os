@@ -117,6 +117,11 @@ class PackagePayloadTests(unittest.TestCase):
         with self.assertRaisesRegex(PermissionError, 'revoked'):
             payload.inventory(archive([file()]), checkpoint=revoked)
 
+    def test_invalid_false_callback_cannot_silently_disable_interruption_checks(self):
+        for callback in (False, 0, [], 'not callable'):
+            with self.subTest(callback=callback), self.assertRaisesRegex(ValueError, 'Callable'):
+                payload.inventory(archive([file()]), checkpoint=callback)
+
     def test_truncated_member_is_not_accepted_as_a_shorter_payload(self):
         raw = archive([file(data=b'long content')]).getvalue()
         with self.assertRaises(ValueError):

@@ -47,7 +47,9 @@ package collisions, removals, candidate mutations, conffiles and authority scope
                            (max_file, MAX_FILE), (max_metadata, MAX_METADATA)):
         if type(value) is not int or not 0 < value <= ceiling:
             raise ValueError('Explicit bounded payload inventory budget required')
-    check = checkpoint or (lambda: None)
+    if checkpoint is not None and not callable(checkpoint):
+        raise ValueError('Callable interruption checkpoint required')
+    check = checkpoint if checkpoint is not None else (lambda: None)
     entries, unsupported = {}, {}
     total, metadata = 0, 0
     try:

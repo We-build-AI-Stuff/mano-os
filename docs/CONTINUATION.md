@@ -1,3 +1,18 @@
+## Current native failure and prepared diagnostics
+Remote7eeabfe42c24dd90ab5f33c85a812322d6a2359b CI40171677448 TERMINALFAILURE:
+qualitySUCCESS; securitylab121103634317/mergegateFAILED. NewCIcloneexperiment
+failed atcombinedcandidateadmission BEFOREarchives/snapshot/dpkg. Failedfieldwas
+notlogged, actualcauseUNPROVEN. No native staging feasibility/productionclaim.
+Rawlog outputs/pr134-7eeabfe-native-job.log. Artifact12591166547 2888992bytes
+BYTEVERIFIED SHA8fe9325cf6db1523ba16abb3f65f227149bcff169ee6c7ada74b6d03e08446cf;
+outputs/pr134-7eeabfe-native-failure.zip retained. NOTfullaccepted.
+Nextsource emitspublicname/architecture/version/size/origin andfailed_fields to
+stderr; noURIcredentials/key/plan. Allauthenticity/officialsite/architecture/SHA/
+size constraints preserved. CanonicalAPT shortname used, recordidentity checked
+separately. Tenfocusedlocalsafety/admissiontestsPASS. ActualrejectionneedsnewCI.
+Locala37b76f payloadobservercommit exists (notwired), subsequentdiagnostics/callback
+safety changesprepared. No productionpublisher/executor changes. GoalACTIVE.
+
 ## Prepared payload inventory component (not yet wired/native verified)
 Currentremote7eeabfe42c24dd90ab5f33c85a812322d6a2359b CI40171677448:
 qualitySUCCESS, security-labIN_PROGRESS. Let SAMErunfinishbeforepush (workflowcancelsolder).
@@ -7,7 +22,7 @@ forwardhardlinks, strictcanonicalpaths/duplicates/types andpayload/metadata quot
 UnknownPAX attrs/linkmetadata conflicts/symlinkparent ambiguity preservedasunsupported.
 Cooperativecheckpointsincludinghardlinkresolution, no signature/candidate/pubauthority.
 Must run in boundedparserworker: tar extensionheader allocations precedeentrychecks.
-SixteenfocusedlocaltestsPASS. No production/staging integration or completecandidate
+SeventeenfocusedlocaltestsPASS. No production/staging integration or completecandidate
 validation yet. Broader publication/activation and originalgoalremainunfinished.
 
 # mano-OS current continuation
