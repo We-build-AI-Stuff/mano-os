@@ -1,10 +1,11 @@
+import contextlib
 import importlib.util
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 SCRIPTS = Path(__file__).resolve().parents[1] / 'scripts'
 sys.path.insert(0, str(SCRIPTS))
@@ -15,6 +16,60 @@ SPEC.loader.exec_module(probe)
 
 
 class StagedProbeSafetyTests(unittest.TestCase):
+    @contextlib.contextmanager
+    def private_cache(self):
+        cache = MagicMock(broken_count=0, dpkg_journal_dirty=False)
+        apt = MagicMock()
+        apt.Cache.return_value = cache
+        apt_pkg = MagicMock()
+        modules = {'apt': apt, 'apt.progress': apt.progress,
+                   'apt.progress.base': apt.progress.base, 'apt_pkg': apt_pkg}
+        manifest = {'catalog_id': 'a' * 64}
+        with tempfile.TemporaryDirectory() as temporary, \
+                patch.object(probe, 'BASE', Path(temporary)), \
+                patch.object(probe, 'load', return_value=(Path('/verified'), manifest)) as load, \
+                patch.object(probe, 'fingerprint') as fingerprint, \
+                patch.object(probe, 'prepare_apt_root') as prepare, \
+                patch.dict(sys.modules, modules):
+            yield cache, apt, apt_pkg, load, fingerprint, prepare
+
+    def test_private_cache_uses_verified_sources_and_rechecks_custody(self):
+        with self.private_cache() as (cache, apt, apt_pkg, load, fingerprint, prepare):
+            with probe.candidate_cache() as selected:
+                self.assertIs(selected, cache)
+                root = prepare.call_args.args[0]
+                self.assertTrue(root.is_dir())
+                self.assertEqual(prepare.call_args.kwargs, {'catalog': Path('/verified')})
+                self.assertEqual(apt.Cache.call_args.kwargs['rootdir'], str(root))
+                self.assertTrue(apt.Cache.call_args.kwargs['memonly'])
+            self.assertFalse(root.exists())
+            self.assertEqual(fingerprint.call_count, 2)
+            self.assertEqual(load.call_args.args, ('a' * 64,))
+            cache.close.assert_called_once()
+            apt_pkg.config.set.assert_any_call('Dir::Etc', str(root / 'etc/apt'))
+
+    def test_private_cache_rejects_unsettled_state_and_closes(self):
+        with self.private_cache() as (cache, _apt, _apt_pkg, _load, _fingerprint, _prepare):
+            cache.broken_count = 1
+            with self.assertRaisesRegex(ValueError, 'Settled'), probe.candidate_cache():
+                self.fail('Unsettled cache yielded')
+            cache.close.assert_called_once()
+
+    def test_changed_catalog_custody_is_rejected_after_work(self):
+        with self.private_cache() as (cache, _apt, _apt_pkg, _load, fingerprint, _prepare):
+            fingerprint.side_effect = [None, ValueError('changed signed input')]
+            with self.assertRaisesRegex(ValueError, 'changed signed input'):
+                with probe.candidate_cache():
+                    pass
+            cache.close.assert_called_once()
+
+    def test_invalid_catalog_stops_before_apt_initialization(self):
+        with patch.object(probe, 'load', side_effect=ValueError('invalid catalog')), \
+                patch.object(probe, 'prepare_apt_root') as prepare:
+            with self.assertRaisesRegex(ValueError, 'invalid catalog'), probe.candidate_cache():
+                self.fail('Invalid catalog yielded')
+            prepare.assert_not_called()
+
     def apt_item(self):
         version = SimpleNamespace(architecture='amd64', version='5.02-1+b1', size=13000,
             record={'Package':'sl','Version':'5.02-1+b1','Architecture':'amd64','SHA256':'a'*64},

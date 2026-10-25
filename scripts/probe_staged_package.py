@@ -4,6 +4,7 @@ This is not the production worker, a PAM authority path, a publication mechanism
 or an adversarial confinement proof. It never installs into the live package DB.
 """
 
+import contextlib
 import hashlib
 import io
 import json
@@ -12,12 +13,15 @@ import re
 import subprocess
 import sys
 import tarfile
+import tempfile
 import time
 import urllib.request
 from pathlib import Path
 
 from probe_package_plans import guard
 
+from mano_broker.package_catalog import load
+from mano_broker.package_solver import fingerprint, prepare_apt_root
 from mano_runtime import recovery
 from mano_runtime.package_apply import NoRedirect, archive_url
 from mano_runtime.package_postconditions import MAX_STATUS, database
@@ -117,11 +121,45 @@ def candidate_admission(item):
     return name, version, digest, origins, checks
 
 
-def acquire():
-    import apt
-    import apt.progress.base
+@contextlib.contextmanager
+def candidate_cache():
+    """Use the verified catalog's canonical sources, never cloud mirror config."""
+    catalog, manifest = load()
+    fingerprint(manifest, catalog=catalog)
+    import apt_pkg
 
-    cache = apt.Cache(progress=apt.progress.base.OpProgress(), memonly=True)
+    with tempfile.TemporaryDirectory(prefix='apt-', dir=BASE) as temporary:
+        root = Path(temporary)
+        prepare_apt_root(root, catalog=catalog)
+        apt_pkg.config.set('Dir', str(root))
+        apt_pkg.config.set('Dir::Etc', str(root / 'etc/apt'))
+        apt_pkg.init_config()
+        import apt
+        import apt.progress.base
+
+        for key, value in {
+            'APT::Architecture': 'amd64', 'APT::Architectures::': 'amd64',
+            'APT::Install-Recommends': 'false', 'APT::Install-Suggests': 'false',
+        }.items():
+            apt_pkg.config.set(key, value)
+        cache = apt.Cache(progress=apt.progress.base.OpProgress(), rootdir=str(root), memonly=True)
+        try:
+            if cache.broken_count or cache.dpkg_journal_dirty:
+                raise ValueError('Settled catalog package state required')
+            yield cache
+            # Recheck signed input custody and live state after acquisition.
+            fingerprint(manifest, catalog=catalog)
+            load(manifest['catalog_id'])
+        finally:
+            cache.close()
+
+
+def acquire():
+    with candidate_cache() as cache:
+        return acquire_from(cache)
+
+
+def acquire_from(cache):
     if cache['sl'].is_installed:
         raise ValueError('Experiment needs an uninstalled fixed sl package')
     cache['sl'].mark_install(auto_fix=True, auto_inst=True, from_user=True)

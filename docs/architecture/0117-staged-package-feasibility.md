@@ -1,6 +1,6 @@
 # Staged package and loader-cache feasibility
 
-Status: native candidate admission failed; diagnostics prepared. Production integration and publication remain undecided.
+Status: native diagnostics identified an empty cloud-mirror origin site; canonical signed-catalog input prepared. Production integration and publication remain undecided.
 
 The current package worker writes selected live /usr, /etc and /var trees.
 Filename rules protect specific authority paths but do not establish complete
@@ -96,3 +96,20 @@ on stderr, while preserving official-origin, trust, size, SHA and architecture
 requirements. It uses APT's documented shortname for the archive filename and
 checks raw Package/Version/Architecture record identity independently. Ten local
 admission/safety tests pass; fresh native diagnostics remain required.
+
+
+## Canonical catalog source correction
+
+Run 40174227139 at 044d4a8 failed admission for libncurses6 with a trusted
+origin whose site was empty. The failed field was trusted_origin. This proves
+the immediate rejection condition; it does not identify every property of the
+cloud mirror configuration or establish that later staging steps work.
+
+The probe now uses the existing verified catalog, checks its input fingerprints,
+and prepares a private APT root with the catalog's canonical official sources,
+indexes, keyring, status and marks. It rejects unsettled package state and
+rechecks catalog custody and live state after acquisition. It never updates or
+fetches indexes through host mirror configuration. Official-site, trusted-origin,
+archive hash, size, architecture and raw-record identity checks remain required.
+Four additional local tests cover private cache setup, unsettled state, changed
+custody and invalid catalog rejection. Native confirmation is still required.
