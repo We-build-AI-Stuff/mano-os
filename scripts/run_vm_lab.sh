@@ -253,6 +253,14 @@ PY
   ssh "${ssh_opts[@]}" lab@127.0.0.1 \
     'sudo env PYTHONPATH=/opt/mano-lab/src python3 /opt/mano-lab/scripts/probe_delegated_cgroups.py' \
     > "$repo_root/evidence/delegated-cgroups.json"
+  # Feasibility only: fixed signed package and a synthetic library in a private
+  # COW clone. No publication, production grant or adversarial-boundary claim.
+  ssh "${ssh_opts[@]}" lab@127.0.0.1 \
+    'sudo env PYTHONPATH=/opt/mano-lab/src python3 /opt/mano-lab/scripts/probe_staged_package.py' \
+    > "$repo_root/evidence/package-staging-feasibility.json"
+  ssh "${ssh_opts[@]}" lab@127.0.0.1 \
+    'sudo tar -cf - -C /opt/mano-lab/evidence --wildcards "staged-*"' \
+    | tar -xf - -C "$repo_root/evidence"
   ssh "${ssh_opts[@]}" lab@127.0.0.1 \
     'sudo env PYTHONPATH=/opt/mano-lab/src PYTHONDONTWRITEBYTECODE=1 python3 /opt/mano-lab/scripts/probe_runtime_package.py' \
     > "$repo_root/evidence/runtime-package.json"

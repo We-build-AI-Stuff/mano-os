@@ -177,4 +177,9 @@ def main():
 
 
 if __name__ == '__main__':
-    print(json.dumps(main(), sort_keys=True))
+    packet = json.dumps(main(), sort_keys=True)
+    # Later CI-only staging observations use the same pre-effect inventory.
+    # Refuse reuse rather than silently replacing another observation.
+    with Path('/opt/mano-lab/evidence/package-elf-inventory.json').open('x') as stream:
+        stream.write(packet + '\n')
+    print(packet)

@@ -16,13 +16,16 @@ downloads below10GiB. Last disk about19GiB/91percent, warned.
 The /compact agent tool is unavailable; this handoff is condensed instead.
 Prior detail is retained in Git history and workspace output archives.
 
-## Current source and running CI
-Pushed headfc9e01da051e529c3ab9de7eb83bcbc09d59b5a6, CI40162914482:
-quality SUCCESS, security-lab IN_PROGRESS at last check. Poll SAME run; do not
-restart on observation timeout. The workflow cancels older runs on a new push,
-so let this run become terminal before pushing the prepared commits.
-Local4638073 adds direct ELF search candidates;38575d3 adds fixed ELF name rules.
-Both are unpushed and native-unverified. The full local suite on prepared code
+## Latest accepted baseline and current experiment
+Accepted head940f0fa243859fd9dfb7d5daf909e6ec61ad1050, CI40164560789 ALL3SUCCESS.
+Artifact12587833235,13357775bytes, SHA256
+7ad816474561a6fca3ee667955ae5ef4e9aea7f0eb5a5e93848d59102fd45410.
+outputs/pr134-elf-policy-security.json/.zip fully accepted54hash/45flags plus
+real package/PAM/Stop/recovery, IPC/preload and55ELF-name/fouralias denials. Direct
+inventory22roots49extensions126files has no combined direct/cache missing names.
+Actual loader selection/plugin/protection closure is still unverified. Six fresh
+originals/four crops actually viewed; receipt acceptance-pr134-elf-policy/inspection.json.
+The earlier4638073/38575d3/940f0fa commits are pushed and included in that evidence. The full local suite on prepared code
 passed584tests/48Linux-only skips, plus Ruff/compileall/all-shell/diff checks.
 No native tests ran locally. Preserve the unrelated untracked duplicates:
 - docs/architecture/0109-privileged-package-stop-domain 2.md
@@ -62,7 +65,7 @@ as those helpers' actual resolution. See pr134-483c04c-elf-inspection.json and
 pr134-483c04c-elf-runpath-gap.json. Raw failed log is preserved; gh job-log API
 needs --allow-escape-sequences. This is not full CI or package acceptance.
 
-## Prepared changes needing fresh CI
+## ELF changes accepted in the current baseline
 Direct-search collector follows own absolute RPATH/RUNPATH and canonical-object
 ORIGIN candidates; RUNPATH takes precedence. Empty/relative/unknown tokens remain
 explicitly unsupported. Inherited RPATH, hwcaps, actual loader selection, plugin
@@ -79,8 +82,8 @@ The ownership/content binding tests pass. A private namespace uses54dummy librar
 name files plus one absent future name, requiring55write denials and four alias/
 metadata denials. Real shared libraries remain RO; no real library writes occur.
 These filename rules do not prove all inode aliases, loader-cache/plugin coverage
-or protected-runtime upgrade compatibility. The preload-name rule and its three
-private synthetic/etc probes from fc9 also need successful native acceptance.
+or protected-runtime upgrade compatibility. The preload-name rule and its three private synthetic/etc probes also passed
+native acceptance. Name rules are still not complete trusted runtime closure.
 
 ## Independent acceptance
 Run outputs/accept_ci_artifact.py FROM THE REPO cwd, with45positional flags from
@@ -110,3 +113,23 @@ Live-provider/model repair/authenticated coding, other v2.1 GUI/app/connector an
 profile work, physical input/8GB tests, signed bootable OS/install/update/recovery
 release gates remain incomplete. Continue the original scope; do not replace
 completion with a narrow synthetic, local-green, CI-green or prototype claim.
+
+## Current prepared CI-only staging experiment
+See docs/architecture/0117-staged-package-feasibility.md. No production worker,
+public capability, grant, publication or activation changes. A private fresh
+btrfs clone receives only fixed sl plus its small new-package closure from APT
+trusted Debian origins, official HTTPS/no-redirect URLs and exact hashes. A fixed
+setpriv setup and kernel-observed six caps/securebits43/NNP/private namespaces
+bound the worker; it is NOT the production guard/PAM/adversarial proof.
+The experiment performs actual dpkg and ldconfig after adding a synthetic library,
+then checks full candidate DB transitions and exact archive sl bytes, changed
+candidate canary/cache, unchanged live inputs and no live fixture library. Unit
+cgroup must drain. Raw before/after DB, archives, installed sl, cache and fixture
+bytes are exported with hashes. Clone remains private/retained; publicationFalse.
+Native staging feasibility is UNVERIFIED until its fresh CI passes. Three local
+safety tests pass; no Linux/Root execution on Mac. ELF collector now exclusively
+persists the pre-effect inventory in guest evidence for the later comparison.
+Future full acceptance requires all five ELF/IPC/preload options above PLUS
+--staged-package-feasibility. Do not use that last option on940f or older bundles.
+Independent stage helper checks raw DB/archive payload/cache/namespace evidence
+and keeps production-PAM/guard/adversarial/publication/full-closure flagsFALSE.
