@@ -27,6 +27,7 @@ from pathlib import Path
 assert Path('/proc/self/attr/current').read_text().strip()=='mano-package-worker (enforce)'
 assert not os.statvfs('/usr/bin').f_flag & os.ST_RDONLY
 assert not os.statvfs('/usr/lib').f_flag & os.ST_RDONLY
+assert not os.statvfs('/etc').f_flag & os.ST_RDONLY
 denials={}
 def denied(name,operation):
  try:operation()
@@ -52,6 +53,13 @@ denied('clear_execution_profile',lambda:Path('/proc/self/attr/current').write_te
                                             'changeprofile unconfined'))
 denied('archive_keyring_write',lambda:Path(
  '/usr/share/keyrings/debian-archive-keyring.pgp').write_text('changed'))
+assert not Path('/etc/ld.so.preload').exists()
+ordinary_config=Path('/etc/ordinary.fixture')
+ordinary_config.write_text('ordinary')
+denied('absent_preload_write',lambda:Path('/etc/ld.so.preload').write_text('changed'))
+denied('absent_preload_symlink',lambda:os.symlink('/etc/ordinary.fixture','/etc/ld.so.preload'))
+denied('absent_preload_replace',lambda:os.replace(ordinary_config,'/etc/ld.so.preload'))
+assert ordinary_config.read_text()=='ordinary'
 helper_denials={}
 for name in json.loads(sys.argv[1]):
  try:Path(name).write_text('changed')
@@ -74,10 +82,12 @@ def run():
     system_binary = BASE / 'sbin'
     library = BASE / 'lib'
     keyrings = BASE / 'keyrings'
+    configuration = BASE / 'etc'
     binary.mkdir(mode=0o700)
     system_binary.mkdir(mode=0o700)
     library.mkdir(mode=0o700)
     keyrings.mkdir(mode=0o700)
+    configuration.mkdir(mode=0o700)
     (library / 'apt').mkdir(mode=0o700)
     helper_payload = b'Synthetic privileged helper; never executed\n'
     standins = {}
@@ -97,7 +107,8 @@ def run():
             '--tmpfs', '/run', '--tmpfs', '/tmp', '--tmpfs', '/root', '--tmpfs', '/home',
             '--bind', str(binary), '/usr/bin', '--bind', str(system_binary), '/usr/sbin',
             '--bind', str(library), '/usr/lib',
-            '--bind', str(keyrings), '/usr/share/keyrings']
+            '--bind', str(keyrings), '/usr/share/keyrings',
+            '--bind', str(configuration), '/etc']
     for path in ('/usr/bin/python3.13', '/usr/bin/aa-exec', '/usr/lib/python3.13',
                  '/usr/lib/python3', '/usr/lib/x86_64-linux-gnu'):
         argv += ['--ro-bind', path, path]
@@ -114,6 +125,7 @@ def run():
     assert not (library / 'python313.zip').exists()
     assert all(path.read_bytes() == helper_payload for path in standins.values())
     assert (keyrings / 'debian-archive-keyring.pgp').read_bytes() == keyring_payload
+    assert not (configuration / 'ld.so.preload').exists()
     return dict(scope='real package profile name rules on private CI substitute inodes',
                 policy_sha256=POLICY_SHA256, proof=proof,
                 synthetic_payload_sha256=hashlib.sha256(payload).hexdigest(),

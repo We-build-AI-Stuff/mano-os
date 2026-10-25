@@ -404,3 +404,14 @@ Seven local parser tests pass; collection still needs disposable Debian CI.
 ELF segment/interpreter and dynamic-tag definitions:
 https://gabi.xinuos.com/elf/07-pheader.html
 https://gabi.xinuos.com/elf/08-dynamic.html
+
+
+The path policy now denies writes, links and replacement at /etc/ld.so.preload
+including when the file was absent at namespace construction. Masking only an
+existing preload inode did not protect that future name. The private CI fixture
+now substitutes a synthetic writable /etc and requires creation, symlink and
+atomic replacement denials, while an ordinary configuration sibling remains
+writable. No real loader configuration write is attempted. This closes a
+specific preload-name route; loader cache, other library selection/configuration
+and persistence closure remain separate unfinished gates. Six source-binding
+tests and static checks pass. Fresh native enforcement evidence is required.

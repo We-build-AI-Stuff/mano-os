@@ -1,3 +1,17 @@
+## Absent preload name protection prepared (native pending)
+Profiledeny /etc/ld.so.preload wkl closes future-name creation when nooriginal
+fileexists. BoundpolicySHA65688ec392ba2e35c87cc14b26eefe3457783e11a6f6ef10759a8a22e3b85876.
+Private-namefixture nowbindssyntheticwritable/etc andchecksabsentpreloadwrite,
+symlink andatomicreplace denied, ordinarysiblings stillwritable. No realloader
+filewriteattempt. Sixpolicybindingtests+Ruff/embeddedfixturecompile/diffPASS.
+Current6d CIstillrunning atpreparation; DO NOTpushuntilterminal.
+Nextheadacceptance needsalloldoptions plus --package-ipc --package-elf-inventory
+--package-preload-policy. Existing6d acceptance mustOMITthesenewthreeflags.
+Independenthelpersconditionallyrequire3newIPCflags, staticinventoryboundtoactual
+checkoutrevision (PRmergecommit, asruntimebuild), and3newpreloaddenials.
+Local578tests48skips PASS beforemetadata-onlyscopeclarification andpreloadchange;
+newheadfreshqualityCIrequired. Fullclosuresnotachieved; originalgoalACTIVE.
+
 ## Static ELF dependency inventory prepared (CI observation, not enforcement)
 BeforeBroker/package-maintainerprobes, scripts/probe_package_elf_inventory.py
 usesreadelfon22fixedhelpers+Debianstdlib/apt Pythonextensions; followsALLexisting

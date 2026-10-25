@@ -39,6 +39,9 @@ profile mano-package-worker flags=(mediate_deleted) {
   deny /usr/share/keyrings/ w,
   deny /usr/share/keyrings/** wkl,
 
+  # Masking only an existing preload file leaves an absent name creatable.
+  deny /etc/ld.so.preload wkl,
+
   # No script can change the policy, its loader or its current execution label.
   deny /{usr/,}bin/aa-exec wkl,
   deny /{usr/,}sbin/apparmor_parser wkl,
