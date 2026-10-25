@@ -455,6 +455,7 @@ def execute(body, *, broker_fd=None):
             package_attempts.ensure_available_locked(body['action_id'])
             STAGE = 'checkpoint'
             checkpoint = recovery.create_locked()
+            observe(body, broker_fd)
             package_attempts.begin_locked(body['action_id'], request.digest,
                                           checkpoint['recovery_id'])
             STAGE = 'child'

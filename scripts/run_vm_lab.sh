@@ -225,7 +225,7 @@ if [ "$result" = 0 ]; then
   fi
   # Progress belongs on stderr. A successful probe must emit one JSON object,
   # rather than letting a later independent acceptance discover broken framing.
-  python3 - "$repo_root/evidence/broker-service.json" <<'PY'
+  if ! python3 - "$repo_root/evidence/broker-service.json" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -233,6 +233,12 @@ from pathlib import Path
 if not isinstance(json.loads(Path(sys.argv[1]).read_text()), dict):
     raise SystemExit('Broker probe must emit one JSON object')
 PY
+  then
+    # Framing errors must preserve the same guest witnesses as probe failures.
+    ssh "${ssh_opts[@]}" lab@127.0.0.1 \
+      'sudo tar -cf - -C /opt/mano-lab/evidence .' | tar -xf - -C "$repo_root/evidence"
+    exit 3
+  fi
   ssh "${ssh_opts[@]}" lab@127.0.0.1 \
     'sudo tar -cf - -C /opt/mano-lab/evidence live-human-permissions.json live-permissions-pending.png live-permissions-effective.png live-human-driver.txt live-human-sway.txt mcp-discovery.json package-plans.json package-sandbox-setup.json package-path-policy-names.json package-apply.json package-apply-before-status package-apply-after-status package-apply-signed.deb package-apply-installed-cowsay package-apply-stop.json package-apply-lost-reply.json package-commit-reply-loss.json package-commit-reply-before-status package-commit-reply-after-status git-workspace-checkpoint.json git-workspace-checkpoint.tar' | tar -xf - -C "$repo_root/evidence"
   ssh "${ssh_opts[@]}" lab@127.0.0.1 \

@@ -1,6 +1,7 @@
 """Fresh native approval and one-shot scheduling for exact system package plans."""
 
 import json
+import math
 import os
 import pwd
 import select
@@ -64,6 +65,15 @@ def approval_scope(plan):
                             maximum_runtime_seconds=60))
 
 
+def execution_deadline(plan, *, grant_expires, now):
+    """Approval expiry gates dispatch; the approved runtime begins at dispatch."""
+    if (type(now) not in {int, float} or not math.isfinite(now) or now < 0
+            or type(grant_expires) not in {int, float} or not math.isfinite(grant_expires)
+            or now >= grant_expires):
+        raise Denied('Package grant expired before dispatch')
+    return now + approval_scope(plan)['limits']['maximum_runtime_seconds']
+
+
 class ApplyWorker:
     def __init__(self, runtime):
         self.runtime = runtime
@@ -91,15 +101,17 @@ class ApplyWorker:
                 socket.SOL_SOCKET, socket.SO_PEERCRED, CREDENTIALS.size)))
             if creator.uid != 0 or creator.gid != 0 or creator.pid <= 0:
                 raise Denied('Package helper listener is not Root activated')
-            runtime.registry.start(state, action_id, now=time.monotonic(), boot_id=runtime.boot_id)
+            now = time.monotonic()
+            deadline = execution_deadline(plan, grant_expires=row['expires'], now=now)
+            runtime.registry.start(state, action_id, now=now, boot_id=runtime.boot_id)
             started = True
             packet = canonical(dict(action_id=action_id, request=request.body(), plan=plan,
                 boot_id=runtime.boot_id, native_generation=row['native_generation'],
-                expires=row['expires'])).encode()
+                expires=deadline)).encode()
             if len(packet) > 65536 or connection.send(packet) != len(packet):
                 raise Denied('Package dispatch incomplete; outcome uncertain')
             self.pending[action_id] = dict(connection=connection, request=request,
-                expires=row['expires'], generation=row['native_generation'])
+                expires=deadline, generation=row['native_generation'])
         except BaseException:
             connection.close()
             if started:

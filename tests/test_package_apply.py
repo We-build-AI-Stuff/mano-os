@@ -3,13 +3,15 @@ import copy
 import json
 import sys
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from mano_broker.approvals import Approvals
-from mano_broker.package_apply import validate
+from mano_broker.package_apply import ApplyWorker, execution_deadline, validate
 from mano_broker.profiles import READ_ONLY, WORKSPACE
 from mano_core.packages import PackageApply, apply_proposal
 from mano_protocol.actions import ActionRequest, Capability, canonical
+from mano_protocol.transport import CREDENTIALS
 from mano_runtime import package_apply as root
 
 
@@ -31,6 +33,62 @@ class ApplyAuthorityTests(unittest.TestCase):
 
     def request(self, grant='0' * 32, scope=None):
         return ActionRequest.parse(canonical((scope or self.scope) | dict(grant_id=grant)).encode())
+
+    def test_approval_latency_does_not_consume_the_approved_execution_interval(self):
+        approvals = Approvals(self.state)
+        pending = approvals.request(self.scope, caller_uid=1004, now=11, boot_id='boot')
+        view = approvals.view(pending['approval_id'], human_uid=1002)
+        grant = approvals.approve(pending['approval_id'], authenticated_human_uid=1002,
+            nonce=view['nonce'], operation_digest=view['operation_digest'], now=56, boot_id='boot')
+        action, _ = self.state.authorize(self.request(grant), caller_uid=1004,
+                                         now=57, boot_id='boot')
+        registry = unittest.mock.Mock()
+
+        def start(state, identifier, **args):
+            return state.start(identifier, **args)
+
+        registry.start.side_effect = start
+        runtime = SimpleNamespace(state=self.state, registry=registry, boot_id='boot')
+        worker = ApplyWorker(runtime)
+        connection = unittest.mock.Mock()
+        connection.getsockopt.return_value = CREDENTIALS.pack(123, 0, 0)
+        connection.send.side_effect = len
+        with patch('mano_broker.package_apply.pwd.getpwnam',
+                   return_value=SimpleNamespace(pw_uid=4000)), \
+                patch('mano_broker.package_apply.os.geteuid', return_value=4000), \
+                patch('mano_broker.package_apply.socket.socket', return_value=connection), \
+                patch('mano_broker.package_apply.socket.SO_PASSCRED', 1, create=True), \
+                patch('mano_broker.package_apply.socket.SO_PEERCRED', 17, create=True), \
+                patch('mano_broker.package_apply.time.monotonic', return_value=70.5):
+            worker.launch(action['id'])
+        self.addCleanup(worker.close)
+        packet = json.loads(connection.send.call_args.args[0])
+        self.assertEqual(packet['expires'], 130.5)
+        self.assertEqual(worker.pending[action['id']]['expires'], 130.5)
+        self.assertEqual(self.state.db.execute('SELECT expires FROM grants WHERE id=?',
+                                               (grant,)).fetchone()['expires'], 71)
+
+    def test_execution_deadline_cannot_revive_expired_or_invalid_dispatch_authority(self):
+        for expires, now in ((71, 71), (71, 72), (float('inf'), 70), (71, float('nan')),
+                             (True, 0), (71, -1)):
+            with self.subTest(expires=expires, now=now), self.assertRaises(ValueError):
+                execution_deadline(self.fixture.plan, grant_expires=expires, now=now)
+
+    def test_sdk_malformed_nested_results_use_value_error_without_replay(self):
+        results = (None, [], {}, {'state': 'done'}, {'state': 'done', 'receipt': []},
+                   {'state': 'done', 'receipt': {}},
+                   {'state': 'done', 'receipt': {'outcome': []}},
+                   {'state': 'done', 'receipt': {'outcome': {}}})
+        responses = [dict(schema_version='1.0', ok=True), None, []]
+        responses += [dict(schema_version='1.0', ok=True, result=value) for value in results]
+        for response in responses:
+            client = unittest.mock.Mock(return_value=response)
+            worker = PackageApply(client, proposed=self.scope, action_id='a' * 32)
+            with self.subTest(response=response), patch.object(worker, 'status',
+                    return_value=dict(state='done', exit_code=0)):
+                with self.assertRaises(ValueError):
+                    worker.result()
+                client.assert_called_once()
 
     def test_only_owned_successful_full_forecast_can_enter_native_apply_view(self):
         plan = validate(self.state, self.request(), caller_uid=1004, boot_id='boot')

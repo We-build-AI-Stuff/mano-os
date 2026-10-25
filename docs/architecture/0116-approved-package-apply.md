@@ -417,7 +417,7 @@ and persistence closure remain separate unfinished gates. Six source-binding
 tests and static checks pass. Fresh native enforcement evidence is required.
 
 
-Native run40162256102 at483c04c failed the pre-effect invalid-plan boundary
+Native run `40162256102` at `483c04c` failed the pre-effect invalid-plan boundary
 probe with TimeoutError during the new IPC check. The pair had a Python timeout
 enabled before the negative accept test; Python polls for readiness before
 calling accept, so it timed out without reaching the syscall denial. Keep the
@@ -427,15 +427,16 @@ EPERM. A regression verifies accept is called before timeout setup. No syscall
 filter or acceptance assertion is relaxed. Fresh native validation remains
 required; the failed run does not verify package execution or preload rules.
 
-The prior6d head passed full independent54hash/45flag/package acceptance after
+The prior `6d` head passed full independent acceptance covering 54 hashes,
+45 flags and the package checks after
 all three CI checks. Six originals and four numeric crops were actually viewed:
-pending/effective900 before and120 after are fully readable. The focus/text
+the pending/effective values of 900 before and 120 after are fully readable. The focus/text
 normalization fixes the observed headless clipping; no physical input or GTK
 root-cause proof is claimed. Hash receipts remain in the workspace outputs.
 
 
-The failed483c04c run yielded a separately inspected static inventory of22helper
-roots,49Python extensions and124candidate files. It left libsystemd-shared-257.so
+The failed `483c04c` run yielded a separately inspected static inventory of 22 helper
+roots, 49 Python extensions and 124 candidate files. It left libsystemd-shared-257.so
 outside the cache even though systemctl, systemd-sysusers and systemd-tmpfiles
 record its private RUNPATH. The next collector follows direct absolute search
 paths and canonical-object ORIGIN expansions, while RUNPATH takes precedence
@@ -466,3 +467,21 @@ Loader-cache redirection, additional plugins/search paths and wider persistence
 still require protection. Protected runtime-library updates and broader package
 compatibility remain explicit validation work; no general upgrade claim is made.
 Fresh native CI and inspection of the real package flows are required.
+
+
+## Approval dispatch window and execution deadline
+
+A fresh package approval still expires 60 seconds after the approval request.
+That expiry gates authorization and dispatch. At dispatch, the Broker now starts
+a separate execution deadline using the 60-second maximum shown in the approved
+package scope, and sends that deadline to Root and retains it for result polling.
+Time spent reading the approval does not consume the execution interval. Root
+rechecks the deadline after checkpoint creation and before the attempt journal
+is opened, as well as before and during the child operation.
+
+The approved runtime limit remains enforced during a commit, alongside native
+Stop, revocation and Broker disconnect. Removing that limit after commit begins
+would contradict the displayed bounded authority and kernel/runtime limits. A
+commit interrupted by any enforced bound remains unknown, is never automatically
+replayed, and requires explicit operator reconciliation/recovery. This change
+does not promise that every Debian transaction can finish within 60 seconds.

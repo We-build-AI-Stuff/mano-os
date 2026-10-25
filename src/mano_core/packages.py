@@ -177,14 +177,17 @@ class PackageApply(PackagePlan):
             raise ValueError('Package outcome unavailable or unknown; do not automatically replay')
         value = self.client(dict(schema_version='1.0', operation='package_apply_result',
             body=dict(task_id=self.task_id, action_id=self.action_id)))
-        if value.get('ok') is not True or value.get('schema_version') != '1.0':
+        if (not isinstance(value, dict) or value.get('ok') is not True
+                or value.get('schema_version') != '1.0'):
             raise ValueError('No authenticated package result')
-        receipt = value['result']['receipt']
-        if (value['result']['state'] != 'done' or not isinstance(receipt, dict)
-                or receipt['outcome']['state'] != 'postconditions-verified'
-                or receipt['outcome']['attempt_id'] != self.action_id
-                or receipt['outcome']['plan_sha256'] != self.expected['plan_sha256']
-                or receipt['outcome']['automatic_replay_allowed'] is not False):
+        result = value.get('result')
+        receipt = result.get('receipt') if isinstance(result, dict) else None
+        outcome = receipt.get('outcome') if isinstance(receipt, dict) else None
+        if (not isinstance(outcome, dict) or result.get('state') != 'done'
+                or outcome.get('state') != 'postconditions-verified'
+                or outcome.get('attempt_id') != self.action_id
+                or outcome.get('plan_sha256') != self.expected['plan_sha256']
+                or outcome.get('automatic_replay_allowed') is not False):
             raise ValueError('Package result scope changed')
         return receipt
 
