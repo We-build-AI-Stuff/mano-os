@@ -10,6 +10,7 @@ import io
 import json
 import os
 import re
+import stat
 import subprocess
 import sys
 import tarfile
@@ -44,8 +45,10 @@ CANARY = Path('/usr/share/.mano-staged-ci-control')
 FIXTURE_LIBRARY = Path('/usr/local/lib/libmano-stage-fixture.so.1.0')
 ENV = {'PATH': '/usr/sbin:/usr/bin:/bin', 'LANG': 'C.UTF-8'}
 CAPS = '-all,+chown,+dac_override,+fowner,+fsetid,+setuid,+setgid'
+EXEC_TRACE = BASE / 'exec-trace.txt'
+MAX_EXEC_TRACE = 16 * 1024**2
 PROGRAM = r'''
-import ctypes,hashlib,json,os,shutil,subprocess,sys
+import ctypes,hashlib,json,os,resource,shutil,subprocess,sys
 from pathlib import Path
 status=dict(line.split(':',1) for line in Path('/proc/self/status').read_text().splitlines())
 caps={k:int(status[k].strip(),16) for k in ('CapEff','CapPrm','CapInh','CapBnd','CapAmb')}
@@ -68,7 +71,7 @@ cache=subprocess.run(['/usr/sbin/ldconfig'],env=env,capture_output=True,timeout=
 assert cache.returncode==0,(cache.returncode,cache.stderr[-2048:])
 print(json.dumps(dict(capabilities=caps,securebits=secure,no_new_privileges=True,
  namespaces=namespaces,pid=os.getpid(),worker_timezone=os.environ.get("TZ"),
- dpkg_timezone=env["TZ"],
+ dpkg_timezone=env["TZ"],file_size_limit_bytes=resource.getrlimit(resource.RLIMIT_FSIZE)[0],
  dpkg_returncode=result.returncode,ldconfig_returncode=cache.returncode,
  dpkg_output_sha256=hashlib.sha256(result.stdout+result.stderr).hexdigest(),
  production_guard_used=False,production_pam_used=False)))
@@ -334,6 +337,45 @@ def tree_observation(role, *, admission_only=False):
 
 
 
+
+def exec_trace_command(argv):
+    return ['/usr/bin/strace', '--kill-on-exit', '-f', '-qq', '-xx', '-s', '16384',
+            '-e', 'trace=execve,execveat', '-e', 'signal=none', '-o', str(EXEC_TRACE), '--', *argv]
+
+
+def read_exec_trace(*, require_complete=True):
+    fd = os.open(EXEC_TRACE, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    try:
+        before = os.fstat(fd)
+        if (not stat.S_ISREG(before.st_mode) or before.st_uid != 0 or before.st_gid != 0
+                or stat.S_IMODE(before.st_mode) != 0o600 or before.st_nlink != 1
+                or not 0 <= before.st_size <= MAX_EXEC_TRACE
+                or (require_complete and not 0 < before.st_size < MAX_EXEC_TRACE)):
+            raise ValueError('Bounded plain Root-owned private execution trace required')
+        pieces, count = [], 0
+        while piece := os.read(fd, min(65536, MAX_EXEC_TRACE + 1 - count)):
+            count += len(piece)
+            if count > MAX_EXEC_TRACE or (require_complete and count >= MAX_EXEC_TRACE):
+                raise ValueError('Execution trace reached its limit; completeness unknown')
+            pieces.append(piece)
+        after = os.fstat(fd)
+        fields = ('st_dev', 'st_ino', 'st_mode', 'st_uid', 'st_gid', 'st_nlink',
+                  'st_size', 'st_mtime_ns', 'st_ctime_ns')
+        stable = count == before.st_size and all(
+            getattr(before, k) == getattr(after, k) for k in fields)
+        if require_complete and not stable:
+            raise ValueError('Execution trace changed during observation')
+        data = b''.join(pieces)
+        return data, dict(schema_version='1.0', bytes=count, sha256=sha(data),
+            uid=before.st_uid, gid=before.st_gid, mode=stat.S_IMODE(before.st_mode),
+            nlink=before.st_nlink, stable_observation=stable,
+            arguments_decoded=False, all_execs_observed=False,
+            trigger_authority_verified=False, script_contents_at_exec_verified=False,
+            changes_authorized=False, publication_authorized=False)
+    finally:
+        os.close(fd)
+
+
 def private_state_masks(baseline_tree):
     """Mask only existing fixed private-state directories; never create targets."""
     entries = baseline_tree['entries']
@@ -412,16 +454,32 @@ def main():
                 '--unit=mano-staged-package-ci.service', '--slice=mano-package.slice',
                 '--property=MemoryMax=536870912', '--property=TasksMax=64',
                 '--property=RuntimeMaxSec=45', '--property=KillMode=control-group',
+                '--property=LimitFSIZE=' + str(MAX_EXEC_TRACE),
                 '--property=Restart=no', '--property=LimitCORE=0', '--property=LimitNOFILE=128']
+        tracer_version = run(['/usr/bin/strace', '--version'])
+        with EXEC_TRACE.open('xb') as stream:
+            os.fchmod(stream.fileno(), 0o600)
         clock_samples = dict(
             boot_id_before=Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
             realtime_before_ns=time.time_ns(), monotonic_before_ns=time.monotonic_ns())
-        proof = json.loads(run(unit + argv, input=json.dumps(
-            dict(archives=[r['filename'] for r in records])).encode(), timeout=60))
+        try:
+            proof = json.loads(run(unit + exec_trace_command(argv), input=json.dumps(
+                dict(archives=[r['filename'] for r in records])).encode(), timeout=60))
+        except Exception:
+            # Preserve bounded partial evidence, never accept it as a successful trace.
+            partial, observation = read_exec_trace(require_complete=False)
+            failure = Path('/opt/mano-lab/evidence')
+            with (failure / 'staged-exec-trace-failed.txt').open('xb') as stream:
+                stream.write(partial)
+            with (failure / 'staged-exec-trace-failed.json').open('x') as stream:
+                json.dump(observation | {'worker_failed': True}, stream, sort_keys=True)
+            raise
         clock_samples.update(monotonic_after_ns=time.monotonic_ns(),
                              realtime_after_ns=time.time_ns(),
                              boot_id_after=Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
                              worker_timezone=proof['worker_timezone'])
+        if proof['file_size_limit_bytes'] != MAX_EXEC_TRACE:
+            raise ValueError('Execution trace and worker file-size limit required')
         if proof['dpkg_timezone'] != 'UTC0':
             raise ValueError('Fixed dpkg UTC0 timezone required')
         if (set(proof['namespaces']) != set(host_namespaces) or
@@ -440,6 +498,7 @@ def main():
             if time.monotonic() >= deadline:
                 raise ValueError('Staged child domain did not drain')
             time.sleep(.05)
+        exec_trace, exec_observation = read_exec_trace()
         if live_inputs() != before:
             raise ValueError('Live package or loader inputs changed in staged experiment')
         if FIXTURE_LIBRARY.exists() or FIXTURE_LIBRARY.is_symlink():
@@ -523,6 +582,7 @@ def main():
     revision = json.loads(Path('/opt/mano-lab/source-info.json').read_text())['revision']
     artifacts = {
         'staged-before-status': before_status, 'staged-after-status': after,
+        'staged-exec-trace.txt': exec_trace, 'staged-strace-version.txt': tracer_version,
         'staged-dpkg-log-before': before_log, 'staged-dpkg-log-after': after_log,
         'staged-installed-sl': payload, 'staged-loader-cache-after': cache,
         'staged-loader-cache-before': recovery.read(Path('/etc/ld.so.cache'), 4 * 1024**2),
@@ -548,7 +608,7 @@ def main():
     return dict(schema_version='1.0', source_revision=revision,
                 scope='CI-only btrfs package/cache staging feasibility; no publication',
                 source=source, candidate=stage, archives=records, worker=proof,
-                private_state_masks=state_masks,
+                private_state_masks=state_masks, execution_trace_observation=exec_observation,
                 live_source=live_source, source_read_only=True,
                 tree_observation_reported=True, tree_changes_authorized=False,
                 payload_closure_validation=payload_policy,

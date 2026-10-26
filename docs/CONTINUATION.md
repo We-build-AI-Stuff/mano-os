@@ -1,3 +1,28 @@
+## Local CI-only exec trace preparation (not pushed)
+
+The current remote ef19cf4/run40321845193 remains under native validation. Keep
+this follow-up local until its exact-source artifacts and thirteen gates pass.
+The new probe wraps the fixed bwrap command with trusted Root strace OUTSIDE the
+candidate namespace, following execve/execveat with hex strings and kill-on-exit.
+No syscall-count detachment is used. The trace path is inside the new Root-only
+BASE directory hidden from the candidate, not a writable evidence-directory
+symlink target. A 16 MiB service file-size limit bounds trace and worker files;
+the worker reports its actual inherited limit. Root/VM execution stays CI-only.
+
+Raw trace and actual strace version become hashed artifacts. Stable regular
+Root 0600/one-link metadata and bounded bytes are checked. Failures retain bounded
+partial evidence marked worker_failed; they cannot satisfy successful acceptance.
+The tracer is trusted inspection TCB, not a sandbox. CLONE_UNTRACED and other
+coverage limitations mean all_execs_observed remains false. Argument decoding,
+script bytes at exec, trigger authority and publication remain false.
+
+787 local tests: 732 passed, 55 skipped. Ruff, compilation, embedded worker
+compilation, shell syntax and diff checks pass. Four tracer tests use mocked FD
+metadata/commands; they do not run Root/Linux on the Mac. Independent opaque-byte
+selfcheck is SYNTHETIC and rejects six altered reports. No native trace exists
+for this source yet. Future acceptance adds --exec-trace to all thirteen preceding
+options (FOURTEEN total). Current remote ef19cf4 uses thirteen, no --exec-trace.
+
 # mano-OS continuation
 
 ## Goal and execution rules

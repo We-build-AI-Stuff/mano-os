@@ -1,6 +1,7 @@
 import contextlib
 import hashlib
 import importlib.util
+import stat
 import sys
 import tempfile
 import unittest
@@ -19,6 +20,67 @@ SPEC.loader.exec_module(probe)
 
 
 class StagedProbeSafetyTests(unittest.TestCase):
+    def test_execution_trace_is_outside_clone_bounded_and_kills_tracees_on_tracer_exit(self):
+        command = probe.exec_trace_command(['/usr/bin/bwrap', '--unshare-pid'])
+        self.assertEqual(command[0], '/usr/bin/strace')
+        self.assertIn('--kill-on-exit', command)
+        self.assertIn('trace=execve,execveat', command)
+        self.assertIn('-xx', command)
+        self.assertEqual(command[-3:], ['--', '/usr/bin/bwrap', '--unshare-pid'])
+        self.assertEqual(command[command.index('-o')+1], str(probe.EXEC_TRACE))
+        self.assertFalse(any(arg.startswith('--syscall-limit') for arg in command))
+
+    def trace_metadata(self, **changes):
+        fields = dict(st_mode=stat.S_IFREG|0o600, st_uid=0, st_gid=0, st_nlink=1,
+                      st_size=3, st_dev=1, st_ino=2, st_mtime_ns=1, st_ctime_ns=1)
+        return SimpleNamespace(**(fields|changes))
+
+    def test_execution_trace_fd_custody_is_checked_without_host_root_execution(self):
+        metadata = self.trace_metadata()
+        with patch.object(probe.os, 'open', return_value=999) as opened, \
+                patch.object(probe.os, 'fstat', return_value=metadata), \
+                patch.object(probe.os, 'read', side_effect=[b'raw', b'']), \
+                patch.object(probe.os, 'close') as closed:
+            data, observed = probe.read_exec_trace()
+            self.assertEqual(data, b'raw')
+            self.assertEqual(opened.call_args.args[1],
+                             probe.os.O_RDONLY|probe.os.O_NOFOLLOW|probe.os.O_NONBLOCK)
+            closed.assert_called_once_with(999)
+            self.assertFalse(observed['arguments_decoded'])
+            self.assertFalse(observed['all_execs_observed'])
+            self.assertFalse(observed['trigger_authority_verified'])
+
+    def test_failed_trace_can_retain_partial_bytes_without_claiming_completeness(self):
+        with patch.object(probe.os, 'open', return_value=999), \
+                patch.object(probe.os, 'fstat', side_effect=[self.trace_metadata(),
+                                                           self.trace_metadata(st_size=4)]), \
+                patch.object(probe.os, 'read', side_effect=[b'raw', b'']), \
+                patch.object(probe.os, 'close'):
+            data, observed = probe.read_exec_trace(require_complete=False)
+            self.assertEqual(data, b'raw')
+            self.assertFalse(observed['stable_observation'])
+            self.assertFalse(observed['all_execs_observed'])
+            self.assertFalse(observed['publication_authorized'])
+
+    def test_execution_trace_alias_metadata_quota_and_mutation_rejected(self):
+        for change in ({'st_mode': stat.S_IFLNK|0o600}, {'st_uid': 1}, {'st_gid': 1},
+                       {'st_mode': stat.S_IFREG|0o644}, {'st_nlink': 2},
+                       {'st_size': probe.MAX_EXEC_TRACE}):
+            with self.subTest(change=change), \
+                    patch.object(probe.os, 'open', return_value=999), \
+                    patch.object(probe.os, 'fstat', return_value=self.trace_metadata(**change)), \
+                    patch.object(probe.os, 'read') as read, patch.object(probe.os, 'close'):
+                with self.assertRaises(ValueError):
+                    probe.read_exec_trace()
+                read.assert_not_called()
+        with patch.object(probe.os, 'open', return_value=999), \
+                patch.object(probe.os, 'fstat', side_effect=[self.trace_metadata(),
+                                                           self.trace_metadata(st_ino=3)]), \
+                patch.object(probe.os, 'read', side_effect=[b'raw', b'']), \
+                patch.object(probe.os, 'close'):
+            with self.assertRaisesRegex(ValueError, 'changed'):
+                probe.read_exec_trace()
+
     def test_private_state_masks_hide_existing_state_without_creating_absent_targets(self):
         entries = {p: {'kind': 'directory'} for p in ('var', 'var/lib', 'var/lib/mano-broker')}
         self.assertEqual(probe.private_state_masks({'entries': entries}), ['/var/lib/mano-broker'])

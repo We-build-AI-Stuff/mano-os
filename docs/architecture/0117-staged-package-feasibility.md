@@ -842,3 +842,41 @@ Neither new implementation executed in that VM run. The follow-up batch still
 needs its own native source run and all thirteen acceptance options. The old
 strict guard continues to reject 11 unknown effects among 66 changes. No log,
 trigger script or candidate publication authority is inferred.
+
+
+## CI-only trusted execution-trace capture prepared locally
+
+The package-name log does not record the exact trigger names passed to postinst.
+The next evidence source is a trusted Root strace collector outside the candidate
+namespace, following execve/execveat while the fixed bwrap workload runs. Debian's
+[strace manual](https://manpages.debian.org/trixie/strace/strace.1.en.html)
+documents fork following, hexadecimal string output and kill-on-exit. The probe
+uses those options without syscall-count detachment. The collector is part of the
+trusted inspection TCB and has Root tracing authority; it is not a restriction on
+package capabilities or a production sandbox.
+
+The raw destination is inside the exclusively created mode-0700 controller BASE,
+hidden behind the candidate's snapshot mask. This avoids a Root tracer opening
+a replaceable evidence-directory target. The file is precreated exclusively with
+mode 0600. The systemd unit caps each file at 16 MiB, retains existing memory/task/
+runtime limits, and the worker reports the inherited file limit. Capture fails
+closed at the byte boundary or on a changed/aliased/non-Root trace. Raw trace and
+actual utility version are exported as SHA-bound artifacts after the child domain
+drains. A failed invocation instead retains bounded partial bytes and explicit
+worker_failed metadata; it produces no successful acceptance receipt.
+
+The trace is deliberately opaque at this stage. Fork-following is not proof of
+all descendants or all execution: CLONE_UNTRACED and other ptrace coverage limits
+must remain visible. Argument decoding, complete coverage, script bytes at exec,
+trigger authority and publication stay false. A valid-looking trace line alone
+cannot bless a callback or maintainer effect. Instrumentation changes timing and
+inherits the file-size ceiling, so this is a specific CI observation context.
+
+787 local tests completed (732 passed, 55 skipped), including four mocked-command/
+FD custody, quota, alias, mutation and partial-evidence tests. Ruff, compilation,
+embedded worker compilation, shell syntax and diff checks pass. An independent
+reader bound SYNTHETIC opaque bytes and rejected six report alterations. No Root
+or tracer execution occurred on the Mac. The preceding remote ef19cf4 source
+contains none of this capture. A later fresh native run must add --staged-exec-trace
+to all thirteen prior acceptance options, then supply actual data before parser
+or trigger-argument claims can be made.
