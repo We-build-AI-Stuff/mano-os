@@ -32,6 +32,7 @@ from mano_runtime.package_log_observation import MAX_LOG
 from mano_runtime.package_log_observation import observe as observe_log
 from mano_runtime.package_log_scope import inspect as inspect_log_scope
 from mano_runtime.package_log_sequence import require_sequence
+from mano_runtime.package_log_time import bind_controller_window
 from mano_runtime.package_postconditions import MAX_STATUS, database, database_records
 from mano_runtime.package_tree import delta as tree_delta
 from mano_runtime.package_tree_worker import REQUIRED_CAPS as TREE_CAPS
@@ -56,7 +57,8 @@ namespaces={k:os.readlink('/proc/self/ns/'+k) for k in ('mnt','pid','net','ipc',
 body=json.loads(sys.stdin.buffer.read(32769));assert set(body)=={'archives'}
 assert 1<=len(body['archives'])<=8
 assert all('/' not in p and p.endswith('.deb') for p in body['archives'])
-env={'PATH':'/usr/sbin:/usr/bin:/bin','LANG':'C.UTF-8','DEBIAN_FRONTEND':'noninteractive'}
+env={'PATH':'/usr/sbin:/usr/bin:/bin','LANG':'C.UTF-8',
+     'TZ':'UTC0','DEBIAN_FRONTEND':'noninteractive'}
 result=subprocess.run(['/usr/bin/dpkg','--force-confold','--install',
  *['/run/archives/'+p for p in body['archives']]],env=env,capture_output=True,timeout=30)
 assert result.returncode==0,(result.returncode,result.stderr[-2048:])
@@ -65,7 +67,8 @@ shutil.copyfile('/run/stage-fixture.so','/usr/local/lib/libmano-stage-fixture.so
 cache=subprocess.run(['/usr/sbin/ldconfig'],env=env,capture_output=True,timeout=10)
 assert cache.returncode==0,(cache.returncode,cache.stderr[-2048:])
 print(json.dumps(dict(capabilities=caps,securebits=secure,no_new_privileges=True,
- namespaces=namespaces,pid=os.getpid(),
+ namespaces=namespaces,pid=os.getpid(),worker_timezone=os.environ.get("TZ"),
+ dpkg_timezone=env["TZ"],
  dpkg_returncode=result.returncode,ldconfig_returncode=cache.returncode,
  dpkg_output_sha256=hashlib.sha256(result.stdout+result.stderr).hexdigest(),
  production_guard_used=False,production_pam_used=False)))
@@ -381,6 +384,7 @@ def main():
                 '--ro-bind', str(empty), '/etc/shadow',
                 '--ro-bind', str(empty), '/etc/gshadow',
                 '--clearenv', '--setenv', 'PATH', ENV['PATH'], '--setenv', 'LANG', ENV['LANG'],
+                '--setenv', 'TZ', 'UTC0',
                 '--setenv', 'PYTHONDONTWRITEBYTECODE', '1', '--chdir', '/',
                 '/usr/bin/setpriv', '--no-new-privs', '--bounding-set=' + CAPS,
                 '--inh-caps=' + CAPS, '--ambient-caps=' + CAPS,
@@ -391,8 +395,17 @@ def main():
                 '--property=MemoryMax=536870912', '--property=TasksMax=64',
                 '--property=RuntimeMaxSec=45', '--property=KillMode=control-group',
                 '--property=Restart=no', '--property=LimitCORE=0', '--property=LimitNOFILE=128']
+        clock_samples = dict(
+            boot_id_before=Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
+            realtime_before_ns=time.time_ns(), monotonic_before_ns=time.monotonic_ns())
         proof = json.loads(run(unit + argv, input=json.dumps(
             dict(archives=[r['filename'] for r in records])).encode(), timeout=60))
+        clock_samples.update(monotonic_after_ns=time.monotonic_ns(),
+                             realtime_after_ns=time.time_ns(),
+                             boot_id_after=Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
+                             worker_timezone=proof['worker_timezone'])
+        if proof['dpkg_timezone'] != 'UTC0':
+            raise ValueError('Fixed dpkg UTC0 timezone required')
         if (set(proof['namespaces']) != set(host_namespaces) or
                 any(proof['namespaces'][kind] == value for kind, value in host_namespaces.items())):
             raise ValueError('Staged worker namespaces are not private')
@@ -429,6 +442,7 @@ def main():
         log_decoding = decode_append(before_log, after_log)
         log_scope = inspect_log_scope(before_log, after_log, before_status, after, records)
         log_sequence = require_sequence(before_log, after_log, before_status, after, records)
+        log_time = bind_controller_window(before_log, after_log, clock_samples)
         trigger_sources = baseline_sources(before_status, baseline_tree,
             log_scope['referenced_trigger_packages'],
             lambda path, maximum: candidate_read(baseline, path, maximum))
@@ -527,6 +541,7 @@ def main():
                 dpkg_log_decoding=log_decoding,
                 dpkg_log_scope=log_scope,
                 dpkg_log_sequence=log_sequence,
+                dpkg_log_time_samples=clock_samples, dpkg_log_time_window=log_time,
                 baseline_trigger_sources=trigger_sources,
                 trigger_declaration_linkage=trigger_linkage,
                 archive_container_identity_bound=True,

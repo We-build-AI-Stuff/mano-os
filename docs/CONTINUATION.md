@@ -1,3 +1,22 @@
+## Local UTC execution-window binding (not pushed)
+
+package_log_time.bind_controller_window checks nonempty preserved log append
+against actual controller realtime/monotonic nanosecond samples around the fixed
+worker run. Same boot, positive bounded integer samples, at most 60 seconds and
+at most two seconds wall/monotonic drift are required. UTC event seconds must
+fall in the inclusive start/end second buckets and never decrease. The worker
+and dpkg receive TZ=UTC0 explicitly; both environment witnesses are recorded.
+This is controller-relative containment, not an external time authority or a
+proof of trigger arguments, script effects or log mutation permission.
+
+779 local tests: 724 passed, 55 skipped. Ruff, compilation and diff checks pass.
+An independent implementation recomputed a SYNTHETIC two-event clock fixture
+and rejected seven altered reports. No native clock samples have been acquired
+by this source yet. Future fresh source acceptance needs TWELVE options, adding
+--log-time-window after --log-sequence. Current remote 8f77c70/run40286784670
+still needs NINE; it has no linkage, sequence or time-window guard. Keep all three
+local follow-ups unpushed until current run and its evidence are accepted.
+
 ## Local supported event-sequence follow-up (not pushed)
 
 package_log_sequence.require_sequence now requires one startup, complete ordered

@@ -748,3 +748,33 @@ recomputed the sequence and rejected six altered reports. This does not establis
 new-source native execution. Later fresh acceptance requires --staged-log-sequence
 in addition to trigger linkage and all preceding gates. The current 8f77c70 native
 run has neither new guard and must not be accepted using these options.
+
+
+## Controller-relative UTC log execution window (local follow-up)
+
+The probe now sets TZ=UTC0 in the worker and in dpkg's explicit environment and
+records both witnesses. The controller samples boot ID, realtime nanoseconds and
+monotonic nanoseconds immediately around the bounded systemd worker execution.
+The window gate requires an unchanged canonical boot ID, exact integer sample
+fields, nonnegative intervals no longer than 60 seconds and wall/monotonic elapsed
+times differing by no more than two seconds. A changed boot, backward clock or
+larger clock jump fails this evidence gate.
+
+Every appended event is interpreted in UTC. Since dpkg timestamps have second
+resolution, its integer event second must lie between the floor of the start and
+end realtime seconds, inclusive. Event seconds must also be nondecreasing. The
+gate rejects an empty or rewritten append. Source custody and the trusted
+controller are prerequisites: arbitrary submitted clock samples or a timezone
+claim do not prove execution. This checks controller-relative consistency and
+containment; external absolute time authority remains unverified. Actual trigger
+arguments, dependency ordering, maintainer effects and log/publication authority
+remain separate requirements.
+
+779 local tests completed (724 passed, 55 skipped), with six focused clock cases
+covering precision boundaries, out-of-window events, decreasing times, drift,
+duration, integer/type bounds, boot changes and timezone substitution. Ruff,
+compilation and diff checks pass. An independent reader recomputed two events on
+a SYNTHETIC clock fixture and rejected seven altered reports, including an
+inconsistent dpkg environment. This source has not acquired native clock samples.
+Future fresh acceptance requires --staged-log-time-window in addition to all
+preceding gates. The current 8f77c70 run contains none of these new local guards.
