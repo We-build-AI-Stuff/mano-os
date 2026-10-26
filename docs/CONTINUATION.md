@@ -1,3 +1,27 @@
+## Prepared LOCAL control metadata follow-up
+
+Remote95d20a024e8be478b04037f11d66de13f2c52cdc / CI40259735562 is queued;
+watchsession68765 is live. Do not push this follow-up until that run is terminal.
+Latest fullyaccepted native baseline is3484744/run40257481990/artifact12623896949
+SHA5fb0711e5ae764447e1080692b3338d14e7942dbad7b091133a7fbed1a4207d2.
+Full54hash45flags+newpayloadclosure accepted,6GUIoriginals+4crops inspected;
+receipt outputs/acceptance-pr134-payload-closure/inspection.json.
+
+New package_control.py observes bounded flat control tar/fields in the existing
+unprivileged sealed-archive worker. No extraction/execution. Parent checks bound
+identity before work. After drainage, complete new-package DB records must equal
+control+settledstate; five copied info files from two real package archives match
+bytes/UID/GID/mode/xattrs/link constraints in offline saved-input checks. Unknown
+members and generated lists/conffiles/cache/log/other effects remain unresolved.
+Generated-state/changeauthority/publication remain false. 705localtests650pass/
+55skip,Ruff/compilation/diffpass. New independent accept_control_metadata.py checks
+archive bytes/manifests/fields/copied info and rejects5tampered report cases.
+NOTnewsource nativeverification. Later require --staged-control-metadata WITH
+--staged-payload-closure and all prior options. Existing95CI must NOT use the new
+control flag (source lacks it). Acceptance wrapper --control-metadata implies new
+source only and requires --payload-closure. Last disk23048104KiB(~22GiB)89percent;
+prior17GiB/92percent warning sent. No data deleted/localVMmodeldownloads.
+
 # mano-OS continuation
 
 Original v2.1 phases 0-7 remain active and incomplete; Phase 8 is optional.

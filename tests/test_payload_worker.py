@@ -1,3 +1,4 @@
+import io
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -5,6 +6,41 @@ from mano_runtime import package_payload_worker as worker
 
 
 class PayloadWorkerAdmissionTests(unittest.TestCase):
+    def test_decompressor_fixed_mode_and_parse_failure_kills_child(self):
+        process = MagicMock()
+        process.stdout = io.BytesIO(b'untrusted tar bytes')
+        process.poll.return_value = None
+        with patch.object(worker.os, 'lseek'), \
+                patch.object(worker.subprocess, 'Popen', return_value=process) as popen:
+            def fail(stream):
+                raise ValueError('Malformed control input')
+            with self.assertRaisesRegex(ValueError, 'Malformed'):
+                worker.decompressed(12, '--ctrl-tarfile', fail)
+            self.assertEqual(popen.call_args.args[0],
+                             ['/usr/bin/dpkg-deb', '--ctrl-tarfile', '/proc/self/fd/12'])
+            self.assertEqual(popen.call_args.kwargs['pass_fds'], (12,))
+            process.kill.assert_called_once()
+            process.wait.assert_called_once_with(timeout=5)
+        with patch.object(worker.subprocess, 'Popen') as popen:
+            with self.assertRaises(ValueError):
+                worker.decompressed(12, '--execute-scripts', fail)
+            popen.assert_not_called()
+
+    def test_nonzero_decompressor_and_nonzero_trailing_bytes_are_rejected(self):
+        for code, tail in ((1, b''), (0, b'bad'), (0, b'\0'*9)):
+            process = MagicMock()
+            process.stdout = io.BytesIO(tail)
+            process.wait.return_value = code
+            process.poll.return_value = code
+            with self.subTest(code=code, tail=tail), patch.object(worker.os, 'lseek'), \
+                    patch.object(worker.subprocess, 'Popen', return_value=process):
+                if code or any(tail):
+                    with self.assertRaises(ValueError):
+                        worker.decompressed(12, '--ctrl-tarfile', lambda stream: 'observed')
+                else:
+                    self.assertEqual(worker.decompressed(12, '--ctrl-tarfile',
+                                                         lambda stream: 'observed'), 'observed')
+
     def test_mac_refuses_before_stdin_proc_or_resource_changes(self):
         with patch.object(worker.sys, 'platform', 'darwin'), \
                 patch.object(worker.sys, 'stdin', MagicMock()) as stdin, \

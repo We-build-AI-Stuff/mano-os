@@ -118,6 +118,7 @@ class StagedProbeSafetyTests(unittest.TestCase):
         import json
 
         record = dict(filename='sl.deb', sha256='a' * 64, bytes=3,
+                      name='sl', architecture='amd64', version='1',
                       container={'archive_sha256': 'a' * 64})
         valid = dict(uid=65534, capabilities={key: 0 for key in
                      ('CapEff', 'CapPrm', 'CapInh', 'CapBnd', 'CapAmb')},
@@ -125,10 +126,13 @@ class StagedProbeSafetyTests(unittest.TestCase):
                      container=record['container'], address_space_limit_bytes=384 * 1024**2,
                      cpu_limit_seconds=12, production_guard_used=False,
                      production_pam_used=False, archive_signature_verified=False,
-                     publication_authorized=False)
+                     publication_authorized=False,
+                     control={'fields': dict(package='sl', architecture='amd64', version='1')})
         cases = [{}, {'uid': 0}, {'uid': True}, {'capabilities': {}},
                  {'no_new_privileges': False}, {'sealed_archive_observed': False},
-                 {'container': {}}, {'cpu_limit_seconds': 0}, {'publication_authorized': True}]
+                 {'container': {}}, {'cpu_limit_seconds': 0}, {'publication_authorized': True},
+                 {'control': None}, {'control': {'fields': {}}},
+                 {'control': {'fields': dict(package='other', architecture='amd64', version='1')}}]
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
             (base / 'archives').mkdir()

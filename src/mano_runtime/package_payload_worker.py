@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 
 from mano_runtime.package_container import MAX_ARCHIVE, bind
+from mano_runtime.package_control import MAX_TAR
+from mano_runtime.package_control import observe as observe_control
 from mano_runtime.package_payload import inventory
 
 
@@ -29,6 +31,31 @@ def guard():
     return caps
 
 
+def decompressed(fd, option, reader):
+    """Fixed dpkg tar output under the existing worker resource boundary."""
+    if option not in {'--fsys-tarfile', '--ctrl-tarfile'}:
+        raise ValueError('Fixed archive stream mode required')
+    os.lseek(fd, 0, os.SEEK_SET)
+    process = subprocess.Popen(
+        ['/usr/bin/dpkg-deb', option, '/proc/self/fd/' + str(fd)],
+        pass_fds=(fd,), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL, cwd='/',
+        env={'PATH': '/usr/sbin:/usr/bin:/bin', 'LANG': 'C.UTF-8'})
+    try:
+        with process.stdout:
+            result = reader(process.stdout)
+            tail = process.stdout.read(1024**2 + 1)
+            if len(tail) > 1024**2 or any(tail):
+                raise ValueError('Unsupported data after package tar terminator')
+        if process.wait(timeout=5) != 0:
+            raise ValueError('Package archive decompression failed')
+        return result
+    finally:
+        if process.poll() is None:
+            process.kill()
+        process.wait(timeout=5)
+
+
 def observe(raw, *, expected_sha256, expected_bytes):
     container = bind(raw, expected_sha256=expected_sha256, expected_bytes=expected_bytes)
     fd = os.memfd_create('mano-ci-payload-observation', os.MFD_ALLOW_SEALING | os.MFD_CLOEXEC)
@@ -40,24 +67,11 @@ def observe(raw, *, expected_sha256, expected_bytes):
         fcntl.fcntl(fd, fcntl.F_ADD_SEALS, seals)
         if fcntl.fcntl(fd, fcntl.F_GET_SEALS) & seals != seals:
             raise ValueError('Immutable observer archive custody required')
-        process = subprocess.Popen(
-            ['/usr/bin/dpkg-deb', '--fsys-tarfile', '/proc/self/fd/' + str(fd)],
-            pass_fds=(fd,), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL, cwd='/',
-            env={'PATH': '/usr/sbin:/usr/bin:/bin', 'LANG': 'C.UTF-8'})
-        try:
-            with process.stdout:
-                result = inventory(process.stdout)
-                tail = process.stdout.read(1024**2 + 1)
-                if len(tail) > 1024**2 or any(tail):
-                    raise ValueError('Unsupported data after payload tar terminator')
-            if process.wait(timeout=5) != 0:
-                raise ValueError('Payload decompression failed')
-        finally:
-            if process.poll() is None:
-                process.kill()
-            process.wait(timeout=5)
+        control = decompressed(fd, '--ctrl-tarfile',
+                               lambda stream: observe_control(stream.read(MAX_TAR + 1)))
+        result = decompressed(fd, '--fsys-tarfile', inventory)
         return dict(payload=result, container=container, sealed_archive_observed=True,
+                    control=control,
                     archive_signature_verified=False, publication_authorized=False)
     finally:
         os.close(fd)

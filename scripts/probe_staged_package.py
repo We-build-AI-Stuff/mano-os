@@ -27,6 +27,7 @@ from mano_runtime.package_apply import NoRedirect, archive_url
 from mano_runtime.package_candidate import compare_payload
 from mano_runtime.package_candidate_policy import validate_payloads
 from mano_runtime.package_container import bind as bind_container
+from mano_runtime.package_control import validate_new as validate_new_control
 from mano_runtime.package_postconditions import MAX_STATUS, database, database_records
 from mano_runtime.package_tree import delta as tree_delta
 from mano_runtime.package_tree_worker import REQUIRED_CAPS as TREE_CAPS
@@ -274,6 +275,11 @@ def payload_observation(record):
                 'archive_signature_verified', 'publication_authorized'):
         if value[key] is not False:
             raise ValueError('CI observer cannot grant authority')
+    control = value.get('control')
+    fields = control.get('fields') if isinstance(control, dict) else None
+    if (not isinstance(fields, dict) or any(fields.get(field) != record[key] for field, key in (
+            ('package', 'name'), ('architecture', 'architecture'), ('version', 'version')))):
+        raise ValueError('Archive control identity differs from authenticated candidate')
     return value
 
 
@@ -415,6 +421,8 @@ def main():
                                            for name, value in observations.items()})
         after = candidate_read(candidate, 'var/lib/dpkg/status', MAX_STATUS)
         old, new = database(before_status), database(after)
+        control_policy = validate_new_control(before_status, after, candidate_tree,
+                                             records, observations)
         old_records, new_records = database_records(before_status), database_records(after)
         approved = {(r['name'], r['architecture']) for r in records}
         if any(new_records.get(key) != old_records.get(key)
@@ -480,6 +488,7 @@ def main():
                 live_source=live_source, source_read_only=True,
                 tree_observation_reported=True, tree_changes_authorized=False,
                 payload_closure_validation=payload_policy,
+                control_metadata_validation=control_policy,
                 archive_container_identity_bound=True,
                 candidate_inventoried_payload_paths_match=True,
                 host_namespaces=host_namespaces,

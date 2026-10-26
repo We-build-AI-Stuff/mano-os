@@ -370,3 +370,42 @@ reader checked all unapproved record fields in four prior native transactions
 That is offline historical-input evidence; fresh native CI is still required for
 the new source. Approved-package control metadata, generated-state validation and
 coherent publication remain separate unfinished gates.
+
+
+## Prepared authenticated control metadata gate
+
+The unprivileged archive observer now reads the control tar from the same sealed,
+SHA-bound Debian archive, using fixed dpkg-deb --ctrl-tarfile under its existing
+empty-capability/NNP/cgroup/CPU/address-space limits. No control member is extracted
+to disk or executed. The uncompressed control input is bounded to 16 MiB, individual
+members to 4 MiB, total content to 8 MiB, control fields to 1 MiB and member count
+256. Only a root directory and flat regular files are supported. Links, nested
+paths, duplicate/ambiguous fields, installed-state headers, unsupported metadata
+and nonzero bytes after the tar terminator are rejected. Identity fields must
+match the authenticated candidate before candidate package execution.
+
+After drainage, each new package's entire installed status record must equal its
+authenticated control fields plus install-ok-installed state. Every package outside
+the approved set retains all baseline fields. Copied md5sums, shlibs, symbols,
+triggers and supported maintainer/config/template files must match control hashes,
+lengths, UID/GID/modes, have no extra xattrs and exactly one link. Multi-Arch:same
+names derive their architecture suffix from the bound control field. Unknown
+control members remain explicitly unsupported. This gate currently addresses new
+packages; upgrades/removals and existing configuration records require separate
+policies, and no generic compatibility claim is made.
+
+Generated .list/conffile records, trigger effects, loader caches, logs, parent
+metadata, protected-runtime changes and all other effects still require validation.
+The result keeps generated-state validation, maintainer-effect verification,
+change authorization and publication false. No control filename confers authority.
+
+Thirteen new portable tests cover malformed/linked/nested inputs, resource budgets,
+metadata drift, whole-record identity/content, multiarch naming, duplicate/preexisting
+packages, aliases, unsupported extensions, child cleanup and decompressor errors.
+The complete local suite has705tests:650passed/55skipped. Applied locally to saved
+3484744 archive/tree/status evidence, two records and five info paths match. A
+separate implementation recomputes those observations and rejects five altered
+reports. Those are historical-input/local-code checks, not new-source native
+execution. The current remote95d20a0 CI remains queued; keep this follow-up local
+until that run is terminal. Fresh CI and explicit --staged-control-metadata
+independent acceptance are required for this addition.
