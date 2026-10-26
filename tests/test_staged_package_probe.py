@@ -1,4 +1,6 @@
+import ast
 import contextlib
+import errno
 import hashlib
 import importlib.util
 import stat
@@ -20,6 +22,31 @@ SPEC.loader.exec_module(probe)
 
 
 class StagedProbeSafetyTests(unittest.TestCase):
+    def fd_guard(self, names, stats):
+        tree = ast.parse(probe.PROGRAM)
+        function = next(n for n in tree.body if isinstance(n, ast.FunctionDef)
+                        and n.name == 'verify_no_inherited_fds')
+        fake_os = SimpleNamespace(listdir=MagicMock(return_value=names),
+                                  fstat=MagicMock(side_effect=stats))
+        namespace = {'os': fake_os, 'errno': errno}
+        exec(compile(ast.Module(body=[function], type_ignores=[]), 'fd-guard-fixture', 'exec'),
+             namespace)
+        return namespace['verify_no_inherited_fds'], fake_os
+
+    def test_worker_fd_guard_accepts_stdio_and_closed_enumeration_fd_without_linux_execution(self):
+        guard, fake_os = self.fd_guard(['0', '1', '2', '3'], [OSError(9, 'closed fixture')])
+        self.assertEqual(guard(), [])
+        fake_os.listdir.assert_called_once_with('/proc/self/fd')
+        fake_os.fstat.assert_called_once_with(3)
+
+    def test_worker_fd_guard_rejects_any_live_nonstdio_descriptor(self):
+        guard, _ = self.fd_guard(['0', '1', '2', '7'], [object()])
+        with self.assertRaisesRegex(ValueError, '7'):
+            guard()
+        guard, _ = self.fd_guard(['3'], [PermissionError(13, 'fixture denied')])
+        with self.assertRaises(PermissionError):
+            guard()
+
     def test_execution_trace_is_outside_clone_bounded_and_kills_tracees_on_tracer_exit(self):
         command = probe.exec_trace_command(['/usr/bin/bwrap', '--unshare-pid'])
         self.assertEqual(command[0], '/usr/bin/strace')

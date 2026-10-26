@@ -902,3 +902,29 @@ verifies 55 of 64 differences and still rejects nine unknown effects. No remaini
 cache/log/synthetic-library mutation is approved merely because the log guards pass.
 The raw execution-trace implementation in 69b19f1 needs a separate native source
 run and fourteen acceptance options. This accepted source contains no tracer.
+
+
+## Explicit worker descriptor snapshot before package execution (local follow-up)
+
+The CI worker now enumerates /proc/self/fd before package invocation and requires
+only standard input, output and error. It ignores a transient enumeration entry
+only if fstat reports EBADF, propagates other errors and rejects any live extra
+descriptor. This is a necessary provenance check: a leaked writable controller or
+trace descriptor could undermine captured evidence even when its pathname is
+hidden. The worker reports the empty nonstdio set and the controller enforces it.
+It does not prove all descriptor use later in the execution.
+
+Trace observation schema 1.1 identifies the check. Independent acceptance requires
+the worker's exact empty set and true check result for that schema. Schema 1.0
+captures remain readable but explicitly have no inherited-descriptor verification.
+The existing fourteen-option acceptance chain is unchanged; source versions are
+not silently promoted to stronger claims. Current 2011fdd native execution does
+not contain this follow-up.
+
+789 local tests completed (734 passed, 55 skipped). Two additional tests compile
+and execute only the isolated helper AST with mocked descriptor operations;
+closed enumeration, live extra descriptors and permission failures are covered.
+The independent SYNTHETIC reader rejects extra descriptors and false verification,
+and explicitly leaves legacy verification false. Root/Linux execution on the Mac
+and native descriptor acquisition did not occur. Argument parsing, script bytes,
+complete trace coverage and execution/publication authority remain separate work.

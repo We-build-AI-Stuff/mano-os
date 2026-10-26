@@ -48,8 +48,27 @@ CAPS = '-all,+chown,+dac_override,+fowner,+fsetid,+setuid,+setgid'
 EXEC_TRACE = BASE / 'exec-trace.txt'
 MAX_EXEC_TRACE = 16 * 1024**2
 PROGRAM = r'''
-import ctypes,hashlib,json,os,resource,shutil,subprocess,sys
+import ctypes,errno,hashlib,json,os,resource,shutil,subprocess,sys
 from pathlib import Path
+
+def verify_no_inherited_fds():
+    extras=[]
+    for name in os.listdir('/proc/self/fd'):
+        if name in {'0','1','2'}:
+            continue
+        fd=int(name)
+        try:
+            os.fstat(fd)
+        except OSError as error:
+            if error.errno!=errno.EBADF:
+                raise
+            continue  # The directory enumeration's own descriptor has closed.
+        extras.append(fd)
+    if extras:
+        raise ValueError('Unexpected inherited descriptors: '+repr(sorted(extras)))
+    return []
+
+nonstdio_fds=verify_no_inherited_fds()
 status=dict(line.split(':',1) for line in Path('/proc/self/status').read_text().splitlines())
 caps={k:int(status[k].strip(),16) for k in ('CapEff','CapPrm','CapInh','CapBnd','CapAmb')}
 assert all(v==0xdb for v in caps.values()),caps
@@ -72,6 +91,7 @@ assert cache.returncode==0,(cache.returncode,cache.stderr[-2048:])
 print(json.dumps(dict(capabilities=caps,securebits=secure,no_new_privileges=True,
  namespaces=namespaces,pid=os.getpid(),worker_timezone=os.environ.get("TZ"),
  dpkg_timezone=env["TZ"],file_size_limit_bytes=resource.getrlimit(resource.RLIMIT_FSIZE)[0],
+ nonstdio_fds=nonstdio_fds,inherited_fd_scope_verified=True,
  dpkg_returncode=result.returncode,ldconfig_returncode=cache.returncode,
  dpkg_output_sha256=hashlib.sha256(result.stdout+result.stderr).hexdigest(),
  production_guard_used=False,production_pam_used=False)))
@@ -366,7 +386,7 @@ def read_exec_trace(*, require_complete=True):
         if require_complete and not stable:
             raise ValueError('Execution trace changed during observation')
         data = b''.join(pieces)
-        return data, dict(schema_version='1.0', bytes=count, sha256=sha(data),
+        return data, dict(schema_version='1.1', bytes=count, sha256=sha(data),
             uid=before.st_uid, gid=before.st_gid, mode=stat.S_IMODE(before.st_mode),
             nlink=before.st_nlink, stable_observation=stable,
             arguments_decoded=False, all_execs_observed=False,
@@ -478,6 +498,8 @@ def main():
                              realtime_after_ns=time.time_ns(),
                              boot_id_after=Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
                              worker_timezone=proof['worker_timezone'])
+        if proof['nonstdio_fds'] != [] or proof['inherited_fd_scope_verified'] is not True:
+            raise ValueError('Worker must inherit only standard input/output/error')
         if proof['file_size_limit_bytes'] != MAX_EXEC_TRACE:
             raise ValueError('Execution trace and worker file-size limit required')
         if proof['dpkg_timezone'] != 'UTC0':

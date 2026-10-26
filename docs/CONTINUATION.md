@@ -1,3 +1,26 @@
+## Local inherited-descriptor check (not pushed)
+
+The worker now enumerates its actual /proc/self/fd before invoking any package.
+Only descriptors 0/1/2 are permitted. An already-closed enumeration descriptor is
+ignored only on EBADF; other errors or any live extra descriptor abort. The worker
+reports its empty nonstdio_fds and inherited_fd_scope_verified=True, and the
+controller checks them. This snapshot does not prove every later descriptor or
+all execution coverage.
+
+Execution-trace observation schema 1.1 identifies this additional requirement.
+The independent reader requires both worker facts for 1.1; archived schema 1.0
+remains readable but explicitly returns inherited-descriptor verification false.
+The number of acceptance flags remains fourteen. Current remote 2011fdd/run
+40325437426 uses schema 1.0 and cannot prove this local check. Keep it unpushed
+until that run's source and artifacts are accepted.
+
+789 local tests: 734 passed, 55 skipped. Two additional tests execute only the
+isolated helper AST against mocked descriptor operations, without Linux/Root calls
+on the Mac. Independent SYNTHETIC selfcheck rejects unexpected live descriptors
+and false verification, and does not upgrade legacy evidence. No native descriptor
+census exists for this source yet. Trace arguments/contents/coverage/authority
+remain unverified; the full original goal remains active.
+
 # mano-OS continuation
 
 ## Objective and rules
