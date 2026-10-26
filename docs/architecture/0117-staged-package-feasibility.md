@@ -880,3 +880,25 @@ or tracer execution occurred on the Mac. The preceding remote ef19cf4 source
 contains none of this capture. A later fresh native run must add --staged-exec-trace
 to all thirteen prior acceptance options, then supply actual data before parser
 or trigger-argument claims can be made.
+
+
+## Combined log and private-state guards independently accepted
+
+Head ef19cf4adc34787a61e283a0802febde1457cea3 passed all three jobs in run
+40321845193. Artifact 12650077946 (22,961,675 bytes) matches SHA256
+08f5e6ed3ab673b8ff5c39004877a60a3935ba6ec7d0ab8803a13bcf2d241e17.
+Independent acceptance passed 54 hash checks, all 45 required flags and the full
+package/PAM/Stop/recovery/ELF/staging chain with all thirteen guard options.
+Native results independently recomputed: two supported declaration links, 21 event
+frames/two trigger cycles, UTC event containment across 649000902 monotonic ns,
+exact broker-state masking with two private entries unchanged, and absent provider
+state remaining absent. This is controller-relative time consistency, not an
+external time authority or general performance benchmark. Actual callback arguments
+remain unverified. Six fresh UI originals/four numeric crops were inspected with
+full 900/120 values visible and a bound receipt retained. Physical provenance null.
+
+The setup correction removes two historical differences. Strict accounting now
+verifies 55 of 64 differences and still rejects nine unknown effects. No remaining
+cache/log/synthetic-library mutation is approved merely because the log guards pass.
+The raw execution-trace implementation in 69b19f1 needs a separate native source
+run and fourteen acceptance options. This accepted source contains no tracer.
