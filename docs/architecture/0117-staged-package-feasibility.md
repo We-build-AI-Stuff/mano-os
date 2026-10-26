@@ -409,3 +409,41 @@ reports. Those are historical-input/local-code checks, not new-source native
 execution. The current remote95d20a0 CI remains queued; keep this follow-up local
 until that run is terminal. Fresh CI and explicit --staged-control-metadata
 independent acceptance are required for this addition.
+
+
+## Prepared generated file-list validation
+
+Generated dpkg .list files are now checked against the authenticated payload path
+set for each new package. Lists require a bounded LF-terminated UTF-8 encoding,
+no CR/NUL, exactly one entry per payload member, no duplicates and exact canonical
+absolute spellings (including /. for the archive root). Ordering alone grants no
+authority. Missing/extra paths, aliases, traversal spellings and newline-ambiguous
+payload names fail closed. This checks file ownership bookkeeping, not the effects
+of scripts or other generated state.
+
+After writer drainage, the controller reads each fixed info path through its owned
+candidate directory FD. Intermediate/leaf symlinks are refused; nonblocking open
+avoids FIFO hangs. File type, same filesystem, ownership/mode/link count, exact
+size/timestamps and final inode identity must match the preceding tree observation.
+The file hash must match that observation as well. Root ownership, mode0644,
+one link, no reported xattrs and the exact hardlink anchor are required. Bounded
+reads and interruption checkpoints close all newly owned descriptors on failure.
+Generic descriptor regressions use user-owned temporary files; they do not prove
+Root authority or physical/native input provenance.
+
+Twelve portable regressions cover path sets, ambiguity, quotas, interruption,
+Root ownership/multiarch binding, symlink/FIFO refusal, real descriptor bytes,
+stale metadata/content and mutation during reading. The full local suite has717
+tests:662passed/55skipped. For saved3484744 evidence, lists reconstructed from
+authenticated archive member order have exactly the recorded candidate hashes:
+424bytes/15entries for libncurses6 and823bytes/33entries for sl. The independent
+reader verifies those48entries and rejects five altered reports. Reconstruction
+is not new-source native descriptor evidence. The exported result carries bounded
+base64 list bytes for independent rechecking against the raw payload and tree.
+
+Control and list follow-ups remain local while95d20a0 CI40259735562 runs. Their
+fresh head must pass native CI and independent acceptance with both new flags
+--staged-control-metadata and --staged-file-lists (plus closure/tree/prior checks).
+All other generated-state validation, whole-candidate verification, change authority
+and publication remain false. Conffiles, trigger/cache/log/status-backup effects,
+protected-runtime policy and coherent activation are still required.

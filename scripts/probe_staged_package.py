@@ -28,6 +28,7 @@ from mano_runtime.package_candidate import compare_payload
 from mano_runtime.package_candidate_policy import validate_payloads
 from mano_runtime.package_container import bind as bind_container
 from mano_runtime.package_control import validate_new as validate_new_control
+from mano_runtime.package_lists import observe as observe_lists
 from mano_runtime.package_postconditions import MAX_STATUS, database, database_records
 from mano_runtime.package_tree import delta as tree_delta
 from mano_runtime.package_tree_worker import REQUIRED_CAPS as TREE_CAPS
@@ -436,6 +437,7 @@ def main():
                 raise ValueError('Read-only archive custody changed')
         candidate_fd = os.open(candidate, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
         try:
+            list_policy = observe_lists(candidate_fd, candidate_tree, records, observations)
             for record in records:
                 record['payload_comparison'] = compare_payload(
                     candidate_fd, observations[record['name']]['payload'])
@@ -489,6 +491,7 @@ def main():
                 tree_observation_reported=True, tree_changes_authorized=False,
                 payload_closure_validation=payload_policy,
                 control_metadata_validation=control_policy,
+                generated_file_list_validation=list_policy,
                 archive_container_identity_bound=True,
                 candidate_inventoried_payload_paths_match=True,
                 host_namespaces=host_namespaces,

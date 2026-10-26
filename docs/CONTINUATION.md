@@ -1,3 +1,18 @@
+## Prepared LOCAL generated-list follow-up
+Remote95d20a024e8be478b04037f11d66de13f2c52cdc CI40259735562 nowRUNNING:
+quality121369299786SUCCESS,security121369299599LIVE(start02:43:36UTC).
+Existingwatch68765stilllive. Priorlocal6de12ff(controlmetadata) isUNPUSHED;
+thislistfollow-up isalsoLOCAL untilthatCIterminal/accepted. Do notcancel it.
+Newpackage_lists.py usesownedFD/nofollow/stableboundedread and exactsignedpayload
+pathset,RootUID/GID/mode0644/1link andtreehashbinding. No othergeneratedauthority.
+717localtests662pass55skip;Ruff/compile/diffpass. Logpr134-file-lists-local-tests.log.
+Reconstructedold348lists424/823bytes matcholdcandidatehashes,15/33entries(total48).
+Independentreader+5tampercasesPASS; pr134-file-lists-offline-selfcheck.json.
+NOTfreshnativeFDproof. Newsource mustlateraccept WITH --staged-file-lists in
+additionto --staged-control-metadata AND --staged-payload-closure/allpriorchecks.
+Wrapper flags: --payload-closure --control-metadata --file-lists.
+Do NOT usecontrol/listflagswhenacceptingcurrentlyrunning95source.
+
 ## Prepared LOCAL control metadata follow-up
 
 Remote95d20a024e8be478b04037f11d66de13f2c52cdc / CI40259735562 is queued;
