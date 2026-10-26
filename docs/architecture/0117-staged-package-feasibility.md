@@ -928,3 +928,35 @@ The independent SYNTHETIC reader rejects extra descriptors and false verificatio
 and explicitly leaves legacy verification false. Root/Linux execution on the Mac
 and native descriptor acquisition did not occur. Argument parsing, script bytes,
 complete trace coverage and execution/publication authority remain separate work.
+
+
+## Bounded loader-cache decoding prepared locally
+
+The new observer decodes the supported glibc new-format 1.1 little-endian layout
+from bytes without opening or loading any referenced library. It bounds the raw
+file, table count and expanded string budget; checks header/reserved/extension
+ranges; requires terminated UTF8/control-free strings and canonical lexical paths;
+and preserves legitimate suffix-sharing in the string table. Zero hwcap/OS-version
+fields and the optional opaque generator section define this explicit profile.
+Old/compat formats, nonzero hwcaps and other extensions need separate support.
+Flags, generator identity, search order, library objects, unused-byte semantics and
+exact regeneration remain unverified. No cache mutation is approved by decoding.
+
+The layout was checked against the glibc-2.41 header (Git blob
+0ee6571315630fb8156d633c48c86b1086dbcd43, SHA256
+d82003ce9e95ffb9fe685426e7591784d9296b2e7fbfa2a519168c5884b5d881)
+and the [Debian glibc cache producer](https://sources.debian.org/src/glibc/2.41-12%2Bdeb13u3/elf/cache.c/).
+The observer also binds the fixed cache bytes to captured plain Root-owned mode
+0644/one-link/xattr-free tree entries, checking byte quotas before hashing.
+The existing ldconfig diagnostic remains separate and unchanged.
+
+798 local tests completed (743 passed, 55 skipped), including nine cache cases.
+One test expectation was corrected: an embedded NUL terminates a C string, and a
+shorter name is structurally valid; unused string bytes are not thereby approved.
+Ruff, compilation and diff checks pass. Applied locally to accepted ef19cf4 native
+inputs, the decoder reads 568 baseline and 573 candidate entries. The five added
+entries are libform, libmenu, libncurses, libpanel and the deliberately unapproved
+fixture library. An independent reader recomputes both tables and rejects seven
+altered reports. This is new local code on native inputs, not new-source VM proof.
+Future acceptance requires --staged-loader-cache after all fourteen earlier options.
+Library-object, cache-regeneration and publication authority remain false.

@@ -28,6 +28,7 @@ from mano_runtime.package_apply import NoRedirect, archive_url
 from mano_runtime.package_candidate import compare_payload
 from mano_runtime.package_change_accounting import UnaccountedChanges, audit, require_accounted
 from mano_runtime.package_container import bind as bind_container
+from mano_runtime.package_loader_cache import bind_pair as bind_loader_caches
 from mano_runtime.package_log_decode import decode_append
 from mano_runtime.package_log_observation import MAX_LOG
 from mano_runtime.package_log_observation import observe as observe_log
@@ -598,6 +599,8 @@ def main():
         if candidate_read(candidate, str(FIXTURE_LIBRARY).lstrip('/'), 1024**2) != (
                 BASE / 'fixture.so').read_bytes():
             raise ValueError('Candidate synthetic library differs from compiled fixture')
+        before_cache = recovery.read(Path('/etc/ld.so.cache'), 4 * 1024**2)
+        cache_observation = bind_loader_caches(before_cache, cache, baseline_tree, candidate_tree)
         listing = run(['/usr/sbin/ldconfig', '-p', '-C', str(candidate / 'etc/ld.so.cache')])
         if sha(cache) == before['/etc/ld.so.cache'] or b'libmano-stage-fixture.so.1' not in listing:
             raise ValueError('Private loader cache did not add the synthetic library')
@@ -607,7 +610,7 @@ def main():
         'staged-exec-trace.txt': exec_trace, 'staged-strace-version.txt': tracer_version,
         'staged-dpkg-log-before': before_log, 'staged-dpkg-log-after': after_log,
         'staged-installed-sl': payload, 'staged-loader-cache-after': cache,
-        'staged-loader-cache-before': recovery.read(Path('/etc/ld.so.cache'), 4 * 1024**2),
+        'staged-loader-cache-before': before_cache,
         'staged-loader-cache-listing': listing,
         'staged-fixture.c': (BASE / 'fixture.c').read_bytes(),
         'staged-fixture.so': (BASE / 'fixture.so').read_bytes(),
@@ -631,6 +634,7 @@ def main():
                 scope='CI-only btrfs package/cache staging feasibility; no publication',
                 source=source, candidate=stage, archives=records, worker=proof,
                 private_state_masks=state_masks, execution_trace_observation=exec_observation,
+                loader_cache_observation=cache_observation,
                 live_source=live_source, source_read_only=True,
                 tree_observation_reported=True, tree_changes_authorized=False,
                 payload_closure_validation=payload_policy,

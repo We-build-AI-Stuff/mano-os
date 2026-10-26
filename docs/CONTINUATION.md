@@ -1,3 +1,30 @@
+## Local bounded loader-cache observation (not pushed)
+
+package_loader_cache observes glibc new-format 1.1 little-endian caches with zero
+hwcap/OS-version fields and an optional opaque generator extension. It bounds
+raw bytes, entry counts, string offsets/termination and expanded strings, checks
+reserved bytes and extension ranges, preserves suffix-shared C strings, and
+rejects unsupported formats/metadata. Library flags remain uninterpreted; no
+library is opened or loaded. Fixed etc/ld.so.cache bytes must match Root 0644/
+one-link/xattr-free baseline and candidate tree entries.
+
+798 local tests: 743 passed, 55 skipped. Nine cache tests cover malformed headers,
+pointers, strings, extensions, quota, C-string termination and metadata/byte binding.
+Ruff/compile/diff pass. The local decoder on accepted ef19cf4 native bytes reads
+568 before/573 after entries; five additions include four ncurses-family libraries
+and the unapproved synthetic fixture. An independent implementation reproduces
+both tables and rejects seven altered reports. This is LOCAL source against native
+input, not new-source native execution. The cache and library effects stay blocked.
+
+Pinned reference: glibc-2.41 dl-cache.h Git blob
+0ee6571315630fb8156d633c48c86b1086dbcd43, SHA256
+d82003ce9e95ffb9fe685426e7591784d9296b2e7fbfa2a519168c5884b5d881.
+The CI-only probe now emits loader_cache_observation alongside the unchanged
+ldconfig diagnostic. Future source acceptance adds --loader-cache after --exec-trace
+(FIFTEEN options). Current remote 2011fdd run uses fourteen; it cannot prove this
+observer or the local inherited-descriptor guard. Keep both follow-ups local until
+that run's source and artifact are accepted.
+
 ## Local inherited-descriptor check (not pushed)
 
 The worker now enumerates its actual /proc/self/fd before invoking any package.
