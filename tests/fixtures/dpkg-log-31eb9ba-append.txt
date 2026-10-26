@@ -1,0 +1,21 @@
+2026-10-26 04:23:40 startup archives install
+2026-10-26 04:23:40 install libncurses6:amd64 <none> 6.5+20250216-2
+2026-10-26 04:23:40 status triggers-pending libc-bin:amd64 2.41-12+deb13u4
+2026-10-26 04:23:40 status half-installed libncurses6:amd64 6.5+20250216-2
+2026-10-26 04:23:40 status unpacked libncurses6:amd64 6.5+20250216-2
+2026-10-26 04:23:40 install sl:amd64 <none> 5.02-1+b1
+2026-10-26 04:23:40 status half-installed sl:amd64 5.02-1+b1
+2026-10-26 04:23:40 status triggers-pending man-db:amd64 2.13.1-1
+2026-10-26 04:23:40 status unpacked sl:amd64 5.02-1+b1
+2026-10-26 04:23:40 configure libncurses6:amd64 6.5+20250216-2 6.5+20250216-2
+2026-10-26 04:23:40 status half-configured libncurses6:amd64 6.5+20250216-2
+2026-10-26 04:23:40 status installed libncurses6:amd64 6.5+20250216-2
+2026-10-26 04:23:40 configure sl:amd64 5.02-1+b1 5.02-1+b1
+2026-10-26 04:23:40 status half-configured sl:amd64 5.02-1+b1
+2026-10-26 04:23:40 status installed sl:amd64 5.02-1+b1
+2026-10-26 04:23:40 trigproc libc-bin:amd64 2.41-12+deb13u4 <none>
+2026-10-26 04:23:40 status half-configured libc-bin:amd64 2.41-12+deb13u4
+2026-10-26 04:23:41 status installed libc-bin:amd64 2.41-12+deb13u4
+2026-10-26 04:23:41 trigproc man-db:amd64 2.13.1-1 <none>
+2026-10-26 04:23:41 status half-configured man-db:amd64 2.13.1-1
+2026-10-26 04:23:41 status installed man-db:amd64 2.13.1-1

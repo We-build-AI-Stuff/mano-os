@@ -1,6 +1,6 @@
 # Staged package and loader-cache feasibility
 
-Status: native producer reported staging success; raw evidence transfer failed. Independent acceptance, production integration and publication remain incomplete.
+Status: CI-only staging and strict unknown-change rejection are independently accepted through 31eb9ba. Production authority integration, complete mutation policy, protected-runtime closure and publication remain incomplete. The log-frame decoder below requires fresh native CI.
 
 The current package worker writes selected live /usr, /etc and /var trees.
 Filename rules protect specific authority paths but do not establish complete
@@ -546,3 +546,50 @@ fixtures do not prove Debian event syntax or behavior. The log event policy must
 be based on real native evidence before it can approve a mutation. This addition
 stays local while8d61ad1 CI40265061248 runs. Fresh later source acceptance requires
 --staged-log-observation and both raw files, with accounting and all earlier gates.
+
+
+## Accepted unknown-change rejection and actual log evidence
+
+Run40267405507 at31eb9ba passed quality/security-lab/merge-gate. Artifact12627821277
+(22,904,164bytes,SHA256284e4ada5725c60839c54b878ce70f59ef1bea3c1dfc95a8a23ec740484e2ebf)
+was byte-verified and independently accepted with all54hashes/45flags and every
+prior gate plus accounting/log observation. The strict guard actually rejected
+11unresolved effects after accounting55of66changes. Six fresh GUI originals and
+four numeric crops were inspected;900/120values are readable. Headless evidence
+still does not prove physical input or a finished product.
+
+The native log preserved its197,189byte baseline and appended1,360bytes. Its21
+events include the two new package installs plus libc-bin and man-db trigger
+processing. The suffix SHA256 is
+c47b68d87eeab5e4c201d8b3d063efbe97d2032901b4e81a3fcce526e1cbe596.
+The recorded suffix is retained as tests/fixtures/dpkg-log-31eb9ba-append.txt.
+These are native facts, not synthetic log examples or approval of their semantics.
+The old watcher ended with a network timeout; authoritative checks confirmed CI
+success. The slow artifact download was preserved until its digest verified.
+
+## Prepared bounded event-frame decoder
+
+package_log_decode follows the event families documented in Debian's dpkg --log
+interface: startup, state updates, package actions and conffile decisions. It
+bounds bytes/event count/line length, validates real calendar timestamps and
+package/version token syntax, and refuses unknown events, ambiguous fields,
+incomplete lines, invalid UTF8 and control/format/line-separator characters.
+Literal conffile spaces remain data and no path is opened. Rewritten logs have no
+decoded append; an empty append is not installation proof. Timestamps remain local
+strings with no verified timezone/window.
+
+The decoder preserves explicit false flags for package scope, trigger authority,
+time window, complete semantics, log accounting, change authority and publication.
+Syntactically valid trigger records are not proof that their execution was allowed.
+The original byte observer remains a separate non-semantic component. The log
+therefore remains unresolved in the combined change audit.
+
+Six new tests include the exact captured21event fixture, documented event classes,
+malformed/unknown fields, timestamp/control/encoding errors, quotas and rewrite/
+empty cases.743localtests:688passed/55skipped,Ruff/compile/diffpass. A separate
+implementation decoded all21events from the accepted raw logs and rejected six
+altered reports. This is local new-code execution against native inputs, not
+native execution of the new source. Fresh CI must also require
+--staged-log-decoding after all six earlier options.
+
+Reference: https://manpages.debian.org/trixie/dpkg/dpkg.1.en.html#OPTIONS

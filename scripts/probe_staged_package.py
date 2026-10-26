@@ -27,6 +27,7 @@ from mano_runtime.package_apply import NoRedirect, archive_url
 from mano_runtime.package_candidate import compare_payload
 from mano_runtime.package_change_accounting import UnaccountedChanges, audit, require_accounted
 from mano_runtime.package_container import bind as bind_container
+from mano_runtime.package_log_decode import decode_append
 from mano_runtime.package_log_observation import MAX_LOG
 from mano_runtime.package_log_observation import observe as observe_log
 from mano_runtime.package_postconditions import MAX_STATUS, database, database_records
@@ -421,6 +422,7 @@ def main():
         before_log = candidate_read(baseline, 'var/log/dpkg.log', MAX_LOG)
         after_log = candidate_read(candidate, 'var/log/dpkg.log', MAX_LOG)
         log_observation = observe_log(before_log, after_log, baseline_tree, candidate_tree)
+        log_decoding = decode_append(before_log, after_log)
         old, new = database(before_status), database(after)
         old_records, new_records = database_records(before_status), database_records(after)
         approved = {(r['name'], r['architecture']) for r in records}
@@ -510,6 +512,7 @@ def main():
                 database_file_validation=database_files,
                 change_accounting=accounting, unlisted_change_guard_rejected=True,
                 dpkg_log_observation=log_observation,
+                dpkg_log_decoding=log_decoding,
                 archive_container_identity_bound=True,
                 candidate_inventoried_payload_paths_match=True,
                 host_namespaces=host_namespaces,
