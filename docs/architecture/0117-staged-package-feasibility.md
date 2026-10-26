@@ -1020,3 +1020,28 @@ in the local selfcheck is derived locally from native 2011fdd data, not a newly
 captured asset. Current 9e41442 native source lacks this decoder. Later acceptance
 requires --staged-exec-decoding after all fifteen earlier options. No new-source
 native decoder or trigger authority claim is made.
+
+
+### Bounded command diagnostics follow-up (local only)
+
+The raw exec trace cannot prove child process success. In particular, the earlier
+native trace shows a successful setpriv image replacement but no mandb exec frame;
+that is insufficient to diagnose a capability failure or to establish coverage.
+The next CI source will retain dpkg and diagnostic ldconfig stdout/stderr as
+separate byte artifacts, bounded at 64 KiB each while reading, and direct child
+return codes. Deadlines and excessive output produce incomplete observations,
+which the controller rejects. Failed dpkg skips the cache fixture command.
+
+The worker can return observations even for command failure; the controller saves
+these witnesses, then rejects any nonzero/incomplete/skipped command. Existing
+unit resource limits and cgroup drain stay mandatory. These direct child outcomes
+do not prove nested callback outcomes, ancestry, script bytes at exec, all-exec
+coverage, absence of errors, or authorized mutations. Streams are retained as raw
+bytes/base64 data, never interpreted as instructions or terminal control content.
+
+Local verification: 812 tests, 757 passed and 55 platform skips, including five
+portable helper tests; Ruff/compilation/diff checks passed. Independent synthetic
+verification matches raw streams and rejects six substitutions. No new-source
+Linux/Root/VM execution or mandb diagnosis is claimed. Its future native acceptance
+requires all sixteen preceding options plus --command-diagnostics and five exact
+new artifacts; the currently running decoder source uses only sixteen options.

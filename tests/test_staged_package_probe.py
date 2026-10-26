@@ -23,6 +23,85 @@ SPEC.loader.exec_module(probe)
 
 
 class StagedProbeSafetyTests(unittest.TestCase):
+    def observed_command(self, code, timeout=2):
+        # Only this portable, unprivileged helper runs; never the Linux/Root PROGRAM.
+        import base64
+        import os
+        import selectors
+        import subprocess
+        import time
+        tree=ast.parse(probe.PROGRAM)
+        function=next(n for n in tree.body if isinstance(n,ast.FunctionDef)
+                      and n.name=='run_observed')
+        namespace=dict(base64=base64,os=os,selectors=selectors,subprocess=subprocess,
+                       time=time,hashlib=hashlib)
+        exec(compile(ast.Module(body=[function],type_ignores=[]),'command-fixture','exec'),
+             namespace)
+        return namespace['run_observed']([sys.executable,'-c',code],{},timeout)
+
+    def diagnostic_worker(self, row):
+        return dict(command_diagnostics=dict(schema_version='1.0',dpkg=row,ldconfig=row,
+                    callback_process_outcomes_verified=False,all_execs_observed=False,
+                    changes_authorized=False,publication_authorized=False),
+                    dpkg_returncode=row['returncode'],ldconfig_returncode=row['returncode'],
+                    dpkg_output_sha256=hashlib.sha256(b'out\xfferr').hexdigest())
+
+    def test_command_capture_keeps_binary_streams_and_actual_nonzero_child_status(self):
+        import base64
+        row=self.observed_command("import os;os.write(1,b'out\\xff');os.write(2,b'err');exit(7)")
+        self.assertEqual(row['returncode'],7)
+        self.assertTrue(row['capture_complete'])
+        self.assertEqual(base64.b64decode(row['stdout']['base64']),b'out\xff')
+        self.assertEqual(base64.b64decode(row['stderr']['base64']),b'err')
+        assets=probe.command_artifacts(self.diagnostic_worker(row))
+        self.assertEqual(assets['staged-dpkg-stdout'],b'out\xff')
+        self.assertEqual(assets['staged-ldconfig-stderr'],b'err')
+        self.assertFalse(json.loads(assets['staged-command-diagnostics.json'])[
+            'callback_process_outcomes_verified'])
+
+    def test_failed_dpkg_retains_diagnostics_with_explicitly_skipped_cache(self):
+        row=self.observed_command("import os;os.write(1,b'out\\xff');os.write(2,b'err');exit(7)")
+        worker=self.diagnostic_worker(row)
+        worker['command_diagnostics']['ldconfig']=None
+        worker['ldconfig_returncode']=None
+        assets=probe.command_artifacts(worker)
+        self.assertEqual(set(assets),{'staged-dpkg-stdout','staged-dpkg-stderr',
+                                     'staged-command-diagnostics.json'})
+        self.assertIsNone(json.loads(assets['staged-command-diagnostics.json'])['ldconfig'])
+        worker['ldconfig_returncode']=0
+        with self.assertRaises(ValueError):
+            probe.command_artifacts(worker)
+
+    def test_command_capture_bounds_floods_and_marks_partial_capture(self):
+        row=self.observed_command("import os;os.write(1,b'x'*200000)")
+        self.assertFalse(row['capture_complete'])
+        self.assertEqual(row['stdout']['bytes'],65536)
+
+    def test_command_capture_deadline_retains_partial_output_without_success(self):
+        row=self.observed_command("import os,time;os.write(2,b'before');time.sleep(10)",.2)
+        self.assertFalse(row['capture_complete'])
+        self.assertNotEqual(row['returncode'],0)
+        self.assertLessEqual(row['stderr']['bytes'],65536)
+
+    def test_command_diagnostic_hash_scope_and_return_substitutions_rejected(self):
+        row=self.observed_command("import os;os.write(1,b'out\\xff');os.write(2,b'err')")
+        worker=self.diagnostic_worker(row)
+        for field,value in (('bytes',False),('sha256','0'*64),('base64','!!!!'),
+                            ('base64','A'*87385)):
+            broken=json.loads(json.dumps(worker))
+            broken['command_diagnostics']['dpkg']['stdout'][field]=value
+            with self.subTest(field=field),self.assertRaises(ValueError):
+                probe.command_artifacts(broken)
+        for key,value in (('callback_process_outcomes_verified',True),
+                          ('publication_authorized',True)):
+            broken=json.loads(json.dumps(worker))
+            broken['command_diagnostics'][key]=value
+            with self.subTest(key=key),self.assertRaises(ValueError):
+                probe.command_artifacts(broken)
+        worker['dpkg_returncode']=7
+        with self.assertRaises(ValueError):
+            probe.command_artifacts(worker)
+
     def test_trace_artifacts_retain_raw_version_and_exact_custody_before_decoder(self):
         observation={'schema_version': '1.1', 'bytes': 3}
         worker={'nonstdio_fds': [], 'inherited_fd_scope_verified': True}

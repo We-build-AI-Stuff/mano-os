@@ -1,3 +1,38 @@
+## Local bounded command diagnostics (not pushed)
+
+The CI staging worker now observes dpkg and diagnostic ldconfig via a portable
+selector-based reader: separate raw stdout/stderr, each at most 64 KiB, a monotonic
+per-command deadline and a separate child session for timeout/flood cleanup. It
+waits for the actual direct child's return code. Flood/deadline captures are
+explicitly incomplete and fail the controller's success gate. The outer systemd
+cgroup/45-second deadline and drain remain required; process-group cleanup alone
+is not a confinement or descendant-outcome proof.
+
+A failed dpkg skips the synthetic cache step and reports ldconfig as null. The
+controller exports raw streams and the command JSON before later checks; it still
+rejects nonzero/incomplete/skipped commands, retaining raw trace/custody as well.
+A successfully returned worker JSON means observations were delivered, not that
+the package transaction succeeded. Stream bytes/hash/base64/size and reported
+return codes are cross-checked. Raw command output is untrusted data and is never
+executed or printed as terminal control content.
+
+812 local tests: 757 passed, 55 skipped in the repository dependency environment.
+Five new tests exercise real portable unprivileged helper processes only, covering
+binary stdout/stderr, nonzero status, flood, deadline, failed dpkg/skipped cache,
+and altered metadata/authority. No Root/Linux worker ran on this Mac. Ruff,
+embedded PROGRAM compilation, independent helper compilation and diff checks pass.
+Independent local synthetic acceptance matches streams and rejects six altered
+reports/raw substitutions; no new native mandb diagnosis is claimed yet.
+
+Current remote remains 9cb9ae5cbd6308becbb37952cd8e820729b0d242, CI 40335584785
+verified live. Keep this follow-up local until that source's sixteen-option native
+acceptance and fresh visual checks pass. Future diagnostic-source acceptance adds
+--command-diagnostics after --exec-decoding (SEVENTEEN options), requiring exactly
+four fixed raw streams plus staged-command-diagnostics.json in the success bundle.
+Callback process outcomes, all-exec coverage, trigger/script authority, generated
+mutation policy and publication remain unverified. Full v2.1 remains active.
+Disk about 20.2 GiB free / 90 percent; no deletion or local VM/model downloads.
+
 ## Native FD and loader-cache evidence accepted; decoder next
 
 Head 9e41442d2fa5fbf78549bb209f8a94af4cd6dd91 / CI 40329962502 completed

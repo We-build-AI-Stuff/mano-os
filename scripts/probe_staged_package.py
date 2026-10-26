@@ -4,6 +4,7 @@ This is not the production worker, a PAM authority path, a publication mechanism
 or an adversarial confinement proof. It never installs into the live package DB.
 """
 
+import base64
 import contextlib
 import hashlib
 import io
@@ -50,7 +51,7 @@ CAPS = '-all,+chown,+dac_override,+fowner,+fsetid,+setuid,+setgid'
 EXEC_TRACE = BASE / 'exec-trace.txt'
 MAX_EXEC_TRACE = 16 * 1024**2
 PROGRAM = r'''
-import ctypes,errno,hashlib,json,os,resource,shutil,subprocess,sys
+import base64,ctypes,errno,hashlib,json,os,resource,selectors,shutil,subprocess,sys,time
 from pathlib import Path
 
 def verify_no_inherited_fds():
@@ -70,6 +71,62 @@ def verify_no_inherited_fds():
         raise ValueError('Unexpected inherited descriptors: '+repr(sorted(extras)))
     return []
 
+def run_observed(argv, env, timeout):
+    # Bounded bytes, not decoded terminal text; the unit remains the outer deadline.
+    child=subprocess.Popen(argv, env=env, stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+    output={'stdout':bytearray(), 'stderr':bytearray()}
+    complete=True
+    deadline=time.monotonic()+timeout
+    try:
+        with selectors.DefaultSelector() as selector:
+            for label,stream in (('stdout',child.stdout),('stderr',child.stderr)):
+                os.set_blocking(stream.fileno(),False)
+                selector.register(stream,selectors.EVENT_READ,label)
+            while selector.get_map():
+                if time.monotonic()>=deadline:
+                    complete=False
+                    break
+                for key,_ in selector.select(min(.05,max(0,deadline-time.monotonic()))):
+                    data=os.read(key.fd,65537-len(output[key.data]))
+                    if not data:
+                        selector.unregister(key.fileobj)
+                    elif len(output[key.data])+len(data)>65536:
+                        output[key.data].extend(data[:65536-len(output[key.data])])
+                        complete=False
+                        break
+                    else:
+                        output[key.data].extend(data)
+                if not complete:
+                    break
+        if not complete:
+            try:
+                os.killpg(child.pid,9)
+            except ProcessLookupError:
+                pass
+        try:
+            code=child.wait(timeout=max(.1,deadline-time.monotonic()))
+        except subprocess.TimeoutExpired:
+            complete=False
+            try:
+                os.killpg(child.pid,9)
+            except ProcessLookupError:
+                pass
+            code=child.wait(timeout=1)
+    except BaseException:
+        try:
+            os.killpg(child.pid,9)
+        except ProcessLookupError:
+            pass
+        child.wait(timeout=1)
+        raise
+    finally:
+        child.stdout.close()
+        child.stderr.close()
+    return dict(returncode=code,capture_complete=complete,
+        **{label:dict(base64=base64.b64encode(data).decode(),bytes=len(data),
+                     sha256=hashlib.sha256(data).hexdigest()) for label,data in output.items()})
+
 nonstdio_fds=verify_no_inherited_fds()
 status=dict(line.split(':',1) for line in Path('/proc/self/status').read_text().splitlines())
 caps={k:int(status[k].strip(),16) for k in ('CapEff','CapPrm','CapInh','CapBnd','CapAmb')}
@@ -83,19 +140,23 @@ assert 1<=len(body['archives'])<=8
 assert all('/' not in p and p.endswith('.deb') for p in body['archives'])
 env={'PATH':'/usr/sbin:/usr/bin:/bin','LANG':'C.UTF-8',
      'TZ':'UTC0','DEBIAN_FRONTEND':'noninteractive'}
-result=subprocess.run(['/usr/bin/dpkg','--force-confold','--install',
- *['/run/archives/'+p for p in body['archives']]],env=env,capture_output=True,timeout=30)
-assert result.returncode==0,(result.returncode,result.stderr[-2048:])
-Path('/usr/share/.mano-staged-ci-control').write_bytes(b'candidate-only\n')
-shutil.copyfile('/run/stage-fixture.so','/usr/local/lib/libmano-stage-fixture.so.1.0')
-cache=subprocess.run(['/usr/sbin/ldconfig'],env=env,capture_output=True,timeout=10)
-assert cache.returncode==0,(cache.returncode,cache.stderr[-2048:])
+result=run_observed(['/usr/bin/dpkg','--force-confold','--install',
+ *['/run/archives/'+p for p in body['archives']]],env,30)
+cache=None
+if result['returncode']==0 and result['capture_complete']:
+    Path('/usr/share/.mano-staged-ci-control').write_bytes(b'candidate-only\n')
+    shutil.copyfile('/run/stage-fixture.so','/usr/local/lib/libmano-stage-fixture.so.1.0')
+    cache=run_observed(['/usr/sbin/ldconfig'],env,10)
 print(json.dumps(dict(capabilities=caps,securebits=secure,no_new_privileges=True,
  namespaces=namespaces,pid=os.getpid(),worker_timezone=os.environ.get("TZ"),
  dpkg_timezone=env["TZ"],file_size_limit_bytes=resource.getrlimit(resource.RLIMIT_FSIZE)[0],
  nonstdio_fds=nonstdio_fds,inherited_fd_scope_verified=True,
- dpkg_returncode=result.returncode,ldconfig_returncode=cache.returncode,
- dpkg_output_sha256=hashlib.sha256(result.stdout+result.stderr).hexdigest(),
+ dpkg_returncode=result['returncode'],ldconfig_returncode=cache['returncode'] if cache else None,
+ command_diagnostics=dict(schema_version='1.0',dpkg=result,ldconfig=cache,
+     callback_process_outcomes_verified=False,all_execs_observed=False,
+     changes_authorized=False,publication_authorized=False),
+ dpkg_output_sha256=hashlib.sha256(base64.b64decode(result['stdout']['base64'])+
+     base64.b64decode(result['stderr']['base64'])).hexdigest(),
  production_guard_used=False,production_pam_used=False)))
 '''
 
@@ -373,6 +434,42 @@ def trace_artifacts(data, version, observation, worker):
                 allow_nan=False).encode()}
 
 
+def command_artifacts(worker):
+    report=worker['command_diagnostics']
+    if (report['schema_version'] != '1.0' or any(report[k] is not False for k in
+            ('callback_process_outcomes_verified', 'all_execs_observed',
+             'changes_authorized', 'publication_authorized'))):
+        raise ValueError('Diagnostics cannot grant callback or mutation authority')
+    assets={}
+    for name in ('dpkg', 'ldconfig'):
+        row=report[name]
+        if row is None:
+            if name != 'ldconfig' or worker['ldconfig_returncode'] is not None:
+                raise ValueError('dpkg observation and explicit skipped cache outcome required')
+            continue
+        if (type(row['returncode']) is not int or not -255 <= row['returncode'] <= 255
+                or type(row['capture_complete']) is not bool
+                or worker[name+'_returncode'] != row['returncode']):
+            raise ValueError('Explicit child outcome and capture scope required')
+        for stream in ('stdout', 'stderr'):
+            field=row[stream]
+            encoded=field['base64']
+            if type(encoded) is not str or len(encoded)>87384:
+                raise ValueError('Bounded encoded command output required')
+            raw=base64.b64decode(encoded,validate=True)
+            if (len(raw)>65536 or type(field['bytes']) is not int
+                    or field['bytes']!=len(raw) or field['sha256']!=sha(raw)
+                    or base64.b64encode(raw).decode()!=encoded):
+                raise ValueError('Command output bytes/hash mismatch')
+            assets['staged-'+name+'-'+stream]=raw
+    combined=sha(assets['staged-dpkg-stdout']+assets['staged-dpkg-stderr'])
+    if combined != worker['dpkg_output_sha256']:
+        raise ValueError('Combined dpkg output hash mismatch')
+    assets['staged-command-diagnostics.json']=json.dumps(report,sort_keys=True,
+                                                        allow_nan=False).encode()
+    return assets
+
+
 def read_exec_trace(*, require_complete=True):
     fd = os.open(EXEC_TRACE, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     try:
@@ -504,6 +601,10 @@ def main():
             with (failure / 'staged-exec-trace-failed.json').open('x') as stream:
                 json.dump(observation | {'worker_failed': True}, stream, sort_keys=True)
             raise
+        retained_commands=command_artifacts(proof)
+        for name,data in retained_commands.items():
+            with (Path('/opt/mano-lab/evidence') / name).open('xb') as stream:
+                stream.write(data)
         clock_samples.update(monotonic_after_ns=time.monotonic_ns(),
                              realtime_after_ns=time.time_ns(),
                              boot_id_after=Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
@@ -536,6 +637,11 @@ def main():
             with (Path('/opt/mano-lab/evidence') / name).open('xb') as stream:
                 stream.write(data)
         # Preserve raw witnesses even if decoding or a later candidate gate rejects.
+        if any(proof['command_diagnostics'][name] is None or
+               proof['command_diagnostics'][name]['returncode'] != 0 or
+               proof['command_diagnostics'][name]['capture_complete'] is not True
+               for name in ('dpkg', 'ldconfig')):
+            raise ValueError('Command failed or output capture incomplete; witnesses retained')
         exec_decoding = decode_exec_trace(exec_trace)
         if live_inputs() != before:
             raise ValueError('Live package or loader inputs changed in staged experiment')
@@ -622,7 +728,7 @@ def main():
     revision = json.loads(Path('/opt/mano-lab/source-info.json').read_text())['revision']
     artifacts = {
         'staged-before-status': before_status, 'staged-after-status': after,
-        **retained_trace,
+        **retained_trace, **retained_commands,
         'staged-dpkg-log-before': before_log, 'staged-dpkg-log-after': after_log,
         'staged-installed-sl': payload, 'staged-loader-cache-after': cache,
         'staged-loader-cache-before': before_cache,
@@ -643,7 +749,7 @@ def main():
         artifacts[record['payload_observation_artifact']] = json.dumps(
             observations[record['name']], sort_keys=True, allow_nan=False).encode()
     for name, data in artifacts.items():
-        if name in retained_trace:
+        if name in retained_trace or name in retained_commands:
             continue  # Already retained before decoding and postcondition validation.
         with (Path('/opt/mano-lab/evidence') / name).open('xb') as stream:
             stream.write(data)
