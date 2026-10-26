@@ -1,3 +1,20 @@
+## Prepared LOCAL database-file follow-up
+Remoteec22401c8c63a208527464fcaad7466d1dfbb915 / CI40262851330 RUNNING;
+quality121378730373SUCCESS,security121378730280LIVE,watch10608live.
+Do notpushthisfollow-upuntilthatrunterminal+accepted. Latestacceptednative95
+run40259735562/artifact12625675066/SHAafcb949f309128fb61c44be8d369099e539af5853d78857d36d1ffa0d89d69af.
+723localtests668passed55skipped,Ruff/compile/diffpass. New6dbfiletests+focused
+missingbackupedgecaserunpass. Logpr134-database-files-local-tests.log.
+Newpackage_database_files.py bindsbefore/afteractualstatusbytes/metadata to
+baseline/candidatetree. Rootplainfile/singlelink/safemode/noxattrs/exactanchor;
+statusmodepreserved. status-oldonlyclassifiedknownpreimagewhenbytes/hash/size/
+mode/mtimeallmatchoriginal. Missing/intermediatebackupUNRESOLVED,notblessedbyname.
+No transaction/generatedstate/changeauthority/publicationclaims. Offline95inputs
+andindependent6tampercasesPASS (pr134-database-files-offline-selfcheck.json).
+NOTfreshnativeverification. Currentecacceptance usescontrol+list+closureflags,
+NOdatabaseflag. Afterecaccepted,pushthisfollow-upandrequirewrapperflags
+--payload-closure --control-metadata --file-lists --database-files forfreshCI.
+
 ## Prepared LOCAL generated-list follow-up
 Remote95d20a024e8be478b04037f11d66de13f2c52cdc CI40259735562 nowRUNNING:
 quality121369299786SUCCESS,security121369299599LIVE(start02:43:36UTC).

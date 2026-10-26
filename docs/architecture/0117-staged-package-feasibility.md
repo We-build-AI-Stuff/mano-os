@@ -447,3 +447,31 @@ fresh head must pass native CI and independent acceptance with both new flags
 All other generated-state validation, whole-candidate verification, change authority
 and publication remain false. Conffiles, trigger/cache/log/status-backup effects,
 protected-runtime policy and coherent activation are still required.
+
+
+## Prepared database file binding and known-preimage backup classification
+
+Database transition checks validate records, but must also bind those actual bytes
+to the observed candidate status file. The staging probe now requires both the
+pre-change and final status bytes to match the corresponding baseline/candidate
+tree lengths and SHA256 hashes. Both must be plain Root-owned, single-link files
+with safe read modes, no reported xattrs and the exact hardlink anchors. The final
+status access mode must equal the baseline mode. This is byte/metadata custody,
+not a replacement for control-field or transaction validation.
+
+The status-old backup is only classified as a known preimage if its content hash,
+length, mode and preserved mtime match the original status. A missing backup or a
+safe but different/intermediate backup remains unresolved; it is not automatically
+rejected as an invalid Debian transaction or blessed by its filename. Unsafe
+backup file metadata fails closed. Whole-generated-state validation, transaction
+validation, changes authority and publication remain false in this component.
+
+Six regressions cover independent before/after bindings, unsafe metadata, aliases,
+mode drift, intermediate/missing backups, preimage timestamp changes and interruption.
+The complete local suite has723tests:668passed/55skipped; the missing-backup edge
+case was also rechecked with the focused suite. The independent reader checked
+saved95d20a0 bytes/tree, bound both status files and identified the recorded backup
+as the known preimage; six altered report cases were rejected. That is local
+historical-input evidence, not fresh native execution of this source. This follow-up
+stays local while ec22401 CI40262851330 runs. Fresh source acceptance must include
+--staged-database-files in addition to control/list/closure/tree/prior flags.

@@ -28,6 +28,7 @@ from mano_runtime.package_candidate import compare_payload
 from mano_runtime.package_candidate_policy import validate_payloads
 from mano_runtime.package_container import bind as bind_container
 from mano_runtime.package_control import validate_new as validate_new_control
+from mano_runtime.package_database_files import bind as bind_database_files
 from mano_runtime.package_lists import observe as observe_lists
 from mano_runtime.package_postconditions import MAX_STATUS, database, database_records
 from mano_runtime.package_tree import delta as tree_delta
@@ -421,6 +422,7 @@ def main():
                                           {name: value['payload']
                                            for name, value in observations.items()})
         after = candidate_read(candidate, 'var/lib/dpkg/status', MAX_STATUS)
+        database_files = bind_database_files(before_status, after, baseline_tree, candidate_tree)
         old, new = database(before_status), database(after)
         control_policy = validate_new_control(before_status, after, candidate_tree,
                                              records, observations)
@@ -492,6 +494,7 @@ def main():
                 payload_closure_validation=payload_policy,
                 control_metadata_validation=control_policy,
                 generated_file_list_validation=list_policy,
+                database_file_validation=database_files,
                 archive_container_identity_bound=True,
                 candidate_inventoried_payload_paths_match=True,
                 host_namespaces=host_namespaces,
