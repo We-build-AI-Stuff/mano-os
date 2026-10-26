@@ -27,7 +27,7 @@ from mano_runtime.package_apply import NoRedirect, archive_url
 from mano_runtime.package_candidate import compare_payload
 from mano_runtime.package_candidate_policy import validate_payloads
 from mano_runtime.package_container import bind as bind_container
-from mano_runtime.package_postconditions import MAX_STATUS, database
+from mano_runtime.package_postconditions import MAX_STATUS, database, database_records
 from mano_runtime.package_tree import delta as tree_delta
 from mano_runtime.package_tree_worker import REQUIRED_CAPS as TREE_CAPS
 
@@ -415,8 +415,10 @@ def main():
                                            for name, value in observations.items()})
         after = candidate_read(candidate, 'var/lib/dpkg/status', MAX_STATUS)
         old, new = database(before_status), database(after)
+        old_records, new_records = database_records(before_status), database_records(after)
         approved = {(r['name'], r['architecture']) for r in records}
-        if any(new.get(key) != old.get(key) for key in (old.keys() | new.keys()) - approved):
+        if any(new_records.get(key) != old_records.get(key)
+               for key in (old.keys() | new.keys()) - approved):
             raise ValueError('Candidate database changed outside fixed dependency closure')
         for record in records:
             if new.get((record['name'], record['architecture'])) != (

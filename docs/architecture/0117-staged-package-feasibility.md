@@ -348,3 +348,25 @@ Generated-state validators, protected-runtime policy, complete mutation approval
 production authority/PAM staging and coherent activation remain required. The
 combined payload result always keeps generated-state validation, change authority,
 whole-candidate verification and publication false. It cannot authorize deployment.
+
+
+## Preserve all fields on packages outside the approved change set
+
+The former database postcondition compared only package identity, state and version.
+That could miss changed dependencies, conffiles, trigger fields or unknown metadata
+on an unapproved package with an unchanged version/state. The database reader now
+retains every field and continuation, rejects duplicate fields (case insensitive),
+NUL values, parser bodies and malformed field names, and compares all fields for
+records outside the approved package set. Field order/header case are semantic
+no-ops. The historical receipt schema remains unchanged so this does not invalidate
+old recovery evidence or claim that old source enforced the stronger invariant.
+Both the production postcondition and CI-only staging check use this comparison.
+
+Three new regressions cover metadata deletion/addition, duplicate non-identity
+fields, parser ambiguity, continuations and equivalent header ordering/case. The
+full local suite has 692 tests:637 passed/55 skipped. An independent line-oriented
+reader checked all unapproved record fields in four prior native transactions
+(695,694,696,695 records respectively) and rejected four injected metadata changes.
+That is offline historical-input evidence; fresh native CI is still required for
+the new source. Approved-package control metadata, generated-state validation and
+coherent publication remain separate unfinished gates.

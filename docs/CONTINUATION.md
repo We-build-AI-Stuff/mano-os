@@ -29,6 +29,18 @@ Collector admission and actual baseline/candidate/baseline scans passed:62778 to
 no unseen hardlink aliases reported. SYS_ADMIN remains trusted collector TCB;
 this is not adversarial sandbox or independently acquired filesystem proof.
 
+## Prepared follow-up: full-record database invariant
+
+Remote348474423a99b06f2f6f1120452e19661617257b CI40257481990 is still running;
+quality121362341635 passed and security121362341485 was confirmed live.
+Follow-up source retains all dpkg fields and checks complete unapproved records,
+not just state/version. Receipt schema unchanged for historical recovery records.
+692 local tests:637passed/55skipped; lint/compilation pass. Independent historical
+checks cover four native status transitions and four metadata mutation denials.
+Keep this follow-up LOCAL until the existing CI is terminal; pushing cancels it.
+Then accept that run for its exact remote3484744 source, not this follow-up.
+Fresh subsequent CI is required for the stronger database checks.
+
 ## Current combined payload gate
 
 package_candidate_policy.validate_payloads checks the combined authenticated
