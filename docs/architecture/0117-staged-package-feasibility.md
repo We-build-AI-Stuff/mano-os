@@ -667,3 +667,19 @@ libc-bin/man-db declaration bytes have not yet been acquired by this source in
 CI. Fresh acceptance requires --staged-trigger-declarations after log scope and
 all earlier gates. The decoder-only retry passed all three CI jobs; artifact and
 visual acceptance is pending separately.
+
+
+## Decoder retry independently accepted
+
+Full retry run 40283471563 at fc81e1076719a5b578f701ecebb462209e5890d9
+passed quality, security-lab and merge-gate. Artifact 12634355338 is 22,982,680
+bytes with SHA256 f455bf0d86a62744abcbf5c504e758ee0d420c3acf7b9d2674042b877c21f66e.
+The downloaded bytes match GitHub's digest. Independent acceptance passed 54
+hash checks, 45 required flags and the full prior package/PAM/Stop/recovery/ELF
+and staging chain. All 21 decoded event frames were independently recomputed.
+The strict guard still rejects 11 unaccounted effects among 66 changes; decoding
+has not authorized the changed log. Six fresh UI originals and four numeric crops
+were actually inspected, with full 900/120 values visible. The bound inspection
+receipt is retained under task outputs/acceptance-pr134-log-decoding-retry.
+This is headless evidence; physical input provenance remains null. The scope and
+trigger-declaration follow-ups need their own fresh native run and acceptance.
