@@ -475,3 +475,45 @@ as the known preimage; six altered report cases were rejected. That is local
 historical-input evidence, not fresh native execution of this source. This follow-up
 stays local while ec22401 CI40262851330 runs. Fresh source acceptance must include
 --staged-database-files in addition to control/list/closure/tree/prior flags.
+
+
+## Prepared complete change accounting and strict unknown-change rejection
+
+The combined audit recomputes payload, control, database and generated-list
+validations from the original observations and owned candidate FD. The caller
+cannot supply an exception path list or a pre-approved report. It accounts for
+validated payload entries/directories, exact copied control files, validated lists
+and known database files. Existing empty dpkg lock files only receive a timestamp
+classification when content, ownership, safe mode, links, anchor and xattrs are
+unchanged. The dpkg updates directory must retain identical security metadata and
+be empty in both snapshots before its timestamp change is classified. Other parent
+directory timestamp changes need a directly accounted child change and otherwise
+identical metadata. No directory or package-name prefix blesses extra files.
+
+Unknown control requirements and unresolved backups remain explicit even if no
+corresponding path delta exists. require_accounted recomputes the audit internally
+and throws UnaccountedChanges for any remaining paths or requirements. It does not
+trust a caller-supplied fully-accounted boolean. A successful content accounting
+still does not establish protected-runtime safety, approval, confinement, custody
+through publication or whole-candidate verification. Those authority flags remain
+false. The private _account helper consumes only the audit's recomputed gate
+results; it is not a model-facing policy interface.
+
+The fixed CI experiment deliberately changes a non-package canary and injects a
+synthetic library. Its complete accounting must therefore reject the candidate.
+The probe requires the canary to remain unresolved and checks that the strict
+entry point actually throws with the same unresolved set. It exports classification
+and this scoped rejection result; no candidate is activated. This is a controlled
+unknown-change rejection test, not broad adversarial confinement proof.
+
+Eight new portable tests cover unknown paths, metadata drift, safe/unsafe lock
+changes, nonempty updates journals, latent requirements, strict rejection despite
+a forged boolean, exact observation identity and parent timestamp derivation.
+731localtests:676passed/55skipped,Ruff/compile/diffpass. Against savedec22401
+inputs, 55of66changes are accounted and11remain unresolved: loader cache/aux-cache,
+synthetic library/symlink, canary, dpkg log, provider mountpoint and their affected
+parents. The strict entry point rejects them. The saved native list receipt was
+substituted for FD reading in that offline check; it is not new-source native
+execution. An independent reader recomputes the same result and rejects six
+altered report cases. This follow-up stays local while8d61ad1 CI40265061248 runs.
+Fresh later acceptance requires --staged-change-accounting plus all prior gates.

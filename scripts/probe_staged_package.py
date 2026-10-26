@@ -25,11 +25,8 @@ from mano_broker.package_solver import fingerprint, prepare_apt_root
 from mano_runtime import recovery
 from mano_runtime.package_apply import NoRedirect, archive_url
 from mano_runtime.package_candidate import compare_payload
-from mano_runtime.package_candidate_policy import validate_payloads
+from mano_runtime.package_change_accounting import UnaccountedChanges, audit, require_accounted
 from mano_runtime.package_container import bind as bind_container
-from mano_runtime.package_control import validate_new as validate_new_control
-from mano_runtime.package_database_files import bind as bind_database_files
-from mano_runtime.package_lists import observe as observe_lists
 from mano_runtime.package_postconditions import MAX_STATUS, database, database_records
 from mano_runtime.package_tree import delta as tree_delta
 from mano_runtime.package_tree_worker import REQUIRED_CAPS as TREE_CAPS
@@ -418,14 +415,8 @@ def main():
                 or baseline_after['entries'] != baseline_tree['entries']):
             raise ValueError('Baseline tree changed during staged experiment')
         changes = tree_delta(baseline_tree, candidate_tree)
-        payload_policy = validate_payloads(baseline_tree, candidate_tree,
-                                          {name: value['payload']
-                                           for name, value in observations.items()})
         after = candidate_read(candidate, 'var/lib/dpkg/status', MAX_STATUS)
-        database_files = bind_database_files(before_status, after, baseline_tree, candidate_tree)
         old, new = database(before_status), database(after)
-        control_policy = validate_new_control(before_status, after, candidate_tree,
-                                             records, observations)
         old_records, new_records = database_records(before_status), database_records(after)
         approved = {(r['name'], r['architecture']) for r in records}
         if any(new_records.get(key) != old_records.get(key)
@@ -439,7 +430,23 @@ def main():
                 raise ValueError('Read-only archive custody changed')
         candidate_fd = os.open(candidate, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
         try:
-            list_policy = observe_lists(candidate_fd, candidate_tree, records, observations)
+            validation = audit(candidate_fd, before_status, after, baseline_tree,
+                               candidate_tree, records, observations)
+            payload_policy, control_policy = validation['payload'], validation['control']
+            database_files, list_policy = validation['database'], validation['lists']
+            accounting = validation['accounting']
+            if str(CANARY).lstrip('/') not in accounting['unresolved_changes']:
+                raise ValueError('Unapproved canary must remain unaccounted')
+            try:
+                require_accounted(candidate_fd, before_status, after, baseline_tree,
+                                  candidate_tree, records, observations)
+            except UnaccountedChanges as error:
+                unverified = (set(accounting['unresolved_changes'])
+                              | set(accounting['unresolved_requirements']))
+                if error.paths != tuple(sorted(unverified)):
+                    raise ValueError('Strict accounting and observed result differ') from error
+            else:
+                raise ValueError('Strict accounting accepted unverified candidate changes')
             for record in records:
                 record['payload_comparison'] = compare_payload(
                     candidate_fd, observations[record['name']]['payload'])
@@ -495,6 +502,7 @@ def main():
                 control_metadata_validation=control_policy,
                 generated_file_list_validation=list_policy,
                 database_file_validation=database_files,
+                change_accounting=accounting, unlisted_change_guard_rejected=True,
                 archive_container_identity_bound=True,
                 candidate_inventoried_payload_paths_match=True,
                 host_namespaces=host_namespaces,

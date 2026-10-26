@@ -1,3 +1,22 @@
+## Prepared LOCAL combined change-accounting follow-up
+Remote8d61ad11c8f7f8e5ed5433c2b3c2f63bdb9a5e28 CI40265061248 nowRUNNING:
+quality121385539456SUCCESS,security121385539623LIVE,watch83358live. Donotpush
+thisfollow-upwhilethatrunlive. Newpackage_change_accounting.audit recomputes
+payload/control/database/listgates withownedFD,derivesallknownchangedpaths
+withoutcallerexceptions. Existingemptylock/emptyupdates/justifiedparenttimes
+requireotherwiseidenticalRootmetadata. Unknowns/requirementsremainexplicit.
+require_accounted recomputesinternally andthrows forunresolvedpaths/requirements;
+no submittedreport/booleanauthority. CIprobecheckscontrolledcanaryremainsunknown
+andSTRICTGUARDREJECTS. No candidatepublished;allprotectedruntime/fullcandidate/
+changeauthority/publicationflagsremainfalse. 731localtests676pass55skip;
+Ruff/compile/diffpass;logpr134-change-accounting-local-tests.log.
+Offlineacceptedecinputs account55/66,reject11. Nativeec listreceipt substituted
+forFDobservationintheofflinecheck,NOTnewnativeexecution. Independentreader+6
+reporttampercasesPASS (pr134-change-accounting-independent-selfcheck.json).
+Current8dacceptance ONLY --payload-closure --control-metadata --file-lists
+--database-files,NO --change-accounting. After8dacceptedpushthisfollow-up;
+THATnewheadrequireswrapper --change-accounting plusall4priorflags/all45checks.
+
 ## Prepared LOCAL database-file follow-up
 Remoteec22401c8c63a208527464fcaad7466d1dfbb915 / CI40262851330 RUNNING;
 quality121378730373SUCCESS,security121378730280LIVE,watch10608live.
