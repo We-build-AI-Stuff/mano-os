@@ -28,6 +28,7 @@ from mano_runtime.package_apply import NoRedirect, archive_url
 from mano_runtime.package_candidate import compare_payload
 from mano_runtime.package_change_accounting import UnaccountedChanges, audit, require_accounted
 from mano_runtime.package_container import bind as bind_container
+from mano_runtime.package_exec_decode import decode as decode_exec_trace
 from mano_runtime.package_loader_cache import bind_pair as bind_loader_caches
 from mano_runtime.package_log_decode import decode_append
 from mano_runtime.package_log_observation import MAX_LOG
@@ -364,6 +365,14 @@ def exec_trace_command(argv):
             '-e', 'trace=execve,execveat', '-e', 'signal=none', '-o', str(EXEC_TRACE), '--', *argv]
 
 
+
+def trace_artifacts(data, version, observation, worker):
+    return {'staged-exec-trace.txt': data, 'staged-strace-version.txt': version,
+            'staged-exec-trace-custody.json': json.dumps(dict(schema_version='1.0',
+                observation=observation, worker=worker), sort_keys=True,
+                allow_nan=False).encode()}
+
+
 def read_exec_trace(*, require_complete=True):
     fd = os.open(EXEC_TRACE, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     try:
@@ -522,6 +531,12 @@ def main():
                 raise ValueError('Staged child domain did not drain')
             time.sleep(.05)
         exec_trace, exec_observation = read_exec_trace()
+        retained_trace = trace_artifacts(exec_trace, tracer_version, exec_observation, proof)
+        for name, data in retained_trace.items():
+            with (Path('/opt/mano-lab/evidence') / name).open('xb') as stream:
+                stream.write(data)
+        # Preserve raw witnesses even if decoding or a later candidate gate rejects.
+        exec_decoding = decode_exec_trace(exec_trace)
         if live_inputs() != before:
             raise ValueError('Live package or loader inputs changed in staged experiment')
         if FIXTURE_LIBRARY.exists() or FIXTURE_LIBRARY.is_symlink():
@@ -607,7 +622,7 @@ def main():
     revision = json.loads(Path('/opt/mano-lab/source-info.json').read_text())['revision']
     artifacts = {
         'staged-before-status': before_status, 'staged-after-status': after,
-        'staged-exec-trace.txt': exec_trace, 'staged-strace-version.txt': tracer_version,
+        **retained_trace,
         'staged-dpkg-log-before': before_log, 'staged-dpkg-log-after': after_log,
         'staged-installed-sl': payload, 'staged-loader-cache-after': cache,
         'staged-loader-cache-before': before_cache,
@@ -628,13 +643,15 @@ def main():
         artifacts[record['payload_observation_artifact']] = json.dumps(
             observations[record['name']], sort_keys=True, allow_nan=False).encode()
     for name, data in artifacts.items():
+        if name in retained_trace:
+            continue  # Already retained before decoding and postcondition validation.
         with (Path('/opt/mano-lab/evidence') / name).open('xb') as stream:
             stream.write(data)
     return dict(schema_version='1.0', source_revision=revision,
                 scope='CI-only btrfs package/cache staging feasibility; no publication',
                 source=source, candidate=stage, archives=records, worker=proof,
                 private_state_masks=state_masks, execution_trace_observation=exec_observation,
-                loader_cache_observation=cache_observation,
+                loader_cache_observation=cache_observation, execution_trace_decoding=exec_decoding,
                 live_source=live_source, source_read_only=True,
                 tree_observation_reported=True, tree_changes_authorized=False,
                 payload_closure_validation=payload_policy,

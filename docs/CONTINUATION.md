@@ -1,3 +1,35 @@
+## Local strict execve frame decoder (not pushed)
+
+package_exec_decode decodes the actual strace -f -qq -xx execve form, including
+bounded unfinished/resumed pairs keyed by PID. Other syscalls/dialects, unknown or
+truncated frames, unreadable/nonhex strings, embedded C terminators and unmatched
+pending calls fail closed. Original argument bytes remain base64 data; nothing is
+executed. Limits cover raw bytes, physical/reassembled lines, individual strings,
+argv counts, pending calls and total expanded argument bytes.
+
+807 local tests: 752 passed, 55 skipped. Nine new tests include the exact native
+2011fdd fixture, interleaving, failed attempts, arbitrary non-NUL argument bytes,
+quotas and raw/version/custody retention. The decoder and independent implementation
+match all 29 calls: 19 zero returns and 10 failed ENOENT attempts. A zero execve
+return is image replacement, NOT process exit success. Process outcomes, caller
+ancestry, complete coverage, actual trigger policy, script contents and authority
+remain false. Seven altered reports/custody substitutions are rejected; synthetic
+interleaved and malformed-frame cross-checks also agree. This is LOCAL new code on
+saved native bytes plus a derived local custody projection, not new-source VM proof.
+
+Raw trace, utility version and a separate custody JSON are retained before decoding
+and later validation, so rejection preserves witnesses. Exact artifact manifests
+add only staged-exec-trace-custody.json when decoding is required. The custody asset
+must equal the main report's observation and worker proof. Future source acceptance
+adds --exec-decoding after all fifteen prior options (SIXTEEN total). Current remote
+9e41442/run40329962502 uses fifteen and cannot prove this local decoder. Keep it
+unpushed until that source is accepted. Exact fixture SHA256:
+6cacfecc59faf8360c9a4bbaee5bbd2f800d6aac0539f17fa6c943ed7f037899.
+
+Disk fell to about 19.2 GiB free/91 percent; user warned. No data deleted. Continue
+only small necessary artifacts with checks; no local VM/model images. Stop new
+large downloads below 10 GiB. Recheck before any download.
+
 # mano-OS continuation
 
 ## Objective and rules

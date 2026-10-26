@@ -3,6 +3,7 @@ import contextlib
 import errno
 import hashlib
 import importlib.util
+import json
 import stat
 import sys
 import tempfile
@@ -22,6 +23,17 @@ SPEC.loader.exec_module(probe)
 
 
 class StagedProbeSafetyTests(unittest.TestCase):
+    def test_trace_artifacts_retain_raw_version_and_exact_custody_before_decoder(self):
+        observation={'schema_version': '1.1', 'bytes': 3}
+        worker={'nonstdio_fds': [], 'inherited_fd_scope_verified': True}
+        assets=probe.trace_artifacts(b'raw', b'version', observation, worker)
+        self.assertEqual(set(assets), {'staged-exec-trace.txt', 'staged-strace-version.txt',
+                                      'staged-exec-trace-custody.json'})
+        self.assertEqual(assets['staged-exec-trace.txt'], b'raw')
+        self.assertEqual(assets['staged-strace-version.txt'], b'version')
+        self.assertEqual(json.loads(assets['staged-exec-trace-custody.json']),
+                         dict(schema_version='1.0', observation=observation, worker=worker))
+
     def fd_guard(self, names, stats):
         tree = ast.parse(probe.PROGRAM)
         function = next(n for n in tree.body if isinstance(n, ast.FunctionDef)

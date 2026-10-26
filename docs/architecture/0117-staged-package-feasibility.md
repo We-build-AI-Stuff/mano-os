@@ -985,3 +985,38 @@ originals/four crops were inspected with full 900/120 values visible; the bound
 receipt is retained and physical provenance remains null. Nine unknown filesystem
 effects remain blocked. Descriptor schema 1.1 and loader-cache observation need a
 separate source run and fifteen-option acceptance before native claims.
+
+
+## Strict bounded execve frame decoding prepared locally
+
+The decoder now targets the actual native strace -f -qq -xx bytes and retains its
+exact 2011fdd input as a regression fixture. It handles complete and interleaved
+unfinished/resumed execve records, recording entry/completion line numbers. Positive
+PID prefixes, complete hex-quoted C strings, bounded argv/environment summaries
+and explicit zero/errno returns are required. Non-NUL bytes remain base64 data,
+including non-UTF8/control argument bytes. Unknown calls/dialects, truncation,
+unreadable arguments, malformed quotes and unpaired resumes fail rather than
+being silently skipped. Raw bytes, lines, strings, argv/pending counts and expanded
+bytes all have fixed limits. No trace content is executed or used as an instruction.
+
+The fixture contains 29 calls: 19 zero returns and ten failed ENOENT search attempts.
+Zero indicates successful execve image replacement, not the invoked program's exit
+status or desired effect. The decoder does not establish process outcomes, caller
+ancestry, all execution, actual trigger policy, script bytes or authority. For
+example, observing setpriv invocation does not establish the eventual mandb result.
+Those evidence boundaries remain explicit despite syntactic argument decoding.
+
+Raw trace, version and custody metadata are now exported before decoding or later
+postconditions, preserving a rejected input. The separate custody asset is SHA-bound
+and must exactly match the main report's observation/worker proof. Its fixed name
+is added only for the decoding gate; exact manifest equality remains mandatory.
+
+807 local tests completed (752 passed, 55 skipped), including nine new cases for
+native bytes, malformed/resumed records, C-string bytes, limits and witness assets.
+Ruff, compilation, embedded worker compilation and diff checks pass. An independent
+implementation recomputed all 29 frames and rejected seven report/custody alterations;
+interleaved and malformed synthetic cases also agree. The custody projection used
+in the local selfcheck is derived locally from native 2011fdd data, not a newly
+captured asset. Current 9e41442 native source lacks this decoder. Later acceptance
+requires --staged-exec-decoding after all fifteen earlier options. No new-source
+native decoder or trigger authority claim is made.
