@@ -333,6 +333,23 @@ def tree_observation(role, *, admission_only=False):
     return value
 
 
+
+def private_state_masks(baseline_tree):
+    """Mask only existing fixed private-state directories; never create targets."""
+    entries = baseline_tree['entries']
+    if any(entries.get(parent, {}).get('kind') != 'directory' for parent in ('var', 'var/lib')):
+        raise ValueError('Real baseline private-state parent directories required')
+    paths = []
+    for path in ('var/lib/mano-broker', 'var/lib/mano-provider'):
+        row = entries.get(path)
+        if row is None:
+            continue  # Absent clone state has no host data to expose or mask.
+        if row['kind'] != 'directory':
+            raise ValueError('Private-state alias or non-directory cannot be masked safely')
+        paths.append('/'+path)
+    return paths
+
+
 def main():
     if sys.platform != 'linux':
         raise PermissionError('Disposable Debian CI only')
@@ -370,6 +387,7 @@ def main():
         if baseline_status != before_status:
             raise ValueError('Read-only baseline package state changed')
         baseline_tree = tree_observation('baseline')
+        state_masks = private_state_masks(baseline_tree)
         argv = ['/usr/bin/bwrap', '--die-with-parent', '--new-session', '--unshare-pid',
                 '--unshare-net', '--unshare-ipc', '--unshare-uts', '--unshare-cgroup',
                 '--bind', str(candidate), '/', '--proc', '/proc', '--dev', '/dev',
@@ -377,7 +395,7 @@ def main():
                 '--ro-bind', '/proc/sysrq-trigger', '/proc/sysrq-trigger',
                 '--tmpfs', '/run', '--tmpfs', '/tmp', '--tmpfs', '/home', '--tmpfs', '/root',
                 '--tmpfs', '/opt', '--tmpfs', '/mnt', '--tmpfs', '/media', '--tmpfs', '/srv',
-                '--tmpfs', '/var/lib/mano-broker', '--tmpfs', '/var/lib/mano-provider',
+                *[arg for path in state_masks for arg in ('--tmpfs', path)],
                 '--tmpfs', '/.snapshots', '--ro-bind', str(BASE / 'archives'), '/run/archives',
                 '--ro-bind', str(BASE / 'probe.py'), '/run/probe.py',
                 '--ro-bind', str(BASE / 'fixture.so'), '/run/stage-fixture.so',
@@ -530,6 +548,7 @@ def main():
     return dict(schema_version='1.0', source_revision=revision,
                 scope='CI-only btrfs package/cache staging feasibility; no publication',
                 source=source, candidate=stage, archives=records, worker=proof,
+                private_state_masks=state_masks,
                 live_source=live_source, source_read_only=True,
                 tree_observation_reported=True, tree_changes_authorized=False,
                 payload_closure_validation=payload_policy,

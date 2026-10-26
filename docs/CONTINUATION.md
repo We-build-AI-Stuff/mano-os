@@ -1,3 +1,22 @@
+## Local private-state mount setup correction (not pushed)
+
+Saved accepted fc81e10 trees prove var/lib/mano-provider was absent in baseline
+and appeared as an empty mode-0755 directory in candidate, with var/lib timestamps
+changed. Bubblewrap's unconditional tmpfs target creation caused this setup delta.
+The new fixed helper masks existing private-state directories only. Absent state
+is not mounted, because it has no clone data to hide. Existing leaf targets and
+var/var-lib ancestors must be real directories; aliases and non-directories fail.
+No package mutation is whitelisted. Existing broker/provider state remains masked.
+
+783 local tests: 728 passed, 55 skipped. Ruff, compilation and diff checks pass.
+The independent mask reader verifies the expected target list, complete unchanged
+existing private subtrees and continued absence of absent targets. Its SYNTHETIC
+positive fixture rejects four changes; the actual old native provider-directory
+creation is correctly rejected by the new reader. This is not new native evidence.
+Future fresh source needs THIRTEEN wrapper options, adding --private-state-masks
+following --log-time-window. Current remote 8f77c70/run40286784670 uses only NINE.
+Local follow-ups stay unpushed until that run's exact-source evidence is accepted.
+
 ## Local aggregate declaration/resource hardening (not pushed)
 
 Baseline trigger acquisition now caps the complete reference set at 4 MiB and

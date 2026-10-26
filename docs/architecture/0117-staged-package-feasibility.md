@@ -795,3 +795,28 @@ each unqualified log entry. Missing or multiarch-ambiguous names still fail.
 781 local tests completed (726 passed, 55 skipped), including aggregate byte and
 directive regressions; Ruff, compilation and diff checks pass. Native validation
 of these local changes remains pending the next fresh source run.
+
+
+## Avoid creating absent private-state mask targets
+
+The accepted fc81e10 baseline had no var/lib/mano-provider entry. The candidate
+contained a new empty Root-owned mode-0755 directory there, and var/lib timestamps
+changed. The unconditional bubblewrap tmpfs target created these setup effects.
+They remain unresolved in that historical evidence; no retrospective allowance
+is introduced.
+
+The staging probe now derives its two fixed private-state mask targets from the
+read-only baseline. Existing directories remain masked regardless of which service
+user owns their contents. Absent state has no clone data to hide and receives no
+mount target. Symlink/non-directory leaves and missing or non-directory ancestors
+are rejected before launching the worker. A package that unexpectedly creates
+private state is not excused by this change.
+
+783 local tests completed (728 passed, 55 skipped), including mask selection and
+alias/parent regressions. Ruff, compilation and diff checks pass. The independent
+reader requires the exact baseline-derived target list, unchanged existing private
+subtrees and continued absence of absent targets. It passes a SYNTHETIC unchanged
+fixture and rejects four substitutions; it also rejects the actual historical
+provider-directory creation as intended. New-source native execution is pending.
+Fresh follow-up acceptance must add --staged-private-state-masks to all prior gates.
+This is a setup correction, not complete privilege confinement or publication.

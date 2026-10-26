@@ -19,6 +19,27 @@ SPEC.loader.exec_module(probe)
 
 
 class StagedProbeSafetyTests(unittest.TestCase):
+    def test_private_state_masks_hide_existing_state_without_creating_absent_targets(self):
+        entries = {p: {'kind': 'directory'} for p in ('var', 'var/lib', 'var/lib/mano-broker')}
+        self.assertEqual(probe.private_state_masks({'entries': entries}), ['/var/lib/mano-broker'])
+        entries['var/lib/mano-provider'] = {'kind': 'directory', 'uid': 1000}
+        self.assertEqual(probe.private_state_masks({'entries': entries}),
+                         ['/var/lib/mano-broker', '/var/lib/mano-provider'])
+        del entries['var/lib/mano-broker']
+        del entries['var/lib/mano-provider']
+        self.assertEqual(probe.private_state_masks({'entries': entries}), [])
+
+    def test_private_state_masks_reject_aliases_and_missing_or_aliased_parents(self):
+        original = {p: {'kind': 'directory'} for p in ('var', 'var/lib', 'var/lib/mano-broker')}
+        for path in original:
+            for kind in ('symlink', 'file', 'fifo'):
+                with self.subTest(path=path, kind=kind), self.assertRaises(ValueError):
+                    probe.private_state_masks({'entries': original | {path: {'kind': kind}}})
+        for parent in ('var', 'var/lib'):
+            with self.subTest(parent=parent), self.assertRaises(ValueError):
+                probe.private_state_masks({'entries': {k:v for k,v in original.items()
+                                                      if k != parent}})
+
     def test_tree_adapter_requires_fixed_role_privileges_and_kernel_limits(self):
         import json
 
