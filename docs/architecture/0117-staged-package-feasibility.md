@@ -637,3 +637,33 @@ Fresh workflow-dispatch run40283471563 executes the entire unchanged CI workflow
 at the exact samefc81e10 head while retaining the failed run/artifact. The scope
 follow-up remains local until that retry is terminal. No failed probe was skipped,
 no protection was disabled and no artifact was deleted for a green check.
+
+
+## Bounded trigger declarations prepared for native acquisition
+
+The archive observer now retains the exact `triggers` member bytes, bounded to
+1 MiB and matched to the authenticated control inventory. The parser accepts the
+six documented interest/activation directive forms, strips comments, bounds the
+number and length of declarations, and rejects ambiguous or unsafe file paths.
+An absent member remains distinct from an empty member.
+
+For existing trigger references, the probe resolves the fixed dpkg info basename
+from the actual baseline database, including Multi-Arch: same. It reads only the
+corresponding private baseline `.triggers` file. Root ownership, mode 0644, one
+link, empty xattrs, exact tree size and SHA256 are required. Missing baseline
+packages or files produce explicit unavailable observations. Caller-selected
+paths cannot substitute for these records.
+
+These observations do not prove that a payload change activates an interest,
+that a named trigger was legitimately activated, or that the resulting maintainer
+script effects are acceptable. Trigger authority, changes and publication remain
+false. Sequence, time and complete mutation accounting remain separate work.
+
+758 local tests completed (703 passed, 55 skipped), including eight focused
+regressions for parsing, bounds, baseline binding, absence, identity drift and
+Multi-Arch naming. The independent reader matches accepted31 archive declarations
+and a SYNTHETIC baseline fixture and rejects five tampered reports. Actual baseline
+libc-bin/man-db declaration bytes have not yet been acquired by this source in
+CI. Fresh acceptance requires --staged-trigger-declarations after log scope and
+all earlier gates. The decoder-only retry passed all three CI jobs; artifact and
+visual acceptance is pending separately.

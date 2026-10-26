@@ -3,6 +3,7 @@
 Run in the same resource-limited unprivileged worker as payload parsing. Expected
 archive identity comes from sealed, authenticated custody outside this module.
 """
+import base64
 import hashlib
 import io
 import re
@@ -11,6 +12,8 @@ from email.parser import Parser
 
 from mano_runtime.package_payload import inventory, path_name
 from mano_runtime.package_postconditions import database_records
+from mano_runtime.package_trigger_declarations import MAX_BYTES
+from mano_runtime.package_trigger_declarations import decode as decode_triggers
 
 MAX_TAR = 16 * 1024**2
 MAX_CONTROL = 1024**2
@@ -41,6 +44,17 @@ def observe(raw):
             raise ValueError('One regular control field member required')
         with archive.extractfile(members[0]) as source:
             data = source.read(MAX_CONTROL + 1)
+        trigger_data = None
+        if 'triggers' in entries:
+            trigger_members = [m for m in archive.getmembers()
+                               if path_name(m.name, directory=m.isdir()) == 'triggers']
+            if len(trigger_members) != 1 or entries['triggers']['bytes'] > MAX_BYTES:
+                raise ValueError('One bounded regular trigger declaration member required')
+            with archive.extractfile(trigger_members[0]) as source:
+                trigger_data = source.read(MAX_BYTES + 1)
+            if (len(trigger_data) != entries['triggers']['bytes'] or
+                    hashlib.sha256(trigger_data).hexdigest() != entries['triggers']['sha256']):
+                raise ValueError('Trigger control member integrity changed')
     if (len(data) != expected['bytes'] or hashlib.sha256(data).hexdigest() != expected['sha256']
             or b'\0' in data):
         raise ValueError('Control field content integrity changed')
@@ -57,6 +71,9 @@ def observe(raw):
                                      ('package', 'architecture', 'version'))):
         raise ValueError('Package identity without installed state required')
     return dict(schema_version='1.0', fields=fields, inventory=manifest,
+                trigger_data_base64=(base64.b64encode(trigger_data).decode()
+                                     if trigger_data is not None else None),
+                trigger_declarations=decode_triggers(trigger_data or b''),
                 archive_signature_verified=False, maintainer_execution_authorized=False,
                 candidate_filesystem_verified=False, publication_authorized=False)
 

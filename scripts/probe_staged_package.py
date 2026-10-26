@@ -34,6 +34,7 @@ from mano_runtime.package_log_scope import inspect as inspect_log_scope
 from mano_runtime.package_postconditions import MAX_STATUS, database, database_records
 from mano_runtime.package_tree import delta as tree_delta
 from mano_runtime.package_tree_worker import REQUIRED_CAPS as TREE_CAPS
+from mano_runtime.package_trigger_declarations import baseline_sources
 
 BASE = Path('/.snapshots/.mano-staged-package-ci')
 CANARY = Path('/usr/share/.mano-staged-ci-control')
@@ -425,6 +426,9 @@ def main():
         log_observation = observe_log(before_log, after_log, baseline_tree, candidate_tree)
         log_decoding = decode_append(before_log, after_log)
         log_scope = inspect_log_scope(before_log, after_log, before_status, after, records)
+        trigger_sources = baseline_sources(before_status, baseline_tree,
+            log_scope['referenced_trigger_packages'],
+            lambda path, maximum: candidate_read(baseline, path, maximum))
         old, new = database(before_status), database(after)
         old_records, new_records = database_records(before_status), database_records(after)
         approved = {(r['name'], r['architecture']) for r in records}
@@ -516,6 +520,7 @@ def main():
                 dpkg_log_observation=log_observation,
                 dpkg_log_decoding=log_decoding,
                 dpkg_log_scope=log_scope,
+                baseline_trigger_sources=trigger_sources,
                 archive_container_identity_bound=True,
                 candidate_inventoried_payload_paths_match=True,
                 host_namespaces=host_namespaces,

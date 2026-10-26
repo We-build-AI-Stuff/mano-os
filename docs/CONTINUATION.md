@@ -1,3 +1,25 @@
+## Trigger declaration follow-up prepared locally
+
+CI retry 40283471563 at fc81e1076719a5b578f701ecebb462209e5890d9 is now
+completed: quality, security-lab and merge-gate all succeeded. Artifact custody,
+independent acceptance and fresh GUI inspection are still pending. Do not treat
+CI success alone as accepted evidence or merge approval.
+
+The local follow-up captures bounded trigger declarations from authenticated
+archive control members and fixed baseline dpkg info paths. Baseline bytes must
+match the read-only tree hash, size and safe metadata. Missing files and packages
+are explicit unavailable sources. No trigger execution or filesystem mutation is
+authorized by declaration decoding. Actual baseline libc-bin/man-db bytes still
+need acquisition by fresh CI at the follow-up head.
+
+758 local tests completed: 703 passed and 55 skipped. Independent acceptance
+recomputed actual accepted31 archive control declarations plus a SYNTHETIC
+baseline fixture and rejected five altered reports. This is not native baseline
+acquisition. Fresh follow-up acceptance must add both --log-scope and
+--trigger-declarations to all seven earlier wrapper options. Preserve the three
+unrelated untracked duplicate files. Goal remains active; production publication
+and the original version requirements remain incomplete.
+
 ## Prepared LOCAL log-scope follow-up; retry running
 Remote fc81e1076719a5b578f701ecebb462209e5890d9 initialCI40282316047 FAILED
 bootstrapAPTlibatspiTLSconnectionreset BEFOREVM/decoder;qualitypassed. Artifact
