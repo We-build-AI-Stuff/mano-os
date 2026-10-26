@@ -1,3 +1,27 @@
+## Native FD and loader-cache evidence accepted; decoder next
+
+Head 9e41442d2fa5fbf78549bb209f8a94af4cd6dd91 / CI 40329962502 completed
+ALL3SUCCESS: quality 121596447604, security-lab 121596447176, merge-gate
+121612328967. Artifact 12655402696, 22,970,782 bytes, SHA256
+aeeb6e22014ea49d612b6d9fe08668a90c726ef3ba90cb90d41d40e9912b7054.
+Download 45374 and full independent acceptance 9159 exited zero. All fifteen
+options and preceding 54-hash/45-flag/package/PAM/Stop/recovery/ELF checks passed.
+Worker inherited-FD snapshot independently checked; cache tables/tree binding
+recomputed: 572 before / 577 after. No library-object/regeneration authority.
+Strict accounting remains 55/64 differences; nine unknown effects rejected.
+Six fresh UI originals plus four numeric crops actually inspected; full 900/120
+values visible. Receipt: outputs/acceptance-pr134-fd-cache-observation/inspection.json
+under task root. Headless only; physical provenance null. No publication.
+
+The strict execution decoder commit 00e844fe58ebf023a85980996e2573ef4245a612
+is ready for the next source run. It is not proved by this accepted source.
+After push, acceptance must include SIXTEEN flags, adding --exec-decoding after
+all fifteen prior options. Raw/version/custody export must survive decoder failure.
+Full original v2.1 phases 0-7 remain incomplete, including callback provenance,
+process outcomes, unknown mutation policy, production staging/activation/runtime
+closure and the remaining product/release requirements below. No merge yet.
+Disk about 20.2 GiB free / 90 percent; no deletion or local VM/model downloads.
+
 ## Local strict execve frame decoder (not pushed)
 
 package_exec_decode decodes the actual strace -f -qq -xx execve form, including
