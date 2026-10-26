@@ -31,6 +31,7 @@ from mano_runtime.package_log_decode import decode_append
 from mano_runtime.package_log_observation import MAX_LOG
 from mano_runtime.package_log_observation import observe as observe_log
 from mano_runtime.package_log_scope import inspect as inspect_log_scope
+from mano_runtime.package_log_sequence import require_sequence
 from mano_runtime.package_postconditions import MAX_STATUS, database, database_records
 from mano_runtime.package_tree import delta as tree_delta
 from mano_runtime.package_tree_worker import REQUIRED_CAPS as TREE_CAPS
@@ -427,6 +428,7 @@ def main():
         log_observation = observe_log(before_log, after_log, baseline_tree, candidate_tree)
         log_decoding = decode_append(before_log, after_log)
         log_scope = inspect_log_scope(before_log, after_log, before_status, after, records)
+        log_sequence = require_sequence(before_log, after_log, before_status, after, records)
         trigger_sources = baseline_sources(before_status, baseline_tree,
             log_scope['referenced_trigger_packages'],
             lambda path, maximum: candidate_read(baseline, path, maximum))
@@ -524,6 +526,7 @@ def main():
                 dpkg_log_observation=log_observation,
                 dpkg_log_decoding=log_decoding,
                 dpkg_log_scope=log_scope,
+                dpkg_log_sequence=log_sequence,
                 baseline_trigger_sources=trigger_sources,
                 trigger_declaration_linkage=trigger_linkage,
                 archive_container_identity_bound=True,

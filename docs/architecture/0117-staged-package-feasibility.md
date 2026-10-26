@@ -720,3 +720,31 @@ Native run 40286784670 still executes the preceding declaration-acquisition
 source; it cannot prove linkage execution. The follow-up remains local until that
 source is accepted. Future acceptance requires --staged-trigger-linkage in addition
 to declarations, scope and all earlier gates.
+
+
+## Supported new-install event state sequences (local follow-up)
+
+The new sequence gate starts from absent approved packages and unchanged baseline
+packages. It requires exactly one initial archives/install startup, one complete
+install → half-installed → unpacked → configure → half-configured → installed
+cycle per new package, and complete pending → trigproc → half-configured →
+installed cycles for referenced trigger packages. Only pending notifications may
+interleave an active package action. Repeated complete trigger cycles are bounded
+by the existing event quota. The gate rejects overlapping actions, missing action
+frames, repeated install/configure, partial final state, uncaused trigger execution,
+unsettled pending state and decreasing timestamp text. It does not infer missing
+frames from the final database.
+
+This is an explicitly supported state-sequence profile, not proof of dependency
+ordering or every Debian installation pattern. Local timestamp text has no trusted
+timezone/window yet. Actual trigger arguments and script effects remain unverified,
+and neither the changed log nor any filesystem effect becomes authorized.
+
+773 local tests completed (718 passed, 55 skipped), including seven sequence
+regressions and the exact previously captured native suffix. Ruff, compilation
+and diff checks pass. Applied to accepted fc81e10 raw logs and full databases, the
+new local gate matches 21 events and two trigger cycles. A separate implementation
+recomputed the sequence and rejected six altered reports. This does not establish
+new-source native execution. Later fresh acceptance requires --staged-log-sequence
+in addition to trigger linkage and all preceding gates. The current 8f77c70 native
+run has neither new guard and must not be accepted using these options.

@@ -1,3 +1,22 @@
+## Local supported event-sequence follow-up (not pushed)
+
+package_log_sequence.require_sequence now requires one startup, complete ordered
+unpack/configure for every approved new package, and pending/processing/settled
+trigger cycles. Empty, truncated, repeated or overlapping actions, uncaused
+trigger processing and decreasing timestamp text fail. Dependency order, actual
+trigger arguments, clock timezone/window, maintainer effects and log authority
+remain separate and unverified. Unsupported state patterns require an explicit
+extension rather than permissive fallback.
+
+773 local tests: 718 passed, 55 skipped. Ruff, compile and diff checks pass.
+The accepted fc81e10 native suffix matches 21 events and two trigger cycles;
+an independent implementation recomputed that sequence and rejected six altered
+reports. This is LOCAL source against native bytes, not a new-source VM run.
+The CI-only probe now includes dpkg_log_sequence. Later fresh acceptance must
+use ELEVEN options, adding --log-sequence after --trigger-linkage. Current remote
+8f77c70 source still uses only nine options. Its run 40286784670 remains live,
+quality succeeded and security-lab is executing the VM step. Preserve that run.
+
 ## Local trigger-linkage follow-up (not pushed)
 
 Remote 8f77c70efeb254cc28d0e627bb6abb9c382a0d48 remains under native CI run
