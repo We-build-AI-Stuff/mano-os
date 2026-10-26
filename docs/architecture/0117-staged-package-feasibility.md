@@ -593,3 +593,47 @@ native execution of the new source. Fresh CI must also require
 --staged-log-decoding after all six earlier options.
 
 Reference: https://manpages.debian.org/trixie/dpkg/dpkg.1.en.html#OPTIONS
+
+
+## Prepared log identity/version scope check
+
+package_log_scope recomputes the append decoder and complete before/after package
+records. New package identities must be distinct, absent from the baseline and
+settled at the exact authenticated candidate version. Every unapproved database
+record remains unchanged. Qualified log identities must exist; unqualified names
+must resolve to exactly one actual architecture. New install/configure/status
+versions must match the approved candidate. New packages may reference their own
+trigger at that candidate version, but no trigger permission is inferred.
+
+For existing packages, only trigger processing and its possible status records
+are classified as references, at the unchanged installed version. Other install,
+configure, upgrade, removal or unpacking actions on a baseline package fail scope
+inspection. A conffile decision or a different startup operation needs a separate
+policy. The inspector does not validate event order, declared trigger authority,
+time window, whole-log semantics or log mutation approval. Empty logs provide no
+execution evidence. References to libc-bin/man-db are not blanket permissions.
+
+Seven regressions cover versions/architectures/unknown identities, baseline action
+substitution, multiarch ambiguity, self-trigger references, duplicate/existing plan
+records, metadata drift, conffile/startup scope, rewritten and empty inputs.
+750localtests:695passed/55skipped,Ruff/compile/diffpass. Applied locally to the
+accepted31eb9ba bytes it matches20package events across21frames and retains two
+unapproved trigger references. An independent implementation reproduces the result
+and rejects six altered reports. This is local source against native input, not
+execution of the new source in the VM. Later acceptance requires
+--staged-log-scope after all seven prior options.
+
+## Decoder CI bootstrap network failure and preserved retry
+
+Run40282316047 atfc81e10 passed quality but failed while preparing the CI image:
+Debian's libatspi2.0-0t64 archive download ended with an OpenSSL connection reset
+(exit100). The VM probes and new decoder did not run. No parser defect or native
+success is inferred. Raw job log and byte-verified failed artifact12632218896
+(35,109bytes,SHA2568fc69f2978e8db093988deb41c1778c031a74cc993ac9da28ee7c11bee7a4075)
+are retained. Existing guest/install scripts already use Acquire::Retries=3;
+no origin/TLS/signature/security check was weakened.
+
+Fresh workflow-dispatch run40283471563 executes the entire unchanged CI workflow
+at the exact samefc81e10 head while retaining the failed run/artifact. The scope
+follow-up remains local until that retry is terminal. No failed probe was skipped,
+no protection was disabled and no artifact was deleted for a green check.

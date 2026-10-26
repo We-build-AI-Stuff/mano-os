@@ -1,3 +1,23 @@
+## Prepared LOCAL log-scope follow-up; retry running
+Remote fc81e1076719a5b578f701ecebb462209e5890d9 initialCI40282316047 FAILED
+bootstrapAPTlibatspiTLSconnectionreset BEFOREVM/decoder;qualitypassed. Artifact
+12632218896,35109bytes,SHA8fc69f2978e8db093988deb41c1778c031a74cc993ac9da28ee7c11bee7a4075
+BYTEVERIFIED pr134-fc81e10-bootstrap-failure.zip;rawjoblogretained. NOTacceptance.
+Oldwatch53993terminalEXIT1. FullfreshCIretry40283471563 workflow_dispatch atSAMEfc
+confirmedRUNNING;security121441693697,quality121441694142. Watch16187live.
+No securitycheckdisabled,nostaleprobeaccepted,no artifactdeleted. ExistingAPT
+alreadyAcquire::Retries=3,no needweakenTLS/origins. Donotpushlocalfollow-upwhile
+retrylive;acceptonlyexactfcsourcewithsevenflags,NOlog-scopeflag.
+Newpackage_log_scope.pyrecomputesdecoder/DBmatches;newpackageidentities/versions
+fixedtocandidates,oldpackagesonlyunchanged-versiontriggerreferences(noapproval).
+Otherbaselinepackageactions/unknownidentities/ambiguousarchitecture/versiondrift
+fail. Scopeisnotorder/triggerauthority/time/semantics/logchangeapproval.
+750localtests695passed55skipped,Ruff/compile/diffpass. Logpr134-log-scope-local-tests.log.
+Independentreader20packageevents/2UNAPPROVEDtriggerrefs+6tampercasesPASSagainst
+saved31nativeinputs(pr134-log-scope-independent-selfcheck.json). NOTnewnativeproof.
+Afterfcretryterminal+accepted,pushfollow-upandfreshCI;THATnewheadrequires
+--log-scope inadditiontoallsevenpriorwrapperflags. OriginalgoalACTIVE/nomerge.
+
 # mano-OS continuation
 
 Original v2.1 phases0-7 ACTIVE/incomplete; Phase8optional. Frozen spec SHA256

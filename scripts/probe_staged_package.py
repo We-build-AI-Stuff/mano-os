@@ -30,6 +30,7 @@ from mano_runtime.package_container import bind as bind_container
 from mano_runtime.package_log_decode import decode_append
 from mano_runtime.package_log_observation import MAX_LOG
 from mano_runtime.package_log_observation import observe as observe_log
+from mano_runtime.package_log_scope import inspect as inspect_log_scope
 from mano_runtime.package_postconditions import MAX_STATUS, database, database_records
 from mano_runtime.package_tree import delta as tree_delta
 from mano_runtime.package_tree_worker import REQUIRED_CAPS as TREE_CAPS
@@ -423,6 +424,7 @@ def main():
         after_log = candidate_read(candidate, 'var/log/dpkg.log', MAX_LOG)
         log_observation = observe_log(before_log, after_log, baseline_tree, candidate_tree)
         log_decoding = decode_append(before_log, after_log)
+        log_scope = inspect_log_scope(before_log, after_log, before_status, after, records)
         old, new = database(before_status), database(after)
         old_records, new_records = database_records(before_status), database_records(after)
         approved = {(r['name'], r['architecture']) for r in records}
@@ -513,6 +515,7 @@ def main():
                 change_accounting=accounting, unlisted_change_guard_rejected=True,
                 dpkg_log_observation=log_observation,
                 dpkg_log_decoding=log_decoding,
+                dpkg_log_scope=log_scope,
                 archive_container_identity_bound=True,
                 candidate_inventoried_payload_paths_match=True,
                 host_namespaces=host_namespaces,
