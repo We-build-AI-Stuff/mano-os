@@ -21,6 +21,9 @@ def inspect(before_log, after_log, before_status, after_status, records):
     if any(old.get(key) != new.get(key) for key in (old.keys() | new.keys()) - planned.keys()):
         raise ValueError('Unapproved package record changed')
     identities = old.keys() | new.keys()
+    by_name = {}
+    for key in identities:
+        by_name.setdefault(key[0], []).append(key)
     triggers, matched = set(), 0
     for event in decoded['events']:
         kind = event['event']
@@ -36,7 +39,7 @@ def inspect(before_log, after_log, before_status, after_status, records):
             if key not in identities:
                 raise ValueError('Log package identity is absent from actual databases')
         else:
-            candidates = [key for key in identities if key[0] == label]
+            candidates = by_name.get(label, [])
             if len(candidates) != 1:
                 raise ValueError('Unqualified log package identity is ambiguous or absent')
             key = candidates[0]

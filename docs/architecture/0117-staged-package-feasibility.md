@@ -778,3 +778,20 @@ a SYNTHETIC clock fixture and rejected seven altered reports, including an
 inconsistent dpkg environment. This source has not acquired native clock samples.
 Future fresh acceptance requires --staged-log-time-window in addition to all
 preceding gates. The current 8f77c70 run contains none of these new local guards.
+
+
+## Aggregate trigger acquisition and package-name lookup bounds
+
+The baseline declaration reader now limits the entire reference set to 4 MiB of
+raw bytes and 4096 decoded directives. Individual file quotas alone allowed up
+to 256 MiB of retained source bytes and many decoded reports. The reader checks
+the accumulated declared size before reading an excess file and rejects excess
+directives before retaining that source. Fixed paths, safe metadata, exact hashes
+and all previous authority restrictions remain mandatory. The independent reader
+checks these aggregate bounds from actual exported bytes and parsed declarations.
+
+Log scope now builds a package-name index once, avoiding a full database scan for
+each unqualified log entry. Missing or multiarch-ambiguous names still fail.
+781 local tests completed (726 passed, 55 skipped), including aggregate byte and
+directive regressions; Ruff, compilation and diff checks pass. Native validation
+of these local changes remains pending the next fresh source run.

@@ -91,3 +91,21 @@ class TriggerDeclarationTests(unittest.TestCase):
         read = Mock(return_value=self.raw)
         result = triggers.baseline_sources(before, {'entries': {path: row}}, self.refs, read)
         self.assertEqual(result['sources'][0]['path'], path)
+
+
+    def test_aggregate_baseline_byte_budget_rejects_before_reading_excess_file(self):
+        other = dict(name='second', architecture='amd64', version='1')
+        path = 'var/lib/dpkg/info/second.triggers'
+        tree = {'entries': self.tree['entries'] | {path: self.row | {'hardlink_anchor': path}}}
+        before = status()+status().replace(b'fixture', b'second')
+        read = Mock(return_value=self.raw)
+        with patch.object(triggers, 'MAX_SOURCE_BYTES', len(self.raw)), self.assertRaisesRegex(
+                ValueError, 'Aggregate baseline trigger byte budget'):
+            triggers.baseline_sources(before, tree, self.refs+[other], read)
+        read.assert_called_once_with(self.path, triggers.MAX_BYTES)
+
+    def test_aggregate_directive_budget_rejects_small_valid_files(self):
+        read = Mock(return_value=self.raw)
+        with patch.object(triggers, 'MAX_SOURCE_DIRECTIVES', 1), self.assertRaisesRegex(
+                ValueError, 'Aggregate baseline trigger directive budget'):
+            triggers.baseline_sources(status(), self.tree, self.refs, read)

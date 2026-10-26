@@ -1,3 +1,18 @@
+## Local aggregate declaration/resource hardening (not pushed)
+
+Baseline trigger acquisition now caps the complete reference set at 4 MiB and
+4096 decoded directives in addition to per-file quotas. Excess declared byte
+size is rejected before invoking the owned-baseline reader for that file. Two
+regressions cover aggregate byte exhaustion and aggregate directive exhaustion.
+The independent reader recomputes the same aggregate bounds. Unqualified log
+package lookup now uses one name index while retaining ambiguity rejection.
+
+781 local tests: 726 passed, 55 skipped. Ruff, compilation and diff checks pass.
+These changes remain local alongside the linkage/sequence/time-window follow-ups.
+Current remote run 40286784670 still validates 8f77c70, with quality successful
+and the VM security job in progress. Its acceptance uses NINE flags; the later
+local source requires TWELVE. No protection, probe or artifact was removed.
+
 ## Local UTC execution-window binding (not pushed)
 
 package_log_time.bind_controller_window checks nonempty preserved log append

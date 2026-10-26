@@ -12,6 +12,8 @@ from mano_runtime.package_postconditions import database_records
 
 MAX_BYTES = 1024**2
 MAX_DIRECTIVES = 4096
+MAX_SOURCE_BYTES = 4 * 1024**2
+MAX_SOURCE_DIRECTIVES = 4096
 DIRECTIVES = {'interest', 'interest-await', 'interest-noawait',
               'activate', 'activate-await', 'activate-noawait'}
 
@@ -46,6 +48,7 @@ def baseline_sources(before_status, baseline, references, read):
         raise ValueError('Bounded references and owned-baseline reader required')
     installed = database_records(before_status)
     sources, seen = [], set()
+    total_bytes, total_directives = 0, 0
     for reference in references:
         key = reference['name'], reference['architecture']
         if key in seen:
@@ -72,12 +75,19 @@ def baseline_sources(before_status, baseline, references, read):
                 != (0, 0, 0o644, 1) or row['xattrs'] or row['hardlink_anchor'] != path
                 or type(row['bytes']) is not int or not 0 <= row['bytes'] <= MAX_BYTES):
             raise ValueError('Plain Root-owned baseline trigger metadata required')
+        if total_bytes + row['bytes'] > MAX_SOURCE_BYTES:
+            raise ValueError('Aggregate baseline trigger byte budget')
         data = read(path, MAX_BYTES)
         if (type(data) is not bytes or len(data) != row['bytes']
                 or hashlib.sha256(data).hexdigest() != row['sha256']):
             raise ValueError('Trigger declaration bytes differ from baseline tree')
+        observation = decode(data)
+        total_bytes += len(data)
+        total_directives += len(observation['declarations'])
+        if total_directives > MAX_SOURCE_DIRECTIVES:
+            raise ValueError('Aggregate baseline trigger directive budget')
         sources.append(dict(package=reference, baseline_available=True, path=path,
                             data_base64=base64.b64encode(data).decode(),
-                            observation=decode(data), baseline_tree_bound=True))
+                            observation=observation, baseline_tree_bound=True))
     return dict(schema_version='1.0', sources=sources, trigger_authority_verified=False,
                 changes_authorized=False, publication_authorized=False)
