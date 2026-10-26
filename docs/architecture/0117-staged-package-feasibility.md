@@ -960,3 +960,28 @@ fixture library. An independent reader recomputes both tables and rejects seven
 altered reports. This is new local code on native inputs, not new-source VM proof.
 Future acceptance requires --staged-loader-cache after all fourteen earlier options.
 Library-object, cache-regeneration and publication authority remain false.
+
+
+## Native opaque execution trace independently accepted
+
+Run 40325437426 at 2011fddef433a894e8e04d8dc4efb4f01f1f5f54 passed all three
+jobs. Artifact 12651604704 (22,991,681 bytes) matches SHA256
+0bf8fd352f1e0c71d85b4dcb50afd93a1927d6bf0cff6cc92f08df7361be14f3.
+Independent acceptance passed 54 hash checks, all 45 flags and the complete prior
+chain with fourteen options. The verifier initially omitted the two fixed trace
+assets from its manifest; adding exactly those names under the trace option
+retained exact set equality and all hashes. The same unchanged artifact passed;
+no native probe, security condition or CI job was skipped. A local failure record
+from tool output is retained; the initial full log was overwritten, so acceptance
+logs now rotate before retries rather than silently replacing earlier attempts.
+
+The actual strace 6.13 trace is 15,864 bytes/29 lines with SHA256
+6cacfecc59faf8360c9a4bbaee5bbd2f800d6aac0539f17fa6c943ed7f037899.
+Stable Root 0600/one-link custody was checked. Manual hex-string inspection shows
+libc-bin.postinst triggered ldconfig and man-db.postinst triggered /usr/share/man.
+This is raw observation, not a formal decoder, complete tracing or script-content/
+authority proof. Schema 1.0 has no inherited-FD verification. All six fresh GUI
+originals/four crops were inspected with full 900/120 values visible; the bound
+receipt is retained and physical provenance remains null. Nine unknown filesystem
+effects remain blocked. Descriptor schema 1.1 and loader-cache observation need a
+separate source run and fifteen-option acceptance before native claims.
