@@ -1,3 +1,22 @@
+## Prepared LOCAL raw log observation follow-up
+Remote8d61ad11c8f7f8e5ed5433c2b3c2f63bdb9a5e28 / CI40265061248 qualitySUCCESS,
+security121385539623LIVE(start03:40:21UTC),samewatch83358live. Do notpushyet.
+Priorlocal988de9f(changeaccounting)isUNPUSHED. Thislogfollow-upwillalsoremainlocal.
+Newpackage_log_observation.py bindsboundedbefore/afterdpkg.logbytestotrees;
+exportsrawstaged-dpkg-log-before/after viaexistingSHA/name transfer. Fixedpath
+fromprivatebaseline/candidateONLY,noarbitrarylogselection. Prefix/suffixhashis
+OBSERVATION,notsemanticapproval. Logremainsunresolvedinchangeaccounting.
+737localtests682passed55skipped,Ruff/compile/diffPASS;log
+pr134-log-observation-local-tests.log. Independentreader+5tampercasespassONLY
+SYNTHETICbyte/treefixtures (pr134-log-observation-independent-selfcheck.json).
+No newsource native logacquisition orrealDebianlogformatverificationclaim.
+Currentlyrunning8dacceptanceMUSTNOTuse--change-accountingor--log-observation.
+After8daccepted,pushbothpreparedcommits;THATfreshheadrequireswrapperflags
+--payload-closure --control-metadata --file-lists --database-files
+--change-accounting --log-observation,plusall45flags/priorchecksautomatically.
+Bothrawlogfilesaremandatoryinartifactmapforlogflag. Logeventparsing/policyisnext
+onceactualnativebytesexist;doNOTblessappend-onlyshapeasvalidpackageevents.
+
 ## Prepared LOCAL combined change-accounting follow-up
 Remote8d61ad11c8f7f8e5ed5433c2b3c2f63bdb9a5e28 CI40265061248 nowRUNNING:
 quality121385539456SUCCESS,security121385539623LIVE,watch83358live. Donotpush

@@ -517,3 +517,32 @@ substituted for FD reading in that offline check; it is not new-source native
 execution. An independent reader recomputes the same result and rejects six
 altered report cases. This follow-up stays local while8d61ad1 CI40265061248 runs.
 Fresh later acceptance requires --staged-change-accounting plus all prior gates.
+
+
+## Prepared raw dpkg log acquisition without event approval
+
+The log mutation remains one of the unresolved changes. Earlier artifacts retain
+only the tree hash/length, so they cannot establish whether the old prefix was
+preserved or what events were appended. The CI-only probe now reads bounded
+var/log/dpkg.log bytes from the private read-only baseline and drained candidate,
+binds them to their tree observations and exports fixed staged-dpkg-log-before/
+after artifacts through the existing validated filename/hash transfer. No other
+logs or arbitrary caller-selected paths are acquired.
+
+The observer requires plain Root-owned, mode0644, single-link files with no
+reported xattrs and the exact hardlink anchors. Both content lengths and SHA256
+must agree with the corresponding tree. It records prefix preservation, appended
+byte count and suffix hash; rewrites/truncations explicitly lack an append claim.
+It does not parse events, verify their semantics or account for the log change.
+Those flags and publication/change authority remain false. The combined change
+audit continues to reject a changed log, even when it happens to be append-only.
+
+Six portable tests cover prefixes, empty/unchanged inputs, rewrite/truncation,
+independent baseline binding, metadata/alias/hash errors and quotas. The complete
+local suite has737tests:682passed/55skipped,Ruff/compile/diffpass. The independent
+reader checks synthetic byte/tree fixtures and rejects five altered reports.
+No actual native log bytes have been acquired for this new source yet; those
+fixtures do not prove Debian event syntax or behavior. The log event policy must
+be based on real native evidence before it can approve a mutation. This addition
+stays local while8d61ad1 CI40265061248 runs. Fresh later source acceptance requires
+--staged-log-observation and both raw files, with accounting and all earlier gates.

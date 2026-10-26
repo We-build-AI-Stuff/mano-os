@@ -27,6 +27,8 @@ from mano_runtime.package_apply import NoRedirect, archive_url
 from mano_runtime.package_candidate import compare_payload
 from mano_runtime.package_change_accounting import UnaccountedChanges, audit, require_accounted
 from mano_runtime.package_container import bind as bind_container
+from mano_runtime.package_log_observation import MAX_LOG
+from mano_runtime.package_log_observation import observe as observe_log
 from mano_runtime.package_postconditions import MAX_STATUS, database, database_records
 from mano_runtime.package_tree import delta as tree_delta
 from mano_runtime.package_tree_worker import REQUIRED_CAPS as TREE_CAPS
@@ -416,6 +418,9 @@ def main():
             raise ValueError('Baseline tree changed during staged experiment')
         changes = tree_delta(baseline_tree, candidate_tree)
         after = candidate_read(candidate, 'var/lib/dpkg/status', MAX_STATUS)
+        before_log = candidate_read(baseline, 'var/log/dpkg.log', MAX_LOG)
+        after_log = candidate_read(candidate, 'var/log/dpkg.log', MAX_LOG)
+        log_observation = observe_log(before_log, after_log, baseline_tree, candidate_tree)
         old, new = database(before_status), database(after)
         old_records, new_records = database_records(before_status), database_records(after)
         approved = {(r['name'], r['architecture']) for r in records}
@@ -472,6 +477,7 @@ def main():
     revision = json.loads(Path('/opt/mano-lab/source-info.json').read_text())['revision']
     artifacts = {
         'staged-before-status': before_status, 'staged-after-status': after,
+        'staged-dpkg-log-before': before_log, 'staged-dpkg-log-after': after_log,
         'staged-installed-sl': payload, 'staged-loader-cache-after': cache,
         'staged-loader-cache-before': recovery.read(Path('/etc/ld.so.cache'), 4 * 1024**2),
         'staged-loader-cache-listing': listing,
@@ -503,6 +509,7 @@ def main():
                 generated_file_list_validation=list_policy,
                 database_file_validation=database_files,
                 change_accounting=accounting, unlisted_change_guard_rejected=True,
+                dpkg_log_observation=log_observation,
                 archive_container_identity_bound=True,
                 candidate_inventoried_payload_paths_match=True,
                 host_namespaces=host_namespaces,
