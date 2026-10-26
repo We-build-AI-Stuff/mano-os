@@ -34,7 +34,8 @@ class TriggerDeclarationTests(unittest.TestCase):
     def test_unknown_directives_ambiguous_fields_paths_and_controls_fail_closed(self):
         for raw in (b'execute ldconfig\n', b'interest two names\n',
                     b'interest /usr/../etc\n', b'interest //usr/share/man\n',
-                    b'interest bad\0name\n', 'interest\u0085ldconfig\n'.encode()):
+                    b'interest bad\0name\n', 'interest caf\u00e9\n'.encode(),
+                    'interest\u0085ldconfig\n'.encode()):
             with self.subTest(raw=raw), self.assertRaises(ValueError):
                 triggers.decode(raw)
 

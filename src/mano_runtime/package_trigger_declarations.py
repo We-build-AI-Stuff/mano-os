@@ -6,7 +6,6 @@ Installed interests are read only through the fixed private-baseline reader.
 import base64
 import hashlib
 import re
-import unicodedata
 
 from mano_runtime.package_payload import path_name
 from mano_runtime.package_postconditions import database_records
@@ -28,7 +27,7 @@ def decode(data):
         words = re.split(r'[ \t]+', line)
         if (len(words) != 2 or words[0] not in DIRECTIVES or len(rows) >= MAX_DIRECTIVES
                 or len(words[1].encode()) > 4096
-                or any(unicodedata.category(c).startswith('C') or c.isspace() for c in words[1])):
+                or any(not 0x21 <= ord(c) <= 0x7e for c in words[1])):
             raise ValueError('Known bounded trigger directive and opaque name required')
         trigger = words[1]
         if trigger.startswith('/') and trigger != '/':

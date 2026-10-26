@@ -683,3 +683,40 @@ were actually inspected, with full 900/120 values visible. The bound inspection
 receipt is retained under task outputs/acceptance-pr134-log-decoding-retry.
 This is headless evidence; physical input provenance remains null. The scope and
 trigger-declaration follow-ups need their own fresh native run and acceptance.
+
+
+## Necessary trigger activation-source guard (local follow-up)
+
+The linkage guard recomputes exact package identity/version scope, candidate
+payload validation, copied control validation and fixed baseline declaration
+binding. It re-parses authenticated archive declaration bytes rather than trusting
+an observation's decoded list or claimed authority. Each referenced package must
+have a declared interest supported by at least one activation in the approved
+new-install closure. A named activation comes from an archive activate directive.
+A file interest matches an exact lexical archive path or a directory-boundary
+prefix; symlink destinations are never resolved for matching. A binary search
+finds a witness in sorted inventories, and output links have a fixed quota.
+
+This follows the upstream [dpkg trigger specification](https://github.com/guillemj/dpkg/blob/main/doc/spec/triggers.txt)
+and [declaration manual](https://manpages.debian.org/trixie/dpkg-dev/deb-triggers.5.en.html).
+The acquired specification text is SHA256
+3283d48c0ecb80b5621aaccc02d9ee49e62b6737f64fc6d27830531185b75172
+(Git blob 1d185aa132f132cd5d742ce436bfce40a83c39d6). Its naming contract also
+revealed that non-ASCII names must be rejected; the parser and independent reader
+now enforce printable 7-bit trigger names.
+
+An interest alone, an unrelated activation, unavailable baseline declarations or
+an invented decoded declaration cannot satisfy the guard. Explicit dynamic
+maintainer-script dpkg-trigger calls need different evidence and are unsupported
+by this fixed new-install guard. Matching a possible source does not establish
+which names dpkg actually passed to postinst. The guard therefore leaves actual
+trigger arguments, authority, event sequence, script effects and publication
+unverified. No unknown cache/log mutation is approved by linkage.
+
+766 local tests completed (711 passed, 55 skipped), including eight linkage
+regressions. Ruff, compilation and diff checks pass. An independent reader
+recomputed two links on a SYNTHETIC fixture and rejected four altered reports.
+Native run 40286784670 still executes the preceding declaration-acquisition
+source; it cannot prove linkage execution. The follow-up remains local until that
+source is accepted. Future acceptance requires --staged-trigger-linkage in addition
+to declarations, scope and all earlier gates.

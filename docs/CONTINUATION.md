@@ -1,3 +1,30 @@
+## Local trigger-linkage follow-up (not pushed)
+
+Remote 8f77c70efeb254cc28d0e627bb6abb9c382a0d48 remains under native CI run
+40286784670. Quality succeeded; security-lab was verified in progress on the real
+Debian VM probe step. Watch session 1886 is live. Do not replace this run merely
+because a polling interval expires. Current run acceptance needs nine options,
+without --trigger-linkage, because remote source does not contain this follow-up.
+
+The local guard recomputes package log scope, authenticated candidate payload and
+control validation, baseline declaration byte binding, and archive declaration
+parsing. Every referenced trigger package must have at least one declared
+interest linked to a lexical authenticated payload path or an explicit activation
+in the approved new-package closure. Unsupported dynamic dpkg-trigger calls cannot
+satisfy this guard. It does not prove actual postinst trigger arguments, event
+order, script effects or execution authority. All corresponding flags remain false.
+A future production policy must cover those requirements separately.
+
+The parser now rejects non-ASCII trigger names, matching upstream's printable
+7-bit naming rule. Upstream trigger specification blob
+1d185aa132f132cd5d742ce436bfce40a83c39d6 was acquired as text only, SHA256
+3283d48c0ecb80b5621aaccc02d9ee49e62b6737f64fc6d27830531185b75172.
+766 local tests: 711 passed, 55 skipped. Ruff, compilation and diff checks pass.
+An independent implementation recomputed two links on a SYNTHETIC fixture and
+rejected four altered reports. This is not native linkage evidence. Once current
+remote source is accepted, the follow-up needs fresh CI and all ten acceptance
+options, adding --trigger-linkage after --trigger-declarations.
+
 # mano-OS continuation
 
 ## Objective and execution rules
