@@ -820,3 +820,25 @@ fixture and rejects four substitutions; it also rejects the actual historical
 provider-directory creation as intended. New-source native execution is pending.
 Fresh follow-up acceptance must add --staged-private-state-masks to all prior gates.
 This is a setup correction, not complete privilege confinement or publication.
+
+
+## Declaration acquisition independently accepted at 8f77c70
+
+Run 40286784670 at 8f77c70efeb254cc28d0e627bb6abb9c382a0d48 passed all
+three CI jobs. Artifact 12635203732 (22,934,745 bytes) matches SHA256
+98f9f84b79478a82f28132f864bd4191db34028ef0a5991a0052183f7e8a571a.
+Independent acceptance passed 54 hash checks, all 45 flags and the full prior
+package/PAM/Stop/recovery/ELF/staging chain, including actual declaration bytes:
+one archive trigger file and both baseline libc-bin/man-db files. Six fresh UI
+originals/four numeric crops were inspected with full 900/120 values visible;
+the task outputs retain a hash-bound inspection receipt. Physical provenance null.
+
+The acquired baseline bytes declare libc-bin interest-await ldconfig and man-db
+interest-noawait for six man directories. The new LOCAL linkage implementation
+and its independent reader match two sources on these native inputs: libncurses6's
+activate-noawait ldconfig and sl's lexical /usr/share/man payload. The new LOCAL
+sequence checker and independent reader match 21 frames/two trigger cycles.
+Neither new implementation executed in that VM run. The follow-up batch still
+needs its own native source run and all thirteen acceptance options. The old
+strict guard continues to reject 11 unknown effects among 66 changes. No log,
+trigger script or candidate publication authority is inferred.
