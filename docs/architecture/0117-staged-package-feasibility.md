@@ -309,3 +309,42 @@ context is exported separately; real scans must explicitly report admission_only
 as false. Independent acceptance rejects an admission record masquerading as a
 scan. Local mocked checks and synthetic acceptance are not native confirmation
 of the admission correction or the actual collector.
+
+
+## Accepted tree evidence and combined payload gate
+
+Run 40223650928 at 20e4fe1 passed all three CI jobs. Independent acceptance checked
+artifact 12611276738 (22,947,547 bytes, SHA256
+868e40f6cc94d09be2c30c1807b40751f9b02c05a5925e20f6b3df211ecdff85), including
+54 hashes, 45 flags and the prior package/PAM/Stop/recovery checks. The collector
+admission and three real tree scans passed. Its baseline contains 62,778 entries;
+the candidate contains 62,821. The baseline-after manifest equals baseline-before.
+The independently recomputed delta has 43 additions, 23 modifications, no removals
+and no reported unseen hardlink aliases. Six fresh headless permissions screenshots
+were inspected. This does not prove physical input or independent reacquisition
+of the candidate filesystem.
+
+A new combined payload gate consumes the authenticated package inventories and
+the drained tree observations. It rejects non-directory path collisions even for
+identical bytes, conflicting shared-directory ownership/modes, symlink parents,
+changed shared-directory security metadata, payload content/ownership/mode/xattrs/
+timestamps, and hardlink groups with aliases outside their package-local payload.
+New directories require the inventoried ownership/mode and no extra xattrs;
+existing directories preserve baseline ownership/mode/xattrs. Directory timestamps
+remain unresolved because unpacking descendants changes them. All other unlisted
+changes also remain unresolved; a path resembling dpkg state or a loader cache
+receives no authority by its name. No caller-supplied whitelist exists.
+
+Twelve portable regressions exercise overlap, metadata and alias attacks,
+interruption and rejection of unsupported/tampered inventories. Applied locally
+to the already accepted native observations, the gate validates 44 distinct paths
+from two packages and leaves 40 changes unresolved. An independent implementation
+rechecks that result and rejects seven altered report cases. This is offline
+validation of new code against prior observations, not execution of the new source
+in the VM. Fresh exact-head native CI remains required. The CI probe now invokes
+the gate after candidate drainage and includes its result in the main report.
+
+Generated-state validators, protected-runtime policy, complete mutation approval,
+production authority/PAM staging and coherent activation remain required. The
+combined payload result always keeps generated-state validation, change authority,
+whole-candidate verification and publication false. It cannot authorize deployment.

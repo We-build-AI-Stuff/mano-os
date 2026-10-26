@@ -25,6 +25,7 @@ from mano_broker.package_solver import fingerprint, prepare_apt_root
 from mano_runtime import recovery
 from mano_runtime.package_apply import NoRedirect, archive_url
 from mano_runtime.package_candidate import compare_payload
+from mano_runtime.package_candidate_policy import validate_payloads
 from mano_runtime.package_container import bind as bind_container
 from mano_runtime.package_postconditions import MAX_STATUS, database
 from mano_runtime.package_tree import delta as tree_delta
@@ -409,6 +410,9 @@ def main():
                 or baseline_after['entries'] != baseline_tree['entries']):
             raise ValueError('Baseline tree changed during staged experiment')
         changes = tree_delta(baseline_tree, candidate_tree)
+        payload_policy = validate_payloads(baseline_tree, candidate_tree,
+                                          {name: value['payload']
+                                           for name, value in observations.items()})
         after = candidate_read(candidate, 'var/lib/dpkg/status', MAX_STATUS)
         old, new = database(before_status), database(after)
         approved = {(r['name'], r['architecture']) for r in records}
@@ -473,6 +477,7 @@ def main():
                 source=source, candidate=stage, archives=records, worker=proof,
                 live_source=live_source, source_read_only=True,
                 tree_observation_reported=True, tree_changes_authorized=False,
+                payload_closure_validation=payload_policy,
                 archive_container_identity_bound=True,
                 candidate_inventoried_payload_paths_match=True,
                 host_namespaces=host_namespaces,
