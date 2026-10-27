@@ -1045,3 +1045,23 @@ verification matches raw streams and rejects six substitutions. No new-source
 Linux/Root/VM execution or mandb diagnosis is claimed. Its future native acceptance
 requires all sixteen preceding options plus --command-diagnostics and five exact
 new artifacts; the currently running decoder source uses only sixteen options.
+
+
+### UID-drop compatibility comparison (CI only, not yet native-verified)
+
+Accepted command diagnostics at 7af2987 show a concrete incompatibility: dpkg
+returns zero while setpriv reports PR_SET_KEEPCAPS denied. The fixed securebits 43
+include KEEP_CAPS_LOCKED, which Linux documents as rejecting that call with EPERM.
+The comparison keeps that failure as a required negative control and separately
+tries securebits 11 under the same 0xdb ceiling/NNP/private namespace construction.
+It requires the actual setpriv UID drop, zero effective/permitted/ambient child
+capabilities, unchanged state after failed root/capability/securebit escalation,
+and drained domains. This does not run mandb or establish package callback success.
+The production worker and main staging worker keep their existing securebits 43.
+
+Both workers execute only fixed source in disposable Debian CI. Raw comparison
+records and program bytes are retained, with failure evidence copied before VM
+orchestration exits. Future native acceptance requires the two fixed new artifacts,
+exact-source program bytes and all eighteen options. Local verification has 816
+tests (761 passed, 55 skipped), including four synthetic comparison tests; lint,
+compilation, shell and diff checks passed. Native results are still pending.

@@ -1,3 +1,38 @@
+## CI-only UID-drop comparison prepared locally
+
+Added a fixed comparison before staged dpkg execution: securebits 43 remains the
+locked negative control, while a separate disposable worker uses securebits 11
+(same NOROOT/no-setuid-fixup locks, no KEEP_CAPS lock). Both retain the exact 0xdb
+capability ceiling, NNP and private namespaces. The main package worker still uses
+43; production code is unchanged. The alternative is a compatibility experiment,
+not authorization to weaken a boundary.
+
+The fixed setpriv invocation drops all three user/group IDs to the baseline man
+account, initializes its groups, then executes fixed Python from a read-only
+/run mount. The child must have zero effective/permitted/ambient capabilities,
+no inherited bit outside 0xdb, bounded set 0xdb, NNP 1, securebits 11 and unchanged
+private namespaces. Attempts to regain root IDs, add CAP_SYS_ADMIN or clear
+securebits must fail EPERM without changing state. Parent capability addition
+must also fail. Each dedicated resource-limited systemd domain must drain.
+The old control must reproduce the exact observed keep-caps error with exit 1.
+This does not execute mandb or prove callback success/ancestry/script authority.
+
+Comparison program and complete raw observations are retained and bound by hash.
+Failure reports are saved before validation, and VM orchestration now copies guest
+evidence before exiting on any staging-probe failure. The main stage artifact
+manifest adds exactly staged-uid-drop-program.py and staged-uid-drop-comparison.json.
+Independent acceptance adds --uid-drop-comparison after all seventeen prior options
+(EIGHTEEN total), comparing program bytes to the exact Git source and checking
+both profile results. Legacy sources keep their prior option sets.
+
+816 local tests: 761 passed, 55 skipped. Four new tests use only synthetic kernel
+reports and argument construction; neither Root/Linux worker runs on this Mac.
+Existing portable subprocess tests still run unprivileged only. Ruff, embedded
+worker/helper compilation, shell syntax and diff checks pass. Real UID-drop/kernel
+behavior remains unmeasured until this source's native CI. Original v2.1 phases 0-7
+and production staging/activation/runtime closure remain incomplete. No merge.
+Disk about 19.7 GiB / 91 percent; warned, no deletion or local VM/model downloads.
+
 ## Native command diagnostics accepted; UID-drop conflict identified
 
 Exact source 7af29875a140435d4108f5ab5366c3130a73b1fd / CI 40436347345

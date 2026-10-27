@@ -266,9 +266,13 @@ PY
     > "$repo_root/evidence/delegated-cgroups.json"
   # Feasibility only: fixed signed package and a synthetic library in a private
   # COW clone. No publication, production grant or adversarial-boundary claim.
-  ssh "${ssh_opts[@]}" lab@127.0.0.1 \
+  if ! ssh "${ssh_opts[@]}" lab@127.0.0.1 \
     'sudo env PYTHONPATH=/opt/mano-lab/src python3 /opt/mano-lab/scripts/probe_staged_package.py' \
-    > "$repo_root/evidence/package-staging-feasibility.json"
+    > "$repo_root/evidence/package-staging-feasibility.json"; then
+    ssh "${ssh_opts[@]}" lab@127.0.0.1 \
+      'sudo tar -cf - -C /opt/mano-lab/evidence .' | tar -xf - -C "$repo_root/evidence"
+    exit 3
+  fi
   python3 "$repo_root/scripts/staged_artifact_names.py" \
     "$repo_root/evidence/package-staging-feasibility.json" \
     | ssh "${ssh_opts[@]}" lab@127.0.0.1 \

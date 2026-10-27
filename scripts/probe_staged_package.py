@@ -519,6 +519,34 @@ def private_state_masks(baseline_tree):
     return paths
 
 
+def sandbox_argv(candidate, state_masks, empty, *, program='probe.py', securebits=43):
+    if (program, securebits) not in {('probe.py',43),('uid-drop.py',43),('uid-drop.py',11)}:
+        raise ValueError('Fixed CI worker/profile pair required')
+    bits='+noroot,+noroot_locked,+no_setuid_fixup_locked'
+    if securebits==43:
+        bits+=',+keep_caps_locked'
+    return ['/usr/bin/bwrap', '--die-with-parent', '--new-session', '--unshare-pid',
+            '--unshare-net', '--unshare-ipc', '--unshare-uts', '--unshare-cgroup',
+            '--bind', str(candidate), '/', '--proc', '/proc', '--dev', '/dev',
+            '--ro-bind', '/proc/sys', '/proc/sys',
+            '--ro-bind', '/proc/sysrq-trigger', '/proc/sysrq-trigger',
+            '--tmpfs', '/run', '--tmpfs', '/tmp', '--tmpfs', '/home', '--tmpfs', '/root',
+            '--tmpfs', '/opt', '--tmpfs', '/mnt', '--tmpfs', '/media', '--tmpfs', '/srv',
+            *[arg for path in state_masks for arg in ('--tmpfs', path)],
+            '--tmpfs', '/.snapshots', '--ro-bind', str(BASE / 'archives'), '/run/archives',
+            '--ro-bind', str(BASE / program), '/run/probe.py',
+            '--ro-bind', str(BASE / 'fixture.so'), '/run/stage-fixture.so',
+            '--ro-bind', str(empty), '/etc/shadow',
+            '--ro-bind', str(empty), '/etc/gshadow',
+            '--clearenv', '--setenv', 'PATH', ENV['PATH'], '--setenv', 'LANG', ENV['LANG'],
+            '--setenv', 'TZ', 'UTC0',
+            '--setenv', 'PYTHONDONTWRITEBYTECODE', '1', '--chdir', '/',
+            '/usr/bin/setpriv', '--no-new-privs', '--bounding-set=' + CAPS,
+            '--inh-caps=' + CAPS, '--ambient-caps=' + CAPS,
+            '--securebits='+bits,
+            '/usr/bin/python3', '-P', '/run/probe.py']
+
+
 def main():
     if sys.platform != 'linux':
         raise PermissionError('Disposable Debian CI only')
@@ -557,26 +585,11 @@ def main():
             raise ValueError('Read-only baseline package state changed')
         baseline_tree = tree_observation('baseline')
         state_masks = private_state_masks(baseline_tree)
-        argv = ['/usr/bin/bwrap', '--die-with-parent', '--new-session', '--unshare-pid',
-                '--unshare-net', '--unshare-ipc', '--unshare-uts', '--unshare-cgroup',
-                '--bind', str(candidate), '/', '--proc', '/proc', '--dev', '/dev',
-                '--ro-bind', '/proc/sys', '/proc/sys',
-                '--ro-bind', '/proc/sysrq-trigger', '/proc/sysrq-trigger',
-                '--tmpfs', '/run', '--tmpfs', '/tmp', '--tmpfs', '/home', '--tmpfs', '/root',
-                '--tmpfs', '/opt', '--tmpfs', '/mnt', '--tmpfs', '/media', '--tmpfs', '/srv',
-                *[arg for path in state_masks for arg in ('--tmpfs', path)],
-                '--tmpfs', '/.snapshots', '--ro-bind', str(BASE / 'archives'), '/run/archives',
-                '--ro-bind', str(BASE / 'probe.py'), '/run/probe.py',
-                '--ro-bind', str(BASE / 'fixture.so'), '/run/stage-fixture.so',
-                '--ro-bind', str(empty), '/etc/shadow',
-                '--ro-bind', str(empty), '/etc/gshadow',
-                '--clearenv', '--setenv', 'PATH', ENV['PATH'], '--setenv', 'LANG', ENV['LANG'],
-                '--setenv', 'TZ', 'UTC0',
-                '--setenv', 'PYTHONDONTWRITEBYTECODE', '1', '--chdir', '/',
-                '/usr/bin/setpriv', '--no-new-privs', '--bounding-set=' + CAPS,
-                '--inh-caps=' + CAPS, '--ambient-caps=' + CAPS,
-                '--securebits=+noroot,+noroot_locked,+no_setuid_fixup_locked,+keep_caps_locked',
-                '/usr/bin/python3', '-P', '/run/probe.py']
+        from probe_package_uid_drop import compare
+        uid_program, uid_comparison = compare(BASE, PROGRAM, host_namespaces,
+            lambda bits: sandbox_argv(candidate,state_masks,empty,
+                program='uid-drop.py',securebits=bits),run)
+        argv = sandbox_argv(candidate,state_masks,empty)
         unit = ['/usr/bin/systemd-run', '--quiet', '--pipe', '--wait', '--collect',
                 '--unit=mano-staged-package-ci.service', '--slice=mano-package.slice',
                 '--property=MemoryMax=536870912', '--property=TasksMax=64',
@@ -728,6 +741,8 @@ def main():
     revision = json.loads(Path('/opt/mano-lab/source-info.json').read_text())['revision']
     artifacts = {
         'staged-before-status': before_status, 'staged-after-status': after,
+        'staged-uid-drop-program.py': uid_program,
+        'staged-uid-drop-comparison.json': json.dumps(uid_comparison,sort_keys=True).encode(),
         **retained_trace, **retained_commands,
         'staged-dpkg-log-before': before_log, 'staged-dpkg-log-after': after_log,
         'staged-installed-sl': payload, 'staged-loader-cache-after': cache,
