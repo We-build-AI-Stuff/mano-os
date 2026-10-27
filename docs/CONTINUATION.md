@@ -1,3 +1,34 @@
+## Native UID comparison failed on test-source read permission; corrected locally
+
+Source 4ae4901b43fa4cdcdfd4b175e418f675836ca80d / CI 40439743818 is terminal
+FAILURE: quality passed, security-lab and merge-gate failed. No merge or bypass.
+Retained artifact 12705434673 is byte-verified: 2,902,841 bytes, SHA256
+507ffed583bc1a6f0a9dd031273eb81ecdc7d7bef190a12b8808b7f15d2d4659.
+Download session 4434 exited 0; failed-run custody only, NOT acceptance. Raw failed
+job log saved as pr134-4ae4901-failed-job.log. New VM failure-copy branch preserved
+both staged-uid-drop-locked.json and staged-uid-drop-compatible.json in the bundle.
+Their raw bytes are saved separately with pr134-4ae4901- prefixes under outputs.
+
+Locked control: securebits 43, all five caps 0xdb, NNP 1, private namespaces, drained;
+setpriv exit 1 and exact original keep-process-capabilities EPERM error.
+Alternative: securebits 11, same initial caps/NNP/private namespace state, drained;
+exit 2, no stdout, exact stderr:
+/usr/bin/python3: can't open file '/run/probe.py': [Errno 13] Permission denied
+This identifies a fixture bug: the test source was mode 0400 Root-owned while the
+child runs as man. It does NOT prove the subsequent capability/escalation checks.
+
+The correction gives only the fixed uid-drop.py source mode 0444, still opened
+exclusively under Root-private BASE and read-only bound at /run/probe.py. Existing
+staging probe.py stays 0400. No execution policy, capability ceiling, negative
+control, namespace, output-custody or escalation requirement is weakened. A new
+portable temporary-file regression checks read/no-write mode, exact source bytes
+and refusal to overwrite an existing source. No Root/Linux worker executes on Mac.
+817 local tests: 762 passed, 55 skipped; Ruff, embedded compilation, shell and diff pass.
+The corrected source still requires fresh native CI and all EIGHTEEN acceptance
+options. Latest accepted source remains 7af2987 / run 40436347345 with 17 options.
+Original v2.1 full goal remains incomplete; no candidate publication or merge.
+Disk ~19.7 GiB / 91 percent, warned; no deletion / local VM / model images.
+
 ## CI-only UID-drop comparison prepared locally
 
 Added a fixed comparison before staged dpkg execution: securebits 43 remains the

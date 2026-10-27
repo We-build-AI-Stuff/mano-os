@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -41,6 +42,17 @@ def fixture(bits):
 
 
 class UidDropComparisonTests(unittest.TestCase):
+    def test_dropped_child_source_is_readable_but_never_writable_or_reused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory)
+            data=uid.write_program(base,stage.PROGRAM)
+            target=base/'uid-drop.py'
+            self.assertEqual(target.read_bytes(),data)
+            self.assertEqual(target.stat().st_mode & 0o777,0o444)
+            with self.assertRaises(FileExistsError):
+                uid.write_program(base,stage.PROGRAM)
+            self.assertEqual(target.read_bytes(),data)
+
     def test_fixed_worker_pairs_keep_main_policy_locked(self):
         for leaf,bits in (('probe.py',43),('uid-drop.py',43),('uid-drop.py',11)):
             args=stage.sandbox_argv(Path('/candidate'),[],Path('/empty'),

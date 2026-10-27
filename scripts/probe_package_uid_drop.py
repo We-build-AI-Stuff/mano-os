@@ -148,12 +148,19 @@ def validate(row, profile, host):
     return child
 
 
-def compare(base, capture_source, host, sandbox, run):
+def write_program(base, capture_source):
     data=program(capture_source)
     path=base/'uid-drop.py'
     with path.open('xb') as stream:
         stream.write(data)
-    path.chmod(0o400)
+    # The fixed child runs as man and must read this source through its RO bind.
+    # BASE stays Root-private; no writable permission is granted to the child.
+    path.chmod(0o444)
+    return data
+
+
+def compare(base, capture_source, host, sandbox, run):
+    data=write_program(base,capture_source)
     rows={}
     for label,bits in (('locked',43),('compatible',11)):
         unit='mano-staged-uid-drop-'+label+'.service'

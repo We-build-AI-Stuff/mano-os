@@ -1065,3 +1065,14 @@ orchestration exits. Future native acceptance requires the two fixed new artifac
 exact-source program bytes and all eighteen options. Local verification has 816
 tests (761 passed, 55 skipped), including four synthetic comparison tests; lint,
 compilation, shell and diff checks passed. Native results are still pending.
+
+
+Native comparison at 4ae4901/run 40439743818 failed, with raw failure evidence
+retained. The locked control reproduced the expected error. The alternative
+reached Python but could not read its Root-owned mode-0400 source after UID drop.
+Only the fixed comparison source is now mode 0444 under the Root-private source
+directory and its existing read-only bind. The main worker source remains 0400.
+A regression checks readable/non-writable mode, exact bytes and exclusive creation.
+817 local tests passed (762 passed, 55 skipped), with lint/compile/shell/diff checks.
+The alternative's child capability and escalation assertions remain unproven until
+a fresh native run passes; no native guard or acceptance requirement was waived.
