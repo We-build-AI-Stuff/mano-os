@@ -1,3 +1,42 @@
+## Native command diagnostics accepted; UID-drop conflict identified
+
+Exact source 7af29875a140435d4108f5ab5366c3130a73b1fd / CI 40436347345
+ALL3SUCCESS: quality 121965805875, security-lab 121965806144, merge-gate
+121973388566. Artifact 12704898914, 23,028,150 bytes, SHA256
+3bcaffbce1cf80b2ea56f1718476b6ebece93165f45532b9e97f765c280e7508.
+Download 84551 and independent full acceptance 32717 exited zero. All seventeen
+options plus prior 54-hash/45-flag/PAM/Stop/recovery/package/ELF chain passed.
+Six fresh UI originals/four numeric crops actually inspected, full 900/120 values
+readable; receipt outputs/acceptance-pr134-command-diagnostics/inspection.json
+under task root. Physical provenance null; no publication.
+
+Native dpkg stdout 533 bytes; stderr 67 bytes. Exact stderr:
+setpriv: keep process capabilities failed: Operation not permitted
+Direct dpkg/diagnostic ldconfig both returned zero with complete captures;
+ldconfig streams empty. Thus direct dpkg success did not establish callback
+completion. Trace still 29 calls, 19 zero execve returns/10 failures. Cache 572/577,
+accounting 55/64 with 9 unapproved effects rejected. No mandb execution observed.
+Installed util-linux 2.41.5-0+deb13u1, man-db 2.13.1-1 from bound baseline status.
+
+Upstream util-linux v2.41.5 setpriv.c lines 1099-1100 unconditionally call
+prctl(PR_SET_KEEPCAPS,1) and emit the matching error on failure. Retrieved through
+authenticated read-only GitHub API; saved task-root outputs/util-linux-2.41.5-setpriv.c,
+SHA256 4519ded6f9df4e0b1b649fdba34a3db5cd23805bfdd2cb57e1ffa52fd360eedb.
+Source https://github.com/util-linux/util-linux/blob/v2.41.5/sys-utils/setpriv.c
+Kernel API https://www.man7.org/linux/man-pages/man2/PR_SET_KEEPCAPS.2const.html
+states EPERM for SECBIT_KEEP_CAPS_LOCKED. Native worker securebits 43 contains that
+lock. This is a concrete compatibility conflict, not evidence to silently weaken
+the production boundary. Next: CI-only differential UID-drop compatibility test
+with old locked control and proposed bounded alternative; verify all capability
+sets/UID/GID/groups/NNP, failed escalation and domain drain before policy changes.
+No such alternative has run yet. Production securebits/caps remain unchanged.
+
+CI is terminal, no new run pending. Local=remote 7af2987 before this evidence note.
+Full original v2.1 phases 0-7 remain incomplete: callback authority/ancestry/script
+bytes, cache objects/regeneration, unlisted state, production staging/activation/
+runtime closure, remaining product and signed OS release gates. PR 134 not ready.
+Disk ~19.7 GiB free/91 percent, warning already delivered. No deletion/VM/model images.
+
 ## Native execution decoder accepted; command diagnostics next
 
 Exact source 9cb9ae5cbd6308becbb37952cd8e820729b0d242, CI 40335584785
