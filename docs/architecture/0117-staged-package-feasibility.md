@@ -1097,3 +1097,15 @@ The full local suite stalled on existing file reads during import, including a
 fresh-cache attempt, and was terminated with diagnostics retained. Full-suite
 validation is delegated to CI; no local full-suite success is claimed for this
 change. Linux/Root execution remains exclusively in disposable CI.
+
+
+Native run 40548807617 at 75fdfe3 passed all nineteen options and the complete
+prior acceptance chain. The actual stage now records setpriv followed by mandb
+image replacement, with empty dpkg stderr. Thirty exec records decode independently
+(20 successful image replacements, 10 failures). The strict guard accounts for
+55/125 differences and rejects 70 unapproved effects, including newly generated
+man-cache tags/indexes/directories. This is observed startup and state change,
+not verified callback exit status, credentials/ancestry/script authority or
+generated-state correctness. Full CI quality passed 820 tests. Fresh UI evidence
+was visually inspected; physical provenance remains null. No production policy
+change, publication, activation or merge is authorized by this experiment.

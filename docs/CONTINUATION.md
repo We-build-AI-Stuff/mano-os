@@ -1,3 +1,43 @@
+## Native actual-compatible-stage accepted; mandb starts, generated state unresolved
+
+Exact head 75fdfe36d9b46d6fded86ad837fbde3ecba2546a / run 40548807617 ALL3SUCCESS:
+quality 122346621695, security-lab 122346622343, merge-gate 122359638200.
+Artifact 12755003539, 23,000,502 bytes, SHA256
+8a7c28a09b7208d6d2632bbd4590eb51783f2d732252f8cb857b4edcd6131732.
+Download 98514 and full independent acceptance 44936 exited 0. All NINETEEN options
+plus complete 54-hash/45-flag/PAM/Stop/recovery/package/ELF chain passed. Exact CI
+merge 68cbebe716cd9c5b16544de8b7032c4306346fd2 was fetched before acceptance;
+parents are base 65fdfc02... and exact head 75fdfe36..., with both worker sources
+identical to PR-head bytes. No verifier gate removed and no native rerun needed.
+
+Actual CI staging worker used securebits 11 with fixed 0xdb ceiling/NNP/namespaces.
+Trace now 30 calls: 20 successful image replacements, 10 failed attempts. Exact setpriv
+UID-drop invocation at line 28 followed by /usr/bin/mandb -pq at line 29, PID 7899.
+Direct dpkg/diagnostic ldconfig return 0; dpkg stdout 533 bytes, stderr 0. Thus prior
+setpriv failure is resolved in CI staging. This proves image startup, not mandb
+exit status, credentials at exec, ancestry, complete exec coverage, script bytes
+or trigger authority. Production remains securebits 43, not changed by this run.
+
+Actual generated state now adds man-cache changes: strict accounting verifies 55
+of 125 differences and rejects 70 unapproved. Those include CACHEDIR.TAG/index.db/
+cat6/man-cache directory changes, plus prior cache/log/synthetic negative files.
+Do not authorize them by name or report this as all mutations validated. Complete
+man-cache content/source/regeneration policy, loader cache/aux-cache, log and
+callback outcomes/provenance remain required. No publication or activation.
+
+Six fresh UI originals/four numeric crops actually inspected, full 900/120 values
+readable; receipt outputs/acceptance-pr134-compatible-stage/inspection.json under
+task root. Physical provenance null. Full CI quality 820 tests passed, raw log+SHA
+proof in pr134-75fdfe3-quality-proof.json. Local full-suite import-read stalls were
+not passes; CI supplies exact-head full-suite evidence. Full original v2.1 phases
+0-7 remain incomplete, including production staging/activation/runtime closure
+and remaining product/signed OS release gates. No merge. No live CI pending.
+
+Next: acquire bounded process outcomes (current exec trace suppresses exit frames),
+then bind actual callback identity/arguments/script custody and generated man/cache
+state to approved inputs; maintain strict unknown-effect rejection and no replay.
+Disk 42.9 GiB / 79 percent, no threshold warning, no deletion or local VM/model images.
+
 ## Actual compatible staging prepared; full suite delegated to CI
 
 CI staging now uses the separately native-tested securebits 11 profile with the
