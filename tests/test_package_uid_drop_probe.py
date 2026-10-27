@@ -53,15 +53,15 @@ class UidDropComparisonTests(unittest.TestCase):
                 uid.write_program(base,stage.PROGRAM)
             self.assertEqual(target.read_bytes(),data)
 
-    def test_fixed_worker_pairs_keep_main_policy_locked(self):
-        for leaf,bits in (('probe.py',43),('uid-drop.py',43),('uid-drop.py',11)):
+    def test_fixed_ci_worker_pairs_use_verified_profiles_only(self):
+        for leaf,bits in (('probe.py',11),('uid-drop.py',43),('uid-drop.py',11)):
             args=stage.sandbox_argv(Path('/candidate'),[],Path('/empty'),
                                     program=leaf,securebits=bits)
             self.assertIn(str(stage.BASE/leaf),args)
             option=next(v for v in args if v.startswith('--securebits='))
             self.assertEqual('keep_caps_locked' in option,bits==43)
             self.assertIn('--bounding-set='+stage.CAPS,args)
-        for leaf,bits in (('probe.py',11),('other.py',43),('uid-drop.py',0)):
+        for leaf,bits in (('probe.py',43),('other.py',43),('uid-drop.py',0)):
             with self.assertRaises(ValueError):
                 stage.sandbox_argv(Path('/candidate'),[],Path('/empty'),
                                    program=leaf,securebits=bits)

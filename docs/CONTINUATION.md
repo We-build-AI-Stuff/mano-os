@@ -1,3 +1,41 @@
+## Actual compatible staging prepared; full suite delegated to CI
+
+CI staging now uses the separately native-tested securebits 11 profile with the
+same 0xdb ceiling, NNP, namespaces, sealed input layout and private masks. Main
+worker reports uid-drop-compatible-v1; production code remains securebits 43.
+The locked 43 and alternative 11 UID comparison still runs with all negative checks.
+After raw trace/custody/command evidence is retained, a new fixed guard requires
+exact setpriv --reuid man --regid man --init-groups -- /usr/bin/mandb -pq followed
+by a successful /usr/bin/mandb image record with argv [/usr/bin/mandb,-pq], same
+observed PID and strictly later entry. Missing, duplicate, failed, reordered or
+substituted records reject. PID linkage is an observed trace match, not verified
+caller ancestry. Process exit status, credentials at mandb exec, complete coverage,
+script bytes, callback authority and publication remain explicitly false.
+
+Independent acceptance adds --compatible-stage after all eighteen prior options
+(NINETEEN). Old sources still require securebits 43; only the explicit new option
+requires 11 plus the matching profile and independently decoded actual trace.
+No new artifact names; raw records and the new report remain hash-bound. Actual
+mandb execution/new generated filesystem state need their own native source run.
+
+Local focused tests: three new compatible-stage tests and five UID comparison
+regressions passed. The old native fixture lacking mandb is rejected; synthetic
+frames match and ten report/profile/missing-record substitutions are rejected by
+an independent implementation. Ruff, embedded workers/helper compilation and
+diff checks passed. Full local discovery stalled in existing filesystem reads:
+first stop_state.cpython-313.pyc, then prompts.py with a fresh temporary cache.
+Process sample/open descriptors retained under task-root outputs. Both owned test
+processes were deliberately terminated (exit 143); these are not test passes or
+assertion failures. Existing user files/caches were not deleted. Full suite must
+run in CI quality before considering this source verified. No new Root/Linux
+execution occurred on Mac. User authorized continuing in disposable CI.
+
+Full original v2.1 phases 0-7 remain incomplete; no merge/publication. Next native
+run must pass all jobs and nineteen options, including actual mandb image record,
+then fresh six UI originals/four crops and exact-source custody. Keep failed
+4ae4901 artifact and accepted 5a16944 evidence distinct. Disk 42.9 GiB / 79 percent,
+no warning threshold crossed, no deletion or local VM/model downloads.
+
 ## Native UID-drop comparison accepted; actual package callback still next
 
 Exact source 5a16944273bf906c3286a9af7f68fa68e38e5cf5 / CI 40441722096

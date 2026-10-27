@@ -132,7 +132,7 @@ status=dict(line.split(':',1) for line in Path('/proc/self/status').read_text().
 caps={k:int(status[k].strip(),16) for k in ('CapEff','CapPrm','CapInh','CapBnd','CapAmb')}
 assert all(v==0xdb for v in caps.values()),caps
 secure=ctypes.CDLL(None,use_errno=True).prctl(27,0,0,0,0)
-assert secure==43 and status['NoNewPrivs'].strip()=='1',(secure,status['NoNewPrivs'])
+assert secure==11 and status['NoNewPrivs'].strip()=='1',(secure,status['NoNewPrivs'])
 assert os.getpid()==2
 namespaces={k:os.readlink('/proc/self/ns/'+k) for k in ('mnt','pid','net','ipc','uts','cgroup')}
 body=json.loads(sys.stdin.buffer.read(32769));assert set(body)=={'archives'}
@@ -151,6 +151,7 @@ print(json.dumps(dict(capabilities=caps,securebits=secure,no_new_privileges=True
  namespaces=namespaces,pid=os.getpid(),worker_timezone=os.environ.get("TZ"),
  dpkg_timezone=env["TZ"],file_size_limit_bytes=resource.getrlimit(resource.RLIMIT_FSIZE)[0],
  nonstdio_fds=nonstdio_fds,inherited_fd_scope_verified=True,
+ capability_profile="uid-drop-compatible-v1",
  dpkg_returncode=result['returncode'],ldconfig_returncode=cache['returncode'] if cache else None,
  command_diagnostics=dict(schema_version='1.0',dpkg=result,ldconfig=cache,
      callback_process_outcomes_verified=False,all_execs_observed=False,
@@ -519,8 +520,38 @@ def private_state_masks(baseline_tree):
     return paths
 
 
-def sandbox_argv(candidate, state_masks, empty, *, program='probe.py', securebits=43):
-    if (program, securebits) not in {('probe.py',43),('uid-drop.py',43),('uid-drop.py',11)}:
+def compatible_stage(worker, decoded):
+    if (worker['securebits']!=11 or worker['capability_profile']!='uid-drop-compatible-v1'
+            or worker['no_new_privileges'] is not True
+            or set(worker['capabilities'])!={'CapEff','CapPrm','CapInh','CapBnd','CapAmb'}
+            or any(type(v) is not int or v!=0xdb for v in worker['capabilities'].values())):
+        raise ValueError('Exact compatible staging profile/ceiling required')
+    observed=[]
+    for event in decoded['events']:
+        if event['return_value']!=0:
+            continue
+        path=base64.b64decode(event['path_base64'],validate=True)
+        args=[base64.b64decode(a,validate=True) for a in event['argv_base64']]
+        observed.append((path,args,event))
+    drops=[e for path,args,e in observed if path==b'/usr/bin/setpriv'
+           and args[:1] in ([b'setpriv'],[b'/usr/bin/setpriv']) and args[1:]==[
+               b'--reuid',b'man',b'--regid',b'man',b'--init-groups',b'--',b'/usr/bin/mandb',b'-pq']]
+    mandb=[e for path,args,e in observed if path==b'/usr/bin/mandb'
+           and args==[b'/usr/bin/mandb',b'-pq']]
+    if (len(drops)!=1 or len(mandb)!=1 or drops[0]['pid']!=mandb[0]['pid']
+            or drops[0]['completion_line']>=mandb[0]['entry_line']):
+        raise ValueError('Observed fixed UID drop followed by mandb image replacement required')
+    return dict(schema_version='1.0',profile='uid-drop-compatible-v1',
+                drop_entry_line=drops[0]['entry_line'],mandb_entry_line=mandb[0]['entry_line'],
+                observed_pid=mandb[0]['pid'],mandb_image_replacement_observed=True,
+                process_exit_status_verified=False,credentials_at_mandb_exec_verified=False,
+                caller_ancestry_verified=False,all_execs_observed=False,
+                script_contents_at_exec_verified=False,trigger_authority_verified=False,
+                changes_authorized=False,publication_authorized=False)
+
+
+def sandbox_argv(candidate, state_masks, empty, *, program='probe.py', securebits=11):
+    if (program, securebits) not in {('probe.py',11),('uid-drop.py',43),('uid-drop.py',11)}:
         raise ValueError('Fixed CI worker/profile pair required')
     bits='+noroot,+noroot_locked,+no_setuid_fixup_locked'
     if securebits==43:
@@ -656,6 +687,7 @@ def main():
                for name in ('dpkg', 'ldconfig')):
             raise ValueError('Command failed or output capture incomplete; witnesses retained')
         exec_decoding = decode_exec_trace(exec_trace)
+        compatible_observation = compatible_stage(proof,exec_decoding)
         if live_inputs() != before:
             raise ValueError('Live package or loader inputs changed in staged experiment')
         if FIXTURE_LIBRARY.exists() or FIXTURE_LIBRARY.is_symlink():
@@ -773,6 +805,7 @@ def main():
                 source=source, candidate=stage, archives=records, worker=proof,
                 private_state_masks=state_masks, execution_trace_observation=exec_observation,
                 loader_cache_observation=cache_observation, execution_trace_decoding=exec_decoding,
+                uid_drop_compatible_stage=compatible_observation,
                 live_source=live_source, source_read_only=True,
                 tree_observation_reported=True, tree_changes_authorized=False,
                 payload_closure_validation=payload_policy,

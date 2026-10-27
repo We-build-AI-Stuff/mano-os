@@ -1076,3 +1076,24 @@ A regression checks readable/non-writable mode, exact bytes and exclusive creati
 817 local tests passed (762 passed, 55 skipped), with lint/compile/shell/diff checks.
 The alternative's child capability and escalation assertions remain unproven until
 a fresh native run passes; no native guard or acceptance requirement was waived.
+
+
+### Actual package stage under the compared profile (native result pending)
+
+The isolated securebits-11 UID-drop comparison passed native acceptance at
+5a16944/run 40441722096. The CI-only package worker now uses that same bounded
+profile, while production remains unchanged. Both comparison controls remain
+mandatory. The stage must observe the exact setpriv UID-drop invocation followed
+by the fixed mandb -pq image record in the same observed PID, in trace order.
+A zero execve result does not prove mandb exited successfully; credentials at exec,
+process ancestry, complete coverage and callback authority remain unverified.
+All newly generated filesystem state still passes through strict accounting.
+
+The explicit nineteenth acceptance option requires the new worker profile and
+recomputes the trace match. Earlier artifacts retain their old securebits-43
+expectation. Three new focused tests plus five UID comparison tests passed locally;
+independent synthetic checks reject ten substitutions. Lint/compile/diff passed.
+The full local suite stalled on existing file reads during import, including a
+fresh-cache attempt, and was terminated with diagnostics retained. Full-suite
+validation is delegated to CI; no local full-suite success is claimed for this
+change. Linux/Root execution remains exclusively in disposable CI.
