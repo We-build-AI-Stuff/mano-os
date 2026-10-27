@@ -1,3 +1,35 @@
+## Native execution decoder accepted; command diagnostics next
+
+Exact source 9cb9ae5cbd6308becbb37952cd8e820729b0d242, CI 40335584785
+ALL3SUCCESS: quality 121616140956, security-lab 121616140549, merge-gate
+121633496328. Artifact 12659191351: 22,981,755 bytes, SHA256
+8e3c3b4b73040f7ec395e9c3396268dceaa82eae9eba2b45b1504d5bd8a4a793.
+Download session 56368 and full independent acceptance 40009 exited zero.
+All sixteen staging options plus the full 54-hash/45-flag prior chain passed.
+Raw trace/version/custody JSON matched the worker report; independent decoding
+reproduced 29 calls, 19 zero execve returns and 10 failed attempts. Image replacement
+is not process exit success. Callback outcomes, ancestry, all-exec coverage,
+actual trigger argument policy, script contents and publication remain unverified.
+Cache tables remain 572/577; strict accounting is 55/64 with nine unapproved
+changes rejected. No candidate activation or publication.
+
+Six fresh originals and four numeric crops actually inspected; full 900/120
+values readable. Bound receipt in task-root outputs:
+acceptance-pr134-exec-decoding/inspection.json. Headless only, physical provenance null.
+Five existing CodeRabbit threads reverified resolved. Main/base is unchanged at
+65fdfc02e3dbb18f791a92374a24690ae4e1ba87; refresh before merge.
+
+Local diagnostic commit de42adc624b1e73a3c47d974ff79b7b676dcd5c4 is ready
+to push with this evidence record. Its new native run must pass SEVENTEEN options,
+adding --command-diagnostics after --exec-decoding. Direct child return codes and
+bounded raw stdout/stderr will help diagnose the unresolved mandb outcome; no
+native diagnostic bytes have been acquired yet. Full original v2.1 phases 0-7
+remain active/incomplete, including production staging/activation/runtime closure,
+callback authority, unlisted mutations and the remaining product/release gates.
+
+Disk warning delivered: about 19.8 GiB free / 91 percent. No deletion; only small
+necessary artifacts. No local VM/model downloads. Stop large downloads below 10 GiB.
+
 ## Local bounded command diagnostics (not pushed)
 
 The CI staging worker now observes dpkg and diagnostic ldconfig via a portable
