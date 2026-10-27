@@ -1109,3 +1109,31 @@ not verified callback exit status, credentials/ancestry/script authority or
 generated-state correctness. Full CI quality passed 820 tests. Fresh UI evidence
 was visually inspected; physical provenance remains null. No production policy
 change, publication, activation or merge is authorized by this experiment.
+
+
+## Process-outcome trace prepared; native validation pending
+
+The trusted CI tracer retains terminal summaries using -q. Explicit decoder dialect
+strace-hex-execve-exit-v1 records normal exits, signals and core-dump markers plus
+observed PID generations. Legacy decoding remains unchanged and rejects terminal
+frames. Generations distinguish observed reuse; they are not proof of births or
+ancestry. Malformed, truncated, out-of-range and pending-call terminal frames fail.
+
+A fixed guard requires exactly one successful image record and a later normal zero
+exit in the same observed PID generation for libc-bin.postinst triggered ldconfig,
+man-db.postinst triggered /usr/share/man, and /usr/bin/mandb -pq. An intervening
+successful image replacement rejects. These are bounded observations; full process
+coverage, credentials at exec, script bytes, ancestry, trigger/change/publication
+authority remain false. Production securebits 43 remains unchanged.
+
+Independent acceptance now requires TWENTY options, adding --process-outcomes after
+--compatible-stage. It independently decodes raw bytes and recomputes all three
+matches. Old nineteen-option native artifacts cannot prove these exits. Fifteen
+focused tests passed (seven new outcomes and eight decoder regressions); Ruff and
+diff checks passed. Independent synthetic matching and eleven substitutions passed.
+The full local suite stalled reading an existing mano_provider credentials .pyc;
+process sample retained, owned process terminated with exit 143. This is neither
+a full-suite pass nor an assertion failure; CI must supply full-suite evidence.
+No Linux/Root execution ran on Mac. Latest accepted native remains 75fdfe3/run
+40548807617; new source must pass fresh native CI and twenty-option acceptance.
+Full v2.1 phases 0-7 remain incomplete. No merge, publication or activation.

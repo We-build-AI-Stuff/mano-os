@@ -423,7 +423,7 @@ def tree_observation(role, *, admission_only=False):
 
 
 def exec_trace_command(argv):
-    return ['/usr/bin/strace', '--kill-on-exit', '-f', '-qq', '-xx', '-s', '16384',
+    return ['/usr/bin/strace', '--kill-on-exit', '-f', '-q', '-xx', '-s', '16384',
             '-e', 'trace=execve,execveat', '-e', 'signal=none', '-o', str(EXEC_TRACE), '--', *argv]
 
 
@@ -520,6 +520,40 @@ def private_state_masks(baseline_tree):
     return paths
 
 
+def process_outcomes(raw):
+    decoded=decode_exec_trace(raw,observe_exits=True)
+    targets={'libc-trigger':(b'/var/lib/dpkg/info/libc-bin.postinst',[b'triggered',b'ldconfig']),
+             'man-trigger':(b'/var/lib/dpkg/info/man-db.postinst',[b'triggered',b'/usr/share/man']),
+             'mandb':(b'/usr/bin/mandb',[b'-pq'])}
+    rows={}
+    for name,(path,args) in targets.items():
+        events=[e for e in decoded['events'] if e['return_value']==0
+                and base64.b64decode(e['path_base64'],validate=True)==path
+                and [base64.b64decode(a,validate=True) for a in e['argv_base64']]==[path,*args]]
+        if len(events)!=1:
+            raise ValueError('One exact observed target process required')
+        event=events[0]
+        ends=[e for e in decoded['exit_events'] if e['pid']==event['pid']
+              and e['process_generation']==event['process_generation']
+              and e['line']>event['completion_line']]
+        if (len(ends)!=1 or ends[0]['exit_code']!=0 or ends[0]['signal'] is not None
+                or ends[0]['core_dumped'] is not False):
+            raise ValueError('Observed target must have an explicit normal zero exit')
+        images=[e for e in decoded['events'] if e['pid']==event['pid'] and e['return_value']==0
+                and e['process_generation']==event['process_generation']
+                and event['entry_line']<=e['entry_line']<ends[0]['line']]
+        if images!=[event]:
+            raise ValueError('Observed target image replaced before terminal record')
+        rows[name]=dict(pid=event['pid'],process_generation=event['process_generation'],
+                        exec_entry_line=event['entry_line'],exit_line=ends[0]['line'],exit_code=0)
+    return dict(schema_version='1.0',profile='fixed-ci-trigger-processes-v1',
+                observations=rows,observed_target_zero_exits=True,
+                all_process_outcomes_verified=False,credentials_at_exec_verified=False,
+                caller_ancestry_verified=False,all_execs_observed=False,
+                script_contents_at_exec_verified=False,trigger_authority_verified=False,
+                changes_authorized=False,publication_authorized=False)
+
+
 def compatible_stage(worker, decoded):
     if (worker['securebits']!=11 or worker['capability_profile']!='uid-drop-compatible-v1'
             or worker['no_new_privileges'] is not True
@@ -539,7 +573,8 @@ def compatible_stage(worker, decoded):
     mandb=[e for path,args,e in observed if path==b'/usr/bin/mandb'
            and args==[b'/usr/bin/mandb',b'-pq']]
     if (len(drops)!=1 or len(mandb)!=1 or drops[0]['pid']!=mandb[0]['pid']
-            or drops[0]['completion_line']>=mandb[0]['entry_line']):
+            or drops[0]['completion_line']>=mandb[0]['entry_line']
+            or drops[0].get('process_generation')!=mandb[0].get('process_generation')):
         raise ValueError('Observed fixed UID drop followed by mandb image replacement required')
     return dict(schema_version='1.0',profile='uid-drop-compatible-v1',
                 drop_entry_line=drops[0]['entry_line'],mandb_entry_line=mandb[0]['entry_line'],
@@ -686,8 +721,9 @@ def main():
                proof['command_diagnostics'][name]['capture_complete'] is not True
                for name in ('dpkg', 'ldconfig')):
             raise ValueError('Command failed or output capture incomplete; witnesses retained')
-        exec_decoding = decode_exec_trace(exec_trace)
+        exec_decoding = decode_exec_trace(exec_trace,observe_exits=True)
         compatible_observation = compatible_stage(proof,exec_decoding)
+        process_observation = process_outcomes(exec_trace)
         if live_inputs() != before:
             raise ValueError('Live package or loader inputs changed in staged experiment')
         if FIXTURE_LIBRARY.exists() or FIXTURE_LIBRARY.is_symlink():
@@ -806,6 +842,7 @@ def main():
                 private_state_masks=state_masks, execution_trace_observation=exec_observation,
                 loader_cache_observation=cache_observation, execution_trace_decoding=exec_decoding,
                 uid_drop_compatible_stage=compatible_observation,
+                observed_process_outcomes=process_observation,
                 live_source=live_source, source_read_only=True,
                 tree_observation_reported=True, tree_changes_authorized=False,
                 payload_closure_validation=payload_policy,

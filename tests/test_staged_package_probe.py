@@ -144,6 +144,8 @@ class StagedProbeSafetyTests(unittest.TestCase):
         self.assertIn('--kill-on-exit', command)
         self.assertIn('trace=execve,execveat', command)
         self.assertIn('-xx', command)
+        self.assertIn('-q', command)
+        self.assertNotIn('-qq', command)
         self.assertEqual(command[-3:], ['--', '/usr/bin/bwrap', '--unshare-pid'])
         self.assertEqual(command[command.index('-o')+1], str(probe.EXEC_TRACE))
         self.assertFalse(any(arg.startswith('--syscall-limit') for arg in command))

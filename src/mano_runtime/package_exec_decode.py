@@ -1,6 +1,7 @@
-"""Decode bounded strace -f -qq -xx execve frames; never execute trace content.
+"""Decode bounded strace hex exec frames and optional -q terminal summaries.
 
-This profile supports complete and unfinished/resumed execve calls. Other calls,
+Profiles support complete and unfinished/resumed execve calls. Terminal summaries
+require explicit observe_exits=True; the legacy dialect remains unchanged. Other calls,
 truncated/unreadable arguments and unknown framing fail closed. Byte strings stay
 base64 data. Syscall success is not process success, ancestry or script authority.
 """
@@ -68,11 +69,14 @@ def _call(body):
                 errno=None if success else ending[3].decode('ascii')), len(path)+sum(map(len, args))
 
 
-def decode(raw):
+def decode(raw, *, observe_exits=False):
+    if type(observe_exits) is not bool:
+        raise ValueError('Explicit trace dialect required')
     if (type(raw) is not bytes or not 0 < len(raw) < MAX_BYTES
             or not raw.endswith(b'\n') or raw.count(b'\n') > MAX_LINES):
         raise ValueError('Bounded nonempty complete raw exec trace required')
     pending, events, expanded = {}, [], 0
+    generations, exits = {}, []
     for number, line in enumerate(raw.split(b'\n')[:-1], 1):
         if not 0 < len(line) <= MAX_LINE:
             raise ValueError('Exec trace line budget')
@@ -80,6 +84,20 @@ def decode(raw):
         if match is None or int(match[1]) >= 2**31:
             raise ValueError('Exact positive PID prefix required')
         pid, body = int(match[1]), match[2]
+        if observe_exits and body.startswith(b'+++'):
+            normal = re.fullmatch(rb'\+\+\+ exited with (0|[1-9][0-9]{0,2}) \+\+\+', body)
+            killed = re.fullmatch(
+                rb'\+\+\+ killed by (SIG[A-Z0-9_]{1,29})( \(core dumped\))? \+\+\+', body)
+            if (pid in pending or (normal is None and killed is None)
+                    or (normal is not None and int(normal[1])>255)):
+                raise ValueError('Complete bounded terminal record without pending exec required')
+            generation = generations.get(pid,0)
+            exits.append(dict(pid=pid,process_generation=generation,line=number,
+                              exit_code=int(normal[1]) if normal is not None else None,
+                              signal=killed[1].decode() if killed is not None else None,
+                              core_dumped=bool(killed is not None and killed[2] is not None)))
+            generations[pid]=generation+1
+            continue
         if body.endswith(UNFINISHED):
             if pid in pending or len(pending) >= MAX_PENDING or not body.startswith(b'execve('):
                 raise ValueError('Bounded distinct pending exec call required')
@@ -100,11 +118,13 @@ def decode(raw):
         expanded += size
         if expanded > MAX_EXPANDED:
             raise ValueError('Expanded exec argument budget')
+        if observe_exits:
+            event['process_generation']=generations.get(pid,0)
         events.append(dict(pid=pid, entry_line=entry, completion_line=number, **event))
     if pending:
         raise ValueError('Incomplete pending exec at trace end')
     events.sort(key=lambda e: e['entry_line'])
-    return dict(schema_version='1.0', profile='strace-hex-execve-v1', bytes=len(raw),
+    result = dict(schema_version='1.0', profile='strace-hex-execve-v1', bytes=len(raw),
                 sha256=hashlib.sha256(raw).hexdigest(), physical_lines=raw.count(b'\n'),
                 events=events, decoded_execve_calls=len(events),
                 successful_execve_returns=sum(e['return_value'] == 0 for e in events),
@@ -114,3 +134,7 @@ def decode(raw):
                 actual_trigger_arguments_verified=False, script_contents_at_exec_verified=False,
                 trigger_authority_verified=False, changes_authorized=False,
                 publication_authorized=False)
+
+    if observe_exits:
+        result.update(schema_version='1.1',profile='strace-hex-execve-exit-v1',exit_events=exits)
+    return result
