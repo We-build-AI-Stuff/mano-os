@@ -1,3 +1,41 @@
+## Native UID-drop comparison accepted; actual package callback still next
+
+Exact source 5a16944273bf906c3286a9af7f68fa68e38e5cf5 / CI 40441722096
+ALL3SUCCESS: quality 121983390612, security-lab 121983390726, merge-gate
+121990160907. Artifact 12706668261: 22,976,977 bytes, SHA256
+962443cb7feb4b9033ffde2a6c6e7df4257930d33dd3c552a550df008795e95a.
+Download 5280 exited 0. First independent acceptance 25628 failed because temporary
+GitHub merge source 80e596dcbeaec7a8f3f0e0d237413069ae773d7e was absent locally.
+Fetched exact object (session 62137 exited 0); verified parents are base 65fdfc02...
+and exact PR head 5a169442..., and both worker source files equal PR-head bytes.
+No verifier gate changed and no native rerun. Wrapper preserved/rotated the first
+failure log; repeat acceptance 36208 exited 0. All EIGHTEEN options plus complete
+54-hash/45-flag/PAM/Stop/recovery/package/ELF chain passed on the same bundle.
+
+Actual locked control reproduced setpriv failure. Alternative securebits 11:
+UID 6/6/6, GID 12/12/12, groups [12], effective/permitted/ambient caps 0,
+inheritable/bounding 0xdb, NNP 1. Capability addition, root-ID restoration and
+securebits reset each failed EPERM with identical before/after state. Both fixed
+test domains drained. Source and raw reports independently matched. This proves
+only the isolated helper comparison, not mandb or package callback completion.
+Main staged package worker and production still use securebits 43. Current main
+stage trace 29 calls / 19 image replacements / 10 failures; accounting 55/64, 9 unapproved.
+Six fresh UI originals/four numeric crops actually inspected, full 900/120 readable;
+bound receipt outputs/acceptance-pr134-uid-drop-comparison/inspection.json under
+task root. Headless only; physical provenance null. No publication.
+
+Next: apply the proven alternative only to CI staging worker, with the same 0xdb
+ceiling/NNP/private namespaces/negative controls, then acquire actual package
+trigger/mandb trace, command diagnostics and generated-state changes. Do not
+change production policy merely from the helper comparison. Keep independent
+acceptance versioned so old 43 native sources retain their own expectations.
+Actual callback status/ancestry/script bytes/authority, complete cache/log/unlisted
+mutation policy, production staging/activation/runtime closure and original v2.1
+phases 0-7 remain incomplete. No merge. No new CI currently pending.
+
+Disk recovered externally to 43.3 GiB free / 79 percent; user notified. No data deleted
+by this agent; no local VM/model downloads. Keep threshold checks before builds.
+
 ## Native UID comparison failed on test-source read permission; corrected locally
 
 Source 4ae4901b43fa4cdcdfd4b175e418f675836ca80d / CI 40439743818 is terminal
