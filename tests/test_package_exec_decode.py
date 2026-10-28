@@ -48,6 +48,25 @@ class ExecTraceDecoderTests(unittest.TestCase):
             with self.subTest(raw=raw),self.assertRaises(ValueError):
                 decoder.decode(raw)
 
+    def test_resumed_result_column_padding_preserves_exact_arguments_and_line_linkage(self):
+        for ending in (b'0', b'-1 ENOENT (No such file or directory)'):
+            body = frame(result=ending)
+            head, tail = body.split(b') = ', 1)
+            for spaces in (1, 13, 40, 64):
+                raw = (b'10  '+head+decoder.UNFINISHED+b'\n11  +++ exited with 0 +++\n'
+                       b'10  '+decoder.RESUMED+b')'+b' '*spaces+b'= '+tail+b'\n')
+                value = decoder.decode(raw, observe_exits=True)
+                event = value['events'][0]
+                self.assertEqual((event['entry_line'], event['completion_line']), (1, 3))
+                self.assertEqual(base64.b64decode(event['path_base64']), b'/usr/bin/tool')
+                self.assertEqual(event['return_value'], 0 if ending == b'0' else -1)
+                self.assertFalse(value['process_exit_status_verified'])
+                self.assertFalse(value['changes_authorized'])
+        for gap in (b'', b'\t', b' \t ', b' '*65, b'\r', b'\v'):
+            raw = b'10  '+frame().replace(b') = ', b')'+gap+b'= ')+b'\n'
+            with self.subTest(gap=repr(gap)), self.assertRaises(ValueError):
+                decoder.decode(raw)
+
     def test_unknown_truncated_unreadable_and_nonhex_frames_fail(self):
         raw=b'10  '+frame()+b'\n'
         for data in (raw.replace(b'execve(',b'execveat('),raw[:-1],
@@ -93,3 +112,20 @@ class ExecTraceDecoderTests(unittest.TestCase):
                    if base64.b64decode(e['path_base64']).endswith(b'.postinst')]
         self.assertEqual([[base64.b64decode(v) for v in e['argv_base64'][1:]] for e in callbacks],
                          [[b'triggered',b'ldconfig'],[b'triggered',b'/usr/share/man']])
+
+    def test_native_aligned_resume_fixture_retains_all_calls_and_process_events(self):
+        raw = (Path(__file__).parent/'fixtures/exec-trace-f49cc1d-aligned-resume.txt').read_bytes()
+        value = decoder.decode(raw, observe_exits=True)
+        self.assertEqual((value['physical_lines'], value['decoded_execve_calls'],
+                          value['successful_execve_returns'], value['failed_execve_returns']),
+                         (62, 30, 20, 10))
+        self.assertEqual(len(value['exit_events']), 31)
+        resumed = [e for e in value['events'] if e['entry_line'] != e['completion_line']]
+        self.assertEqual(len(resumed), 1)
+        event = resumed[0]
+        self.assertEqual((event['pid'], event['entry_line'], event['completion_line']),
+                         (7892, 12, 14))
+        self.assertEqual(base64.b64decode(event['path_base64']), b'/usr/bin/tar')
+        self.assertFalse(value['caller_ancestry_verified'])
+        self.assertFalse(value['script_contents_at_exec_verified'])
+        self.assertFalse(value['publication_authorized'])

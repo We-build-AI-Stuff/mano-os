@@ -57,7 +57,9 @@ def _call(body):
     if body[position:position+2] != b', ':
         raise ValueError('Explicit environment summary required')
     ending = re.fullmatch(
-        rb'(?:NULL|0x[0-9a-f]{1,16} /\* ([0-9]{1,6}) vars \*/)\) = '
+        # strace pads short resumed suffixes to its result column. Only a
+        # bounded run of literal spaces is framing; tabs/other gaps still reject.
+        rb'(?:NULL|0x[0-9a-f]{1,16} /\* ([0-9]{1,6}) vars \*/)\)[ ]{1,64}= '
         rb'(0|-1 ([A-Z][A-Z0-9_]{0,31}) \([\x20-\x7e]{1,256}\))', body[position+2:])
     if ending is None or (ending[1] is not None and int(ending[1]) > 4096):
         raise ValueError('Known bounded environment and exec return frame required')

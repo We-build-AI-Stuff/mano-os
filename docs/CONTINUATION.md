@@ -1,3 +1,50 @@
+## Native strace alignment failure retained; next run combines the prepared pipeline
+
+Run 40697287147 at f49cc1d46a3320fa485764e8d73a98a3ccdd8326 is terminal FAILURE.
+Quality 122847338127 passed 888 tests (one Mac-specific skip, both native GNU DBM
+crosschecks passed). Security 122847338031 and merge-gate 122857057502 failed.
+Artifact 12821036891 is 2,909,581 bytes, SHA256
+c98ec01331b7079eaf538e3697c443609de12455d43ae93066bb11ad3f4d3f25.
+One-shot 92070 exited nonzero after failed-run custody. No native25 acceptance,
+cache regeneration, loopback-fix proof or new UI receipt occurred. Preserve
+pr134-f49cc1d-security-failed-job.log, native-failure-proof.json and trace-padding-selfcheck.json.
+Latest fully accepted native remains d59f36e / native24, not either failed run.
+
+Failure preceded the man-cache experiment. The raw trace has a tar exec entry
+at line 12 and resumed completion at line 14 for PID 7892. strace aligns that short
+resumed suffix using thirteen literal spaces before '= 0'; the parser previously
+required exactly one. The fix supports only 1-64 literal ASCII spaces at that
+separator. It still rejects zero spacing, tabs, other whitespace, 65 spaces,
+unknown returns, incomplete args, mismatched PID/resume and missing completion.
+No event is discarded and no success/authority flag is invented.
+
+The entire 16,829-byte native trace is preserved as tests/fixtures/
+exec-trace-f49cc1d-aligned-resume.txt. Both independent decoders agree on 62 lines,
+30 exec calls (20 successes, 10 failed attempts) and 31 terminal events. Local
+fixed callback outcome checks also pass on those bytes; this is failed-run data
+analysis, not a successful CI result. The native fixture and success/failure
+padding-boundary regressions are mandatory. Focused suite: 145 tests, 136 passed,
+nine Linux-only skips on Mac. Repository lint/diff checks pass.
+
+Prepared canonical artifact integration at 3c3d64c is already committed locally.
+Since the preceding run failed BEFORE producing regeneration bytes, no actual
+native25 fresh data can be inspected first. The next source combines the framing
+fix and the prepared canonical pipeline, and requires all TWENTY-SIX checks
+(including every earlier gate). This supersedes the earlier plan to get a separate
+successful native25 before pushing. Both generation and derivation must pass;
+raw regenerated databases/tree manifests are retained BEFORE canonical parsing
+so failures stay diagnosable. The local five-index native24 selfcheck is still
+only local derived evidence, never a substitute for the next native run.
+
+No new push is needed while a run is live; the prior run is now terminal and its
+artifact digest has been verified, so the corrected source may be pushed. Source
+checks on the next tested merge must cover thirteen relevant runtime/probe files,
+including package_exec_decode.py and package_man_canonical.py. Next exact head,
+run and one-shot handle belong in task-root outputs/CONTINUATION.md. No merge,
+publication or activation; all 18 unresolved effects, production policy/runtime
+closure and original phases 0-7/release requirements remain active. Disk about
+49 GiB free / 76 percent used; no data deleted; preserve unrelated duplicates.
+
 ## Deterministic cache artifact integration prepared locally
 
 Remote and live CI remain f49cc1d46a3320fa485764e8d73a98a3ccdd8326 /
