@@ -1667,3 +1667,46 @@ run and one-shot handle belong in task-root outputs/CONTINUATION.md. No merge,
 publication or activation; all 18 unresolved effects, production policy/runtime
 closure and original phases 0-7/release requirements remain active. Disk about
 49 GiB free / 76 percent used; no data deleted; preserve unrelated duplicates.
+
+## Virtual-to-primary metadata links prepared locally, current gate26 unchanged
+
+Remote and current native run remain 3729ef2afe04c7fadeb17483cea2f4942d4bfea7 /
+40700950648. Quality 122860281543 passed 895 tests (one Mac-specific skip).
+Security 122860282032 is still live. One-shot session 1966 is confirmed live;
+its log had one transient observation error and correctly retries the SAME run.
+The authoritative API still reports in_progress. No restart, cancellation or
+fresh CI submission occurred. Keep all current 26 gates/verifier behavior intact.
+
+New local package_man_virtual_metadata recomputes primary metadata from actual
+index bytes and the candidate tree, then resolves only C-type virtual pointers
+to unique A/B records in the SAME index. Matching is case-sensitive on the actual
+name, extension and section, then exact compression/filter/timestamp fields must
+agree. The referenced primary source metadata must already bind. Missing or
+ambiguous targets, C-to-C/self references, unset pointers, differing fields,
+inline descriptions and missing source files stay unresolved. Alias names and
+pointers are never interpreted as filesystem paths or executable content.
+
+This is internal record metadata linkage only. It does NOT prove alias declarations
+in source text, roff includes/transitive link graphs, description/filter semantics,
+complete source validity, generated-state or publication authority. Those flags
+remain false even when all pointers resolve. It is NOT wired into staging or
+production, and does not modify current gate26 artifacts or the v1 source report.
+A separate accept_man_virtual_metadata.py is new; existing independent gate26
+implementations remain unchanged while the current native run is live.
+
+Both implementations agree on all 224 virtual targets in the FIVE retained
+native24 candidate indexes. Every target is unique and metadata-bound. Seven
+independent mismatch cases agree as unresolved. This is local derived analysis
+of old accepted data, not current-run fresh generation. Evidence is retained in
+pr134-virtual-metadata-independent-selfcheck.json. Focused suite: 152 tests,
+143 passed and nine Linux-only checks skipped on Mac. Repository lint/diff and
+changed-source compilation pass. No Root/Linux/native database execution on Mac.
+
+Hold this source from pushing while the current run is live; pushing would cancel
+it. First preserve and inspect that run's actual raw/derived artifacts or failure
+witnesses. The next integration can decide how to expose the new link evidence
+without changing its limited scope or waiving older gates. Latest fully accepted
+native remains d59f36e / native24 with its own UI receipt. No new native acceptance,
+merge, publication or activation is claimed. All 18 unknown effects, full production
+runtime/staging/activation and original phases 0-7/release gates remain active.
+Disk about 48 GiB free / 76 percent used; no deletion; preserve unrelated duplicates.
