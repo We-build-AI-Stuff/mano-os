@@ -1137,3 +1137,24 @@ a full-suite pass nor an assertion failure; CI must supply full-suite evidence.
 No Linux/Root execution ran on Mac. Latest accepted native remains 75fdfe3/run
 40548807617; new source must pass fresh native CI and twenty-option acceptance.
 Full v2.1 phases 0-7 remain incomplete. No merge, publication or activation.
+
+## Native process-outcome attempt rejected; CI APT writers now quiesced
+
+Head 43a5f3c/run 40554651554: quality passed all 827 tests, but security-lab and
+merge-gate failed. Acquisition's final catalog load rejected changed APT source
+index identity before staging or terminal-trace collection. No process-outcome
+native success is claimed. Artifact 12757142876 (2,910,460 bytes), SHA256
+9f85b77817009dc357e8134b14cae9b1d5a535d799c743bf849584cf516f3c47 was downloaded
+with failed-run custody only. Failure log and raw quality proof are retained under
+task outputs. Latest accepted native remains 75fdfe3 with nineteen options.
+
+Failed VM serial logs show both scheduled APT timers enabled. This is a possible
+concurrent writer, not conclusive actor attribution. Disposable guest preparation
+now persistently masks/stops both daily timers and services before controlled APT
+operations. The staging acquisition requires all four fixed units masked/inactive
+before opening the catalog. Catalog fingerprint and live identity rechecks remain
+unchanged and must still reject every source change. No production timer policy
+changes. Three focused guard tests plus fifteen outcome/decoder tests passed;
+lint, shell syntax and diff checks passed. Source 43c7ed45d05195ac536addeff9c3ff44d034f074
+is pushed; fresh native validation must pass all jobs and twenty acceptance options.
+Old failed artifacts cannot substitute. Full goal remains incomplete; no merge.
