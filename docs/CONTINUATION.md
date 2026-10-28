@@ -1,3 +1,44 @@
+## Canonical cache bytes and record framing prepared locally (2026-10-28)
+
+Remote and live CI remain d356534fe5ef9de7b3c62cc6605d74217b434cbb /
+40693734664. Security job 122834882711 is still live. Do not push this next
+source until that run is terminal and its available evidence is retained: the
+workflow cancels an earlier run on a new push. One-shot local session 22196 is
+still live and observes only the existing run with TWENTY-FIVE acceptance options.
+Quality at d356534 passed 864 tests, with one Mac-specific skip. Native fresh-cache
+rebuild, its independent artifact acceptance and fresh UI inspection remain pending.
+
+New local package_gdbm_encode emits deterministic standard little-endian 64-bit
+GDBM bytes from bounded binary key/value pairs. Prefix partitions and linear
+probe positions are deterministic, allocation metadata is rebuilt, and inactive
+fields/padding/trailing space are fixed from scratch. require_canonical compares
+all bytes with a fresh encoding. This removes a future acceptance blind spot for
+unused database bytes; it does not validate man-db semantics or permit publication.
+A separate byte-number implementation agrees exactly on all eight retained native24
+databases: 7,756 records, input 1,212,416 bytes, output 1,025,024 bytes. On 512
+seed-13426 mutations both validators agree: 405 reject; 107 remain canonical with
+potentially changed record contents, which still require separate source binding.
+No native database library was loaded on Mac. An unprivileged Linux-only test will
+read empty/single/max-frame/split binary fixtures and update/delete/insert in its
+own synthetic encoded database. That native compatibility test has NOT run yet.
+
+New local package_man_records reads the exact man-db 2.5.0 version, ten-field
+binary frames (only the first nine tabs split), bounded timestamps and A-E record
+types. It resolves case-sensitive multi-key records against their lower-case
+reference keys, rejects incomplete/duplicate/unresolved references and exposes
+orphan keys. Descriptions, filters, compression, pointers and alias names remain
+inert base64 data. A separate implementation agrees on all eight native24 files:
+7,656 direct records, 92 reference records, 202 links and no orphan multi-keys.
+Both reject eight deliberately malformed cases. Primary/transitive manual-source
+paths, timestamps, semantic meaning and generated-state authority remain unproved.
+
+Focused local suite: 107 tests, 98 passed and nine Linux-only checks skipped.
+Repository lint passes. Native24 data analysis is local derived evidence, not
+native25 regeneration or native reader compatibility. These two modules are not
+wired into staging or production. Keep all 18 unapproved effects rejecting; no
+merge, publication, activation or complete-version claim. Disk about 50 GiB free,
+76 percent used; no data deleted. Preserve the three unrelated duplicate files.
+
 ## Current verified baseline and fresh-cache follow-up (2026-10-28)
 
 Head d59f36e9948e754b86e9fb87fdbdd5db9b85c864, run 40621100477, passed all
