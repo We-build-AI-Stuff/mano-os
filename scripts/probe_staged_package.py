@@ -40,6 +40,7 @@ from mano_runtime.package_log_sequence import require_sequence
 from mano_runtime.package_log_time import bind_controller_window
 from mano_runtime.package_man_cache import collect as collect_man_cache
 from mano_runtime.package_man_cache import read_index, read_regenerated_index
+from mano_runtime.package_man_canonical import derive as derive_canonical_man
 from mano_runtime.package_man_regeneration import collect as collect_regenerated_man
 from mano_runtime.package_man_regeneration import compare as compare_regenerated_man
 from mano_runtime.package_man_regeneration import inputs as man_regeneration_inputs
@@ -828,6 +829,12 @@ def main():
             path: man_cache_artifacts[rows['candidate']['artifact']]
             for path, rows in man_cache_bytes['databases'].items()
             if rows['candidate'] is not None})
+        canonical_man, canonical_artifacts = derive_canonical_man(
+            regeneration_bundle, candidate_tree)
+        for name, data in canonical_artifacts.items():
+            with (Path('/opt/mano-lab/evidence') / name).open('xb') as stream:
+                stream.write(data)
+        regeneration_artifacts.update(canonical_artifacts)
         for role, observed in (('baseline', baseline_tree), ('candidate', candidate_tree)):
             current = tree_observation(role)
             if (current['manifest_sha256'] != observed['manifest_sha256']
@@ -959,6 +966,7 @@ def main():
                 observed_trigger_arguments=trigger_arguments,
                 man_cache_bytes=man_cache_bytes,
                 man_cache_decoding=man_cache_decoding,
+                man_cache_canonical=canonical_man,
                 man_cache_regeneration=dict(inputs=regeneration_inputs,
                     worker=regeneration_worker, raw=regeneration_bytes,
                     comparison=regeneration_comparison,
