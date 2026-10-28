@@ -1,4 +1,5 @@
 import base64
+import json
 import os
 import struct
 import sys
@@ -37,6 +38,22 @@ def database(pairs=((b'name\0', b'value\0'),), *, extended=False):
 
 
 class GdbmDecodeTests(unittest.TestCase):
+    def test_retained_artifact_batch_names_counts_and_serialization_budgets(self):
+        raw = bytes(database())
+        inputs = {'staged-man-index-0-candidate.db': raw}
+        summary, encoded = gdbm.decode_artifacts(inputs)
+        self.assertEqual(summary['databases'], 1)
+        self.assertEqual(summary['decoded_records'], 1)
+        self.assertEqual(json.loads(encoded), {next(iter(inputs)): gdbm.decode(raw)})
+        self.assertFalse(summary['cache_regeneration_verified'])
+        for bad in ({'../../index.db': raw}, {'staged-man-index-8-candidate.db': raw},
+                    {'staged-man-index-0-candidate.db': bytearray(raw)}):
+            with self.assertRaises(ValueError):
+                gdbm.decode_artifacts(bad)
+        for limit in ('MAX_TOTAL_RECORDS', 'MAX_SERIALIZED'):
+            with patch.object(gdbm, limit, 0), self.assertRaises(ValueError):
+                gdbm.decode_artifacts(inputs)
+
     @unittest.skipUnless(sys.platform == 'linux', 'Native GNU DBM fixture runs in Linux CI only')
     def test_native_unprivileged_linux_writer_split_delete_and_reuse_crosscheck(self):
         # Native code creates only its own fixture; never run a database library

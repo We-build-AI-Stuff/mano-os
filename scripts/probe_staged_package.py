@@ -30,6 +30,7 @@ from mano_runtime.package_candidate import compare_payload
 from mano_runtime.package_change_accounting import UnaccountedChanges, audit, require_accounted
 from mano_runtime.package_container import bind as bind_container
 from mano_runtime.package_exec_decode import decode as decode_exec_trace
+from mano_runtime.package_gdbm_decode import decode_artifacts as decode_man_indexes
 from mano_runtime.package_loader_cache import bind_pair as bind_loader_caches
 from mano_runtime.package_log_decode import decode_append
 from mano_runtime.package_log_observation import MAX_LOG
@@ -767,6 +768,14 @@ def main():
                                                   baseline_tree['entries'][path]),
                 lambda path, maximum: read_index(roots[1], path, maximum,
                                                   candidate_tree['entries'][path]))
+        # Retain the exact opaque inputs before any new database decoding gate.
+        for name, data in man_cache_artifacts.items():
+            with (Path('/opt/mano-lab/evidence') / name).open('xb') as stream:
+                stream.write(data)
+        man_cache_decoding, decoded_indexes = decode_man_indexes(man_cache_artifacts)
+        man_cache_artifacts[man_cache_decoding['artifact']] = decoded_indexes
+        with (Path('/opt/mano-lab/evidence') / man_cache_decoding['artifact']).open('xb') as stream:
+            stream.write(decoded_indexes)
         after = candidate_read(candidate, 'var/lib/dpkg/status', MAX_STATUS)
         before_log = candidate_read(baseline, 'var/log/dpkg.log', MAX_LOG)
         after_log = candidate_read(candidate, 'var/log/dpkg.log', MAX_LOG)
@@ -865,8 +874,8 @@ def main():
         artifacts[record['payload_observation_artifact']] = json.dumps(
             observations[record['name']], sort_keys=True, allow_nan=False).encode()
     for name, data in artifacts.items():
-        if name in retained_trace or name in retained_commands:
-            continue  # Already retained before decoding and postcondition validation.
+        if name in retained_trace or name in retained_commands or name in man_cache_artifacts:
+            continue  # Already retained at the corresponding observation gate.
         with (Path('/opt/mano-lab/evidence') / name).open('xb') as stream:
             stream.write(data)
     return dict(schema_version='1.0', source_revision=revision,
@@ -892,6 +901,7 @@ def main():
                 trigger_declaration_linkage=trigger_linkage,
                 observed_trigger_arguments=trigger_arguments,
                 man_cache_bytes=man_cache_bytes,
+                man_cache_decoding=man_cache_decoding,
                 archive_container_identity_bound=True,
                 candidate_inventoried_payload_paths_match=True,
                 host_namespaces=host_namespaces,

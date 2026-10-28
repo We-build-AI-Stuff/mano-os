@@ -1382,3 +1382,55 @@ inputs using immutable baseline tools remains necessary. Reconstructed caches ca
 be the publication inputs; the original untrusted binary layout need not become
 authority. No reconstruction/activation mechanism is implemented by this codec.
 Full original phases 0-7 and all remaining requirements stay incomplete. No merge.
+
+## Native man-index bytes accepted; logical decoding integrated for next CI
+
+Exact head 9f62c05c1bb9a011b9b66e8204e99fce60b437b7 / run 40617804840 passed all
+three jobs: quality 122584287348 (846 tests), security-lab 122584287075, merge-gate
+122591792097. Artifact 12786772685 is 23,346,178 bytes, SHA256
+ba16c62f18f6dab6d2c30a455255938283f297cd215ff13bfe94d0f30fde94fb.
+One-shot 91951 exited zero: digest, tested merge 96605ca0d01ae1608d65254148a1769abd630d54,
+expected base/head parents and four source files matched. All TWENTY-THREE options
+plus complete prior 54-hash/45-flag/PAM/Stop/recovery/package/ELF chain passed.
+Six fresh UI originals and eight numeric/glyph crops were inspected, also in a
+labelled contact sheet; the 15-PNG receipt is acceptance-pr134-man-cache-bytes/inspection.json.
+Full 900/120 values are readable and pending/effective numeric regions identical.
+Headless only; physical provenance remains null. No verifier or evidence gate waived.
+
+Native metadata accounting is now 107/125, with 18 unresolved effects. Eight raw
+index copies across five paths total 1,212,416 bytes and match their tree metadata
+and hashes. New de.UTF-8/ja.UTF-8 indexes each have only a candidate copy. Baseline
+and candidate main/de/ja indexes preserve exact bytes despite changed timestamps.
+No generated-content authorization or publication follows from this observation.
+
+Local codec 71a4c9f independently decoded all eight actual retained databases:
+7,756 active records, no failures, and a separate implementation agrees exactly.
+This is local analysis of native23 bytes, not native decoder execution. The baseline
+already has an sl cache record although usr/share/man/man6/sl.6.gz is absent from
+its tree; the candidate adds that authenticated page. Do not infer cache correctness
+from byte equality. Exact man-db 2.13.1 source confirms -p disables purging obsolete
+entries; the observed callback uses -pq. This does not establish the baseline's
+history. Source binding and trusted regeneration remain necessary.
+
+The next source integrates bounded pure-Python logical decoding after retaining
+all raw copies. It writes staged-man-index-decoding.json and a hash/size/count
+summary; the independent verifier reconstructs every record from raw bytes. Inputs
+are bounded to 16 files/8 MiB, each codec file 2 MiB, aggregate 65,536 records and
+16 MiB serialized output. Free-space graph, unused bytes, man-db semantics, source,
+regeneration and all mutation/publication authority remain false. No native library
+is loaded by the codec. Failed decoding leaves raw inputs for diagnosis.
+
+Local focused checks: 94 tests, 93 passed and one Linux-only native GNU DBM writer
+fixture skipped on Mac. That unprivileged CI fixture still needs its first Linux
+run. Independent actual-data integration agrees (1,943,219-byte derived report),
+ten altered summaries reject, and 24-option command forwarding/lint/compile/diff
+checks passed. Earlier 512 synthetic mutations agreed in both implementations.
+Full local discovery remains constrained by diagnosed shared dependency file reads;
+no new full-suite pass is claimed. No Root/Linux/VM execution occurred on Mac.
+
+Next native acceptance requires TWENTY-FOUR options: add --gdbm-decoding after
+--man-cache-bytes. New report is the sole additional artifact; raw copies retain
+their fixed names. Refresh source/CI and inspect fresh evidence after pushing.
+Full original phases 0-7, the 18 effects, script custody, dependency order, trusted
+cache reconstruction, production staging/activation/runtime closure and release
+requirements remain incomplete. No merge/publication. Disk about 45 GiB free.

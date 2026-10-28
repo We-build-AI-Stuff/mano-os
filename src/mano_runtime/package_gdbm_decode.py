@@ -8,6 +8,8 @@ not database validity, regeneration, source, mutation or publication authority.
 """
 import base64
 import hashlib
+import json
+import re
 import struct
 
 MAX_BYTES = 2 * 1024**2
@@ -16,6 +18,8 @@ MAX_KEY = 4096
 MAX_VALUE = 65536
 MAX_EXPANDED = 4 * 1024**2
 MAX_PROBES = 1024**2
+MAX_TOTAL_RECORDS = 65536
+MAX_SERIALIZED = 16 * 1024**2
 STANDARD = 0x13579ACF
 NUMSYNC = 0x13579AD1
 
@@ -119,3 +123,31 @@ def decode(raw):
         all_database_bytes_validated=False, man_index_semantics_verified=False,
         cache_sources_verified=False, cache_regeneration_verified=False,
         changes_authorized=False, publication_authorized=False)
+
+
+def decode_artifacts(raw_files):
+    """Serialize fixed retained-input reports with aggregate resource bounds."""
+    if (type(raw_files) is not dict or len(raw_files) > 16
+            or any(not isinstance(name, str) or re.fullmatch(
+                r'staged-man-index-[0-7]-(baseline|candidate)\.db', name) is None
+                or type(data) is not bytes for name, data in raw_files.items())
+            or sum(map(len, raw_files.values())) > 8 * 1024**2):
+        raise ValueError('Bounded retained man-index artifact set required')
+    reports, count = {}, 0
+    for name, data in sorted(raw_files.items()):
+        report = decode(data)
+        count += report['decoded_records']
+        if count > MAX_TOTAL_RECORDS:
+            raise ValueError('Aggregate GDBM record budget')
+        reports[name] = report
+    encoded = json.dumps(reports, sort_keys=True, allow_nan=False).encode()
+    if len(encoded) > MAX_SERIALIZED:
+        raise ValueError('Serialized GDBM report budget')
+    summary = dict(schema_version='1.0', profile='retained-man-index-gdbm-logical-v1',
+        artifact='staged-man-index-decoding.json', bytes=len(encoded),
+        sha256=hashlib.sha256(encoded).hexdigest(), databases=len(reports), decoded_records=count,
+        logical_records_decoded=True, free_space_graph_verified=False,
+        all_database_bytes_validated=False, man_index_semantics_verified=False,
+        cache_sources_verified=False, cache_regeneration_verified=False,
+        changes_authorized=False, publication_authorized=False)
+    return summary, encoded
