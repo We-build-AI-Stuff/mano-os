@@ -5,6 +5,7 @@ from returning. Even a fully accounted content delta is not publication authorit
 or a proof of protected-runtime safety, custody, approval or confinement.
 """
 import hashlib
+import re
 
 from mano_runtime.package_candidate_policy import validate_payloads
 from mano_runtime.package_control import validate_new
@@ -26,6 +27,30 @@ class UnaccountedChanges(ValueError):
 
 def without_times(row):
     return {k: v for k, v in row.items() if k not in TIMES}
+
+
+def preserved_man_tag(path, before, after):
+    """Debian man-cache baseline tag unchanged except inode change time.
+
+    This does not validate tag contents, cache generation or a new tag. In
+    particular, mtime must remain identical; it is not discarded with ctime.
+    """
+    parts = path.split('/')
+    if (len(parts) not in {4, 5} or parts[:3] != ['var', 'cache', 'man']
+            or parts[-1] != 'CACHEDIR.TAG' or before is None or after is None
+            or (len(parts) == 5 and (parts[3] in {'.', '..'}
+                or re.fullmatch(r'[A-Za-z0-9_@.+-]{1,64}', parts[3]) is None))):
+        return False
+    return (before.get('kind') == 'file'
+            and all(type(row[k]) is int for row in (before, after)
+                    for k in ('uid', 'gid', 'mode', 'nlink', 'bytes', 'mtime_ns', 'ctime_ns'))
+            and (before['uid'], before['gid'], before['mode'], before['nlink']) == (6, 12, 0o644, 1)
+            and before['xattrs'] == {} and before['hardlink_anchor'] == path
+            and 0 < before['bytes'] <= 4096
+            and isinstance(before['sha256'], str)
+            and re.fullmatch('[a-f0-9]{64}', before['sha256']) is not None
+            and {k: v for k, v in before.items() if k != 'ctime_ns'}
+            == {k: v for k, v in after.items() if k != 'ctime_ns'})
 
 
 def _account(baseline, candidate, payloads, control, lists, database):
@@ -67,6 +92,9 @@ def _account(baseline, candidate, payloads, control, lists, database):
                 and before['xattrs'] == {} and all(not any(path.startswith(UPDATES + '/')
                     for path in tree['entries']) for tree in (baseline, candidate))):
             verified[UPDATES] = 'drained-empty-dpkg-updates-timestamps'
+    for path, change in changes.items():
+        if preserved_man_tag(path, change['before'], change['after']):
+            verified[path] = 'unchanged-man-cache-tag-ctime'
     parents = {path.rsplit('/', 1)[0] if '/' in path else '.' for path in verified}
     for path in parents & (changes.keys() - verified.keys()):
         before, after = changes[path]['before'], changes[path]['after']

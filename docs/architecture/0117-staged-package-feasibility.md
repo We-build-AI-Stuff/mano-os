@@ -1228,3 +1228,38 @@ requires TWENTY-ONE options (--trigger-arguments after --process-outcomes). Reta
 this accepted20 artifact separately. All five current CodeRabbit threads resolved;
 base unchanged. Full original v2.1 phases0-7 remain incomplete; no merge/publication.
 Disk45GiB/78percent. No local VM/model or Root/Linux execution on Mac.
+
+## Preserved man-cache tag metadata classification prepared locally
+
+The live remote source is 1194d2a74cf70f48e2d793e1d466ac3160594393, CI run
+40615467240. Quality job 122576810621 passed all 836 tests; its raw completed log
+and SHA-bound proof are retained. Security-lab remains running. One-shot session
+21423 and watcher 74612 follow this same run. It requires TWENTY-ONE acceptance
+options, without the following new metadata rule. Latest fully accepted native
+source remains 43c7ed4 / run 40612599127 with twenty options and visual inspection.
+
+The next local rule classifies existing Debian man-cache CACHEDIR.TAG files only
+when their bytes/hash, mtime, ownership, mode, links, xattrs and every other field
+are identical to the baseline; only ctime may differ. The scoped profile requires
+a plain nonempty bounded 0644 file, UID 6/GID 12, one link, matching hardlink anchor,
+and a canonical root or one-locale tag path. Strict integer types exclude booleans.
+New files, changed content/mtime/security metadata and other/deeper paths remain
+unresolved. This does not validate tag semantics or any generated cache content.
+Existing parent-directory timestamp rules then apply without changing security
+metadata. Strict rejection of every remaining unknown effect stays in place.
+
+All 78 focused accounting/callback/staging/decoder tests passed locally, including
+three new accounting tests with multiple metadata substitutions. Independent local
+recomputation on accepted native20 manifests agrees: 26 unchanged tags plus their
+parent timestamps raise accounted differences from 55 to 107 of 125, leaving 18
+unresolved. This is a derived LOCAL result, not native22 proof. Twelve altered
+classification/metadata/authority reports reject. Lint, compilation, diff checks
+and a mocked 22-option CLI forwarding check passed. No Root/Linux execution on Mac.
+
+Future native acceptance adds --cache-tag-metadata after --trigger-arguments:
+TWENTY-TWO options, explicitly gated so older twenty/21-option artifacts retain
+legacy accounting expectations. No new artifact names. Hold the next push until
+current native21 completes and is inspected. Full v2.1 phases 0-7 remain active;
+script custody, new/changed cache content, loader state, logs, dependency order,
+production staging/activation/runtime closure and release gates remain incomplete.
+No publication or merge. Disk remains about 45 GiB free; no data deleted.

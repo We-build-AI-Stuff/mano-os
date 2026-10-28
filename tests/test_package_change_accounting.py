@@ -59,6 +59,43 @@ class ChangeAccountingTests(unittest.TestCase):
                          {'usr/backdoor', 'var/lib/dpkg/info/extra'})
         self.assertFalse(result['change_set_fully_accounted'])
 
+    def test_existing_man_tag_ctime_only_preserves_content_and_mtime_without_authority(self):
+        path = 'var/cache/man/de/CACHEDIR.TAG'
+        self.before[path] = file(path) | dict(uid=6, gid=12, mode=0o644)
+        self.after[path] = self.before[path] | dict(ctime_ns=2)
+        result = self.account()
+        self.assertEqual(result['accounted_changes'][path], 'unchanged-man-cache-tag-ctime')
+        self.assertFalse(result['all_generated_state_validated'])
+        self.assertFalse(result['publication_authorized'])
+
+    def test_man_tag_content_security_mtime_links_or_added_tag_stays_unresolved(self):
+        path = 'var/cache/man/CACHEDIR.TAG'
+        original = file(path) | dict(uid=6, gid=12, mode=0o644)
+        self.before[path] = original
+        for key, value in (('sha256', '0' * 64), ('bytes', 3), ('mode', 0o666),
+                           ('uid', 0), ('gid', 0), ('nlink', 2), ('mtime_ns', 2),
+                           ('nlink', True), ('mtime_ns', True), ('ctime_ns', False),
+                           ('hardlink_anchor', 'other'), ('xattrs', {'security.capability': {}})):
+            with self.subTest(key=key):
+                self.after[path] = original | {'ctime_ns': 2, key: value}
+                self.assertIn(path, self.account()['unresolved_changes'])
+        del self.before[path]
+        self.after[path] = original
+        self.assertIn(path, self.account()['unresolved_changes'])
+
+    def test_other_names_deep_paths_and_other_baseline_metadata_are_not_cache_tag_policy(self):
+        for path in ('var/cache/man/index.db', 'var/cache/other/CACHEDIR.TAG',
+                     'var/cache/man/de/nested/CACHEDIR.TAG', 'var/cache/man/../CACHEDIR.TAG'):
+            self.before[path] = file(path) | dict(uid=6, gid=12, mode=0o644)
+            self.after[path] = self.before[path] | dict(ctime_ns=2)
+            self.assertIn(path, self.account()['unresolved_changes'])
+        path = 'var/cache/man/de/CACHEDIR.TAG'
+        for key, value in (('uid', 0), ('mode', 0o664), ('nlink', 2), ('bytes', 4097)):
+            with self.subTest(key=key):
+                self.before[path] = file(path) | dict(uid=6, gid=12, mode=0o644) | {key: value}
+                self.after[path] = self.before[path] | dict(ctime_ns=2)
+                self.assertIn(path, self.account()['unresolved_changes'])
+
     def test_parent_security_metadata_or_unrelated_timestamp_change_remains_unresolved(self):
         self.before['unrelated'] = directory()
         self.after['unrelated'] = directory() | {'mtime_ns': 2}
