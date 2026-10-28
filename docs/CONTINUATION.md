@@ -1,3 +1,45 @@
+## Native observed callback arguments accepted; combined cache batch next
+
+Exact head 1194d2a74cf70f48e2d793e1d466ac3160594393 / CI run 40615467240 passed
+all three jobs: quality 122576810621 (836 tests), security-lab 122576810886 and
+merge-gate 122583355167. Artifact 12786081414 is 22,978,862 bytes, SHA256
+939cb415dca4a2349a71d74a70d2ac76b058ff0c02f112a79ed73da89da6e838.
+One-shot session 21423 exited zero after digest verification, fetching tested merge
+5965b99ca8d9c51acd2f2513e58e4ceef8690cb9 and verifying its expected base/head
+parents and worker source bytes. All TWENTY-ONE staging options and the complete
+54-hash/45-flag/PAM/Stop/recovery/package/ELF chain passed. No verifier gate waived.
+
+Independent raw-trace recomputation links two callbacks: libc-bin.postinst
+triggered ldconfig (PID 7980, entry 47), and man-db.postinst triggered
+/usr/share/man (PID 7982, entry 51), to exact installed identities/declarations
+and authenticated activation sources. Both scripts and mandb PID 7983 retain
+explicit normal zero exits in observed generation zero. Ancestry, complete exec
+coverage, script contents at exec, effects and all authority remain false.
+Production remains securebits 43; the compared CI-only stage uses 11.
+
+Six fresh UI originals plus four numeric and four glyph crops were inspected,
+with all eight crops also visible in a labelled contact sheet. Receipt
+acceptance-pr134-trigger-arguments/inspection.json binds fifteen PNG hashes to
+this head/run/artifact. Full 900/120 values are readable; pending/effective numeric
+regions are pixel-identical. Headless evidence only; physical provenance null.
+Current native accounting still verifies 55/125 and rejects 70 effects. Recomputing
+the future local ctime-only metadata rule on this new artifact agrees independently
+at 107/125 with 18 unresolved; this is not native cache-policy proof.
+
+Local commits 89d8a01 and 96c8993 prepare the metadata rule and bounded, manifest-
+bound raw man-index collection as one combined future batch. Its native acceptance
+requires TWENTY-THREE options: add --cache-tag-metadata and --man-cache-bytes after
+--trigger-arguments. Eighty-five focused tests, independent negative substitutions,
+CLI forwarding, lint/compilation/diff checks passed. Full local suite remains
+limited by diagnosed shared-environment file read stalls; no local full pass is
+claimed. Baseline index contents have not yet been collected/parsed/authorized.
+
+Base remains 65fdfc02e3dbb18f791a92374a24690ae4e1ba87; all five review threads were
+resolved at refresh. Push the combined batch now, then validate its exact head.
+Full original phases 0-7 remain active; script custody, dependency order, generated
+content and loader/log policy, production staging/activation/runtime closure and
+release gates remain incomplete. No merge/publication. Disk about 45 GiB free.
+
 ## Bounded man-index byte retention prepared locally
 
 The next local source now also retains raw baseline/candidate bytes for every
