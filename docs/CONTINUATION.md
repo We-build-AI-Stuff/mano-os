@@ -1,3 +1,46 @@
+## Bounded logical GDBM decoder prepared locally, not wired into staging
+
+The current remote remains 9f62c05c1bb9a011b9b66e8204e99fce60b437b7, native CI
+40617804840. Quality job 122584287348 passed all 846 tests; its completed raw log
+and SHA-bound proof are retained. Security-lab is running. One-shot 91951 follows
+that exact source with TWENTY-THREE options. Latest fully accepted native is still
+1194d2a / run 40615467240 (21 options, fresh UI receipt). Do not conflate sources.
+
+Next local package_gdbm_decode decodes active key/value records as bounded Python
+data. It uses the standard/numsync little-endian off_t-64 layout and signed-char
+hash facts in GNU GDBM 1.24. The accepted package inventory confirms libgdbm6t64
+1.24-2 and man-db 2.13.1-1. Official upstream research source (1,195,931 bytes) was
+matched to the HTTPS Debian .dsc SHA256; PGP signature was not verified, and the
+source was never built/executed. Provenance is in gdbm-1.24-research-source.json.
+
+The decoder bounds file/directory/bucket/key/value/expanded/probing work, verifies
+hash/prefix/directory/probe reachability and rejects duplicate keys or overlapping
+structural/data regions. Metadata disjointness is checked before bucket scanning,
+so overlapping directory aliases cannot amplify cell work beyond physical input
+bounds. GDBM can reserve a final block beyond EOF; active records remain strictly
+bounded even when unused trailing space is absent. No native database library is
+loaded. Free-space chains, unused bytes, man-db semantics, source mapping,
+regeneration and change/publication authority remain explicitly false.
+
+Local focused suite: 93 tests, 92 passed and one deliberately Linux-only native
+GNU DBM writer test skipped on Mac. That future CI-only unprivileged fixture creates,
+splits, deletes and reuses its own database, then compares exact records. It never
+feeds staged data to a native library and has not run in CI yet. Independent Python
+decoding matches synthetic standard/extended/binary fixtures and rejects eleven
+report/raw substitutions. Deterministic seed 13424, 512 mutated synthetic files:
+both decoders reject 289 and agree on 223 bounded decodes with unvalidated-space
+flags false. Lint/compilation/diff checks passed. No Root/Linux execution on Mac.
+
+Hold this codec source from pushing/wiring until native23 supplies actual baseline
+and candidate index bytes. First decode those retained bytes locally and compare
+both implementations. Only then add explicit native decoding artifacts/gates to
+the staging path. Do not infer records from hashes or treat this synthetic result
+as native cache correctness. Trusted regeneration from authenticated manual-source
+inputs using immutable baseline tools remains necessary. Reconstructed caches can
+be the publication inputs; the original untrusted binary layout need not become
+authority. No reconstruction/activation mechanism is implemented by this codec.
+Full original phases 0-7 and all remaining requirements stay incomplete. No merge.
+
 ## Native observed callback arguments accepted; combined cache batch next
 
 Exact head 1194d2a74cf70f48e2d793e1d466ac3160594393 / CI run 40615467240 passed
