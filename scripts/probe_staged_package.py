@@ -37,6 +37,8 @@ from mano_runtime.package_log_observation import observe as observe_log
 from mano_runtime.package_log_scope import inspect as inspect_log_scope
 from mano_runtime.package_log_sequence import require_sequence
 from mano_runtime.package_log_time import bind_controller_window
+from mano_runtime.package_man_cache import collect as collect_man_cache
+from mano_runtime.package_man_cache import read_index
 from mano_runtime.package_postconditions import MAX_STATUS, database, database_records
 from mano_runtime.package_tree import delta as tree_delta
 from mano_runtime.package_tree_worker import REQUIRED_CAPS as TREE_CAPS
@@ -754,6 +756,17 @@ def main():
                 or baseline_after['entries'] != baseline_tree['entries']):
             raise ValueError('Baseline tree changed during staged experiment')
         changes = tree_delta(baseline_tree, candidate_tree)
+        with contextlib.ExitStack() as descriptors:
+            roots = []
+            for root in (baseline, candidate):
+                fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+                descriptors.callback(os.close, fd)
+                roots.append(fd)
+            man_cache_bytes, man_cache_artifacts = collect_man_cache(baseline_tree, candidate_tree,
+                lambda path, maximum: read_index(roots[0], path, maximum,
+                                                  baseline_tree['entries'][path]),
+                lambda path, maximum: read_index(roots[1], path, maximum,
+                                                  candidate_tree['entries'][path]))
         after = candidate_read(candidate, 'var/lib/dpkg/status', MAX_STATUS)
         before_log = candidate_read(baseline, 'var/log/dpkg.log', MAX_LOG)
         after_log = candidate_read(candidate, 'var/log/dpkg.log', MAX_LOG)
@@ -831,7 +844,7 @@ def main():
         'staged-before-status': before_status, 'staged-after-status': after,
         'staged-uid-drop-program.py': uid_program,
         'staged-uid-drop-comparison.json': json.dumps(uid_comparison,sort_keys=True).encode(),
-        **retained_trace, **retained_commands,
+        **retained_trace, **retained_commands, **man_cache_artifacts,
         'staged-dpkg-log-before': before_log, 'staged-dpkg-log-after': after_log,
         'staged-installed-sl': payload, 'staged-loader-cache-after': cache,
         'staged-loader-cache-before': before_cache,
@@ -878,6 +891,7 @@ def main():
                 baseline_trigger_sources=trigger_sources,
                 trigger_declaration_linkage=trigger_linkage,
                 observed_trigger_arguments=trigger_arguments,
+                man_cache_bytes=man_cache_bytes,
                 archive_container_identity_bound=True,
                 candidate_inventoried_payload_paths_match=True,
                 host_namespaces=host_namespaces,

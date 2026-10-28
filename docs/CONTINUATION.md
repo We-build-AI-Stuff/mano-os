@@ -1,3 +1,37 @@
+## Bounded man-index byte retention prepared locally
+
+The next local source now also retains raw baseline/candidate bytes for every
+changed man index in the fixed root/one-locale profile. Paths are selected from
+recomputed tree deltas, never a caller allowlist. At most eight database paths,
+2 MiB per file and 8 MiB total are allowed. Baseline absence and candidate removal
+are explicit. Raw data must match the exact tree size/hash and plain UID 6/GID 12,
+0644, single-link/no-xattr profile; no database library is loaded or executed.
+
+A descriptor-relative reader rejects symlink ancestors/leaves, stale observed
+ownership/mode/link/size/timestamps, and identity/path changes during reading.
+This is separate from the Root-owned catalog reader because legitimate man cache
+files are owned by man. Unit fixtures initially lacked required root manifest
+entries; those were corrected without weakening tree admission. Portable file
+identity/alias/change tests run as the ordinary Mac user, never Root/Linux probes.
+All 85 focused tests passed after correction, plus lint, compilation/diff checks,
+independent opaque-byte matching, ten substituted report/byte rejections and mocked
+23-option CLI forwarding. No native collection or cache semantics claim yet.
+
+New artifacts use deterministic staged-man-index-N-baseline.db and
+staged-man-index-N-candidate.db names. The independent verifier derives the complete
+expected set from both tree manifests, checks all raw byte hashes and report
+fields, and keeps database-record/source/regeneration/generated-state/authority
+claims false. Future acceptance adds --man-cache-bytes after the prepared
+--cache-tag-metadata rule: TWENTY-THREE options. The local metadata rule still has
+only a derived 107/125 accounted result with 18 unknown effects; it is not native
+proof. This batch includes both metadata and byte-retention work in one future run.
+
+Current remote 1194d2a / CI 40615467240 still requires TWENTY-ONE options. Quality
+passed 836 tests; security is running. Session 21423 follows this run and must not
+be restarted on timeout. Hold source push until its artifact is inspected. Latest
+accepted native remains 43c7ed4 / run 40612599127 (twenty options). Full phases 0-7
+and all outstanding production/cache/script/release work remain active. No merge.
+
 ## Preserved man-cache tag metadata classification prepared locally
 
 The live remote source is 1194d2a74cf70f48e2d793e1d466ac3160594393, CI run
