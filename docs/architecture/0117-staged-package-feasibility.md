@@ -1187,3 +1187,44 @@ adds --trigger-arguments after --process-outcomes (TWENTY-ONE); old/current twen
 option source must not be tested with the new requirement. No new artifact names.
 Hold the next source push until the live twenty-option run is terminal and inspected.
 Keep all current/failed evidence; full goal remains active and incomplete. No merge.
+
+## Native process exits accepted; observed callback linkage next
+
+Exact remote head 43c7ed45d05195ac536addeff9c3ff44d034f074 / run40612599127 ALL3SUCCESS:
+quality122567494075 (all830 tests), security122567496155, merge-gate122575492327.
+Artifact12784892346, 23,028,245 bytes, SHA256
+d3b209125ecdd96aa679b0f88dc8852c782d5c750a3cbb9b363c88a2cdaae7b0.
+One-shot session56197 exited0: acquired digest-bound artifact, fetched tested merge
+7dde297e3bf033ce7b70742908cb21a91b3728fb, verified parents base65fdfc02.../head43c7ed45...
+and worker source equality, then passed all TWENTY staging options plus complete
+prior 54-hash/45-flag/PAM/Stop/recovery/package/ELF acceptance. No gate waived.
+
+Trusted trace independently decodes30 exec records (20 replacements/10 failures)
+and31 terminal summaries. libc-bin.postinst PID7894 exec47/exit50, man-db.postinst
+PID7896 exec51/exit55, mandb PID7897 exec53/exit54 each have explicit normal zero
+exits in observed generation0 with no intervening image replacement. These are
+three bounded observations, not all-process status/credentials/ancestry/coverage,
+script-at-exec or callback effect authority. Production remains securebits43;
+CI-only staging remains11. Scheduled APT writer precondition passed this run.
+
+Six fresh UI originals, four numeric crops and four magnified duration crops
+actually inspected; receipt acceptance-pr134-process-outcomes/inspection.json has
+14 PNG hashes. A preliminary apparent clipped-digit concern was resolved with
+magnified glyphs and pixel-identical pending/effective numeric regions: full900
+and120 values are visible. No UI source change needed. Headless only; physical
+input provenance null. Strict accounting still verifies55/125 differences and
+rejects70 unapproved effects. Generated man/cache/log policy remains incomplete.
+
+Local callback source7208eab (not yet native21 tested) recomputed both observed
+callback argument sets on this new native20 evidence, independently agreeing.
+Earlier67 focused tests, twelve altered-report rejections, 21-option CLI forwarding,
+lint and compile checks passed. Full local discovery also stalled when using exact
+Git archive source and a fresh cache; samples show shared virtualenv pydantic .pyc
+and langchain beta_decorator.py reads. Both owned tests exited143; no assertion
+failure/full local suite success claimed. Existing caches/source not deleted.
+
+Next push the prepared callback source with this evidence. Its native acceptance
+requires TWENTY-ONE options (--trigger-arguments after --process-outcomes). Retain
+this accepted20 artifact separately. All five current CodeRabbit threads resolved;
+base unchanged. Full original v2.1 phases0-7 remain incomplete; no merge/publication.
+Disk45GiB/78percent. No local VM/model or Root/Linux execution on Mac.
