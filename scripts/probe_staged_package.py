@@ -39,7 +39,10 @@ from mano_runtime.package_log_scope import inspect as inspect_log_scope
 from mano_runtime.package_log_sequence import require_sequence
 from mano_runtime.package_log_time import bind_controller_window
 from mano_runtime.package_man_cache import collect as collect_man_cache
-from mano_runtime.package_man_cache import read_index
+from mano_runtime.package_man_cache import read_index, read_regenerated_index
+from mano_runtime.package_man_regeneration import collect as collect_regenerated_man
+from mano_runtime.package_man_regeneration import compare as compare_regenerated_man
+from mano_runtime.package_man_regeneration import inputs as man_regeneration_inputs
 from mano_runtime.package_postconditions import MAX_STATUS, database, database_records
 from mano_runtime.package_tree import delta as tree_delta
 from mano_runtime.package_tree_worker import REQUIRED_CAPS as TREE_CAPS
@@ -400,7 +403,7 @@ def payload_observation(record):
 
 
 def tree_observation(role, *, admission_only=False):
-    if role not in {'baseline', 'candidate'}:
+    if role not in {'baseline', 'candidate', 'regenerated-man-cache'}:
         raise ValueError('Fixed snapshot role required')
     program = ('import sys;sys.path.insert(0,"/opt/mano-lab/src");'
                'from mano_runtime.package_tree_worker import main;main()')
@@ -776,6 +779,52 @@ def main():
         man_cache_artifacts[man_cache_decoding['artifact']] = decoded_indexes
         with (Path('/opt/mano-lab/evidence') / man_cache_decoding['artifact']).open('xb') as stream:
             stream.write(decoded_indexes)
+        # Independent fresh output uses only baseline tools/configuration, with
+        # candidate manuals overlaid read-only and an empty bounded private cache.
+        # Nothing from this experiment is installed or grants mutation authority.
+        for path in ('usr', 'usr/share', 'usr/share/man'):
+            row = candidate_tree['entries'][path]
+            if row['kind'] != 'directory' or row['uid'] != 0 or row['mode'] & 0o022:
+                raise ValueError('Real drained manual-source directories required')
+        config = candidate_read(baseline, 'etc/manpath.config', 65536)
+        regeneration_inputs = man_regeneration_inputs(baseline_tree, candidate_tree, config)
+        from probe_package_man_regeneration import regenerate
+        regeneration_program, _, regeneration_raw, regeneration_worker = regenerate(
+            BASE, PROGRAM, host_namespaces, state_masks, empty, config, run)
+        regeneration_tree = tree_observation('regenerated-man-cache')
+        regenerated_fd = os.open(BASE / 'regenerated-man-cache',
+                                 os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            regeneration_bytes, regeneration_bundle = collect_regenerated_man(regeneration_tree,
+                lambda path, maximum: read_regenerated_index(regenerated_fd, path, maximum,
+                    regeneration_tree['entries'][path]))
+        finally:
+            os.close(regenerated_fd)
+        regeneration_artifacts = {
+            'staged-man-regeneration-program.py': regeneration_program,
+            'staged-man-regeneration-config': config,
+            'staged-man-regeneration-worker.json': regeneration_raw,
+            'staged-man-regenerated-tree.json': json.dumps(
+                regeneration_tree, sort_keys=True).encode(),
+            regeneration_bytes['artifact']: regeneration_bundle,
+        }
+        for name, data in regeneration_artifacts.items():
+            if name not in {'staged-man-regeneration-program.py',
+                            'staged-man-regeneration-config',
+                            'staged-man-regeneration-worker.json'}:
+                with (Path('/opt/mano-lab/evidence') / name).open('xb') as stream:
+                    stream.write(data)
+        regeneration_comparison = compare_regenerated_man(regeneration_bundle, {
+            path: man_cache_artifacts[rows['candidate']['artifact']]
+            for path, rows in man_cache_bytes['databases'].items()
+            if rows['candidate'] is not None})
+        for role, observed in (('baseline', baseline_tree), ('candidate', candidate_tree)):
+            current = tree_observation(role)
+            if (current['manifest_sha256'] != observed['manifest_sha256']
+                    or current['entries'] != observed['entries']):
+                raise ValueError('Manual regeneration changed a bound input tree')
+        if live_inputs() != before:
+            raise ValueError('Live inputs changed during manual regeneration')
         after = candidate_read(candidate, 'var/lib/dpkg/status', MAX_STATUS)
         before_log = candidate_read(baseline, 'var/log/dpkg.log', MAX_LOG)
         after_log = candidate_read(candidate, 'var/log/dpkg.log', MAX_LOG)
@@ -853,7 +902,7 @@ def main():
         'staged-before-status': before_status, 'staged-after-status': after,
         'staged-uid-drop-program.py': uid_program,
         'staged-uid-drop-comparison.json': json.dumps(uid_comparison,sort_keys=True).encode(),
-        **retained_trace, **retained_commands, **man_cache_artifacts,
+        **retained_trace, **retained_commands, **man_cache_artifacts, **regeneration_artifacts,
         'staged-dpkg-log-before': before_log, 'staged-dpkg-log-after': after_log,
         'staged-installed-sl': payload, 'staged-loader-cache-after': cache,
         'staged-loader-cache-before': before_cache,
@@ -874,7 +923,8 @@ def main():
         artifacts[record['payload_observation_artifact']] = json.dumps(
             observations[record['name']], sort_keys=True, allow_nan=False).encode()
     for name, data in artifacts.items():
-        if name in retained_trace or name in retained_commands or name in man_cache_artifacts:
+        if (name in retained_trace or name in retained_commands or name in man_cache_artifacts
+                or name in regeneration_artifacts):
             continue  # Already retained at the corresponding observation gate.
         with (Path('/opt/mano-lab/evidence') / name).open('xb') as stream:
             stream.write(data)
@@ -902,6 +952,12 @@ def main():
                 observed_trigger_arguments=trigger_arguments,
                 man_cache_bytes=man_cache_bytes,
                 man_cache_decoding=man_cache_decoding,
+                man_cache_regeneration=dict(inputs=regeneration_inputs,
+                    worker=regeneration_worker, raw=regeneration_bytes,
+                    comparison=regeneration_comparison,
+                    input_trees_unchanged=True, fresh_generation_observed=True,
+                    production_policy_changed=False, changes_authorized=False,
+                    publication_authorized=False),
                 archive_container_identity_bound=True,
                 candidate_inventoried_payload_paths_match=True,
                 host_namespaces=host_namespaces,

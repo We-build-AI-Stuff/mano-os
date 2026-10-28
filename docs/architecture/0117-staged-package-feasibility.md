@@ -1434,3 +1434,44 @@ their fixed names. Refresh source/CI and inspect fresh evidence after pushing.
 Full original phases 0-7, the 18 effects, script custody, dependency order, trusted
 cache reconstruction, production staging/activation/runtime closure and release
 requirements remain incomplete. No merge/publication. Disk about 45 GiB free.
+
+## Current verified baseline and fresh-cache follow-up (2026-10-28)
+
+Head d59f36e9948e754b86e9fb87fdbdd5db9b85c864, run 40621100477, passed all
+three jobs: quality 122595065461 (855 tests, including the native unprivileged
+GNU DBM writer crosscheck), security-lab 122595065099, merge-gate 122601841693.
+Artifact 12788132725 is 23,612,862 bytes, SHA256
+33a18552aca152a9199c58ae90cd1050a24904e31fde2782b48482c97f85447e.
+Recovered acceptance completed with exit zero, all TWENTY-FOUR options and the
+prior 54-hash/45-flag/security/package/recovery chain. Tested merge
+7c91eaf297157758222b19b2bad80aad99e48aeb has the expected base/head parents and
+matching five source files. All six fresh UI originals and eight numeric/glyph
+crops were viewed, including their contact sheet. Exact-head 15-image receipt:
+outputs/acceptance-pr134-gdbm-decoding/inspection.json (relative to task root).
+The displayed full 900/120 limits are clear; physical input provenance is null.
+The old local process handles are gone; completed logs prove successful acceptance.
+
+The follow-up source adds a fixed CI-only fresh-cache experiment. Baseline tools
+and configuration are read-only; candidate /usr/share/man is overlaid read-only.
+An independent empty tmpfs cache is capped at 16 MiB. Fixed setpriv clears groups
+and all capability sets before the guarded UID 6 / GID 12 Python/mandb process.
+It runs mandb --create --quiet /usr/share/man under bounded memory/tasks/runtime,
+retains diagnostics and waits for the process domain to drain. The trusted tree
+collector then observes the fresh cache. Up to 64 databases / 8 MiB raw bytes
+are retained in one bounded JSON bundle. Pure Python compares exact logical
+records against changed candidate indexes, reporting stale/missing/different keys.
+Input baseline/candidate trees are reobserved and must remain unchanged.
+
+This new path has portable tests only so far: 93 focused tests ran, 85 passed and
+eight Linux-only checks were skipped on Mac. The independent synthetic comparison
+agrees and rejects eight altered evidence claims. No new Root/VM operation
+ran locally. Independent twenty-fifth acceptance is prepared outside Git; fresh
+native CI, raw artifact acceptance, failure diagnosis and fresh UI inspection are
+still required. No source authority, complete runtime closure, unused DB-space
+validation, generated-state authorization, publication or merge is claimed.
+Native accounting remains 107/125 with 18 unapproved effects. All original phases
+0-7 and every remaining release gate below remain active and incomplete.
+
+Latest disk about 50 GiB free / 75 percent used; no data deleted. Preserve the three
+unrelated untracked duplicate files listed below. Earlier sections are historical;
+use this entry and task-root outputs/CONTINUATION.md for current source/run state.

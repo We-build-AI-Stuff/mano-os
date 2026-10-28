@@ -2,7 +2,7 @@
 
 This is trusted controller code, not an adversarial executor sandbox. SYS_ADMIN
 is retained only to observe trusted.* xattr names; the collector executes no
-candidate files, interprets no scripts and accepts only two fixed snapshot roles.
+candidate files, interprets no scripts and accepts only fixed CI tree roles.
 """
 import json
 import os
@@ -43,7 +43,8 @@ def guard():
 
 def main():
     caps = guard()
-    if (len(sys.argv) not in {2, 3} or sys.argv[1] not in {'baseline', 'candidate'}
+    if (len(sys.argv) not in {2, 3} or sys.argv[1] not in
+            {'baseline', 'candidate', 'regenerated-man-cache'}
             or (len(sys.argv) == 3 and sys.argv[2] != '--admission-only')):
         raise ValueError('Fixed snapshot role required')
     role = sys.argv[1]

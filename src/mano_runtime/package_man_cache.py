@@ -26,6 +26,18 @@ def read_index(root_fd, path, maximum, expected):
     """Read only the observed regular file through an owned snapshot descriptor."""
     if not index_path(path) or type(maximum) is not int or not 0 < maximum <= MAX_DATABASE_BYTES:
         raise ValueError('Fixed bounded man-index path required')
+    return _read_index(root_fd, path, maximum, expected)
+
+
+def read_regenerated_index(root_fd, path, maximum, expected):
+    """The root descriptor is the separate drained fresh-cache tmpfs."""
+    if (not index_path('var/cache/man/' + path) or type(maximum) is not int
+            or not 0 < maximum <= MAX_DATABASE_BYTES):
+        raise ValueError('Fixed bounded regenerated index path required')
+    return _read_index(root_fd, path, maximum, expected)
+
+
+def _read_index(root_fd, path, maximum, expected):
     parent = parent_fd(root_fd, path)
     try:
         leaf = path.rsplit('/', 1)[-1]
