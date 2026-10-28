@@ -256,7 +256,23 @@ def candidate_cache():
             cache.close()
 
 
+def require_quiet_apt_writers():
+    """CI fixture precondition, never an exemption from catalog identity checks."""
+    observed = {}
+    for unit in ('apt-daily.timer', 'apt-daily-upgrade.timer',
+                 'apt-daily.service', 'apt-daily-upgrade.service'):
+        raw = run(['/usr/bin/systemctl', 'show', unit,
+                   '--property=LoadState', '--property=ActiveState']).decode('ascii')
+        rows = raw.strip().splitlines()
+        if len(rows) != 2 or set(rows) != {'LoadState=masked', 'ActiveState=inactive'}:
+            raise ValueError('CI scheduled APT writers must be masked and inactive')
+        observed[unit] = dict(row.split('=', 1) for row in rows)
+    print(json.dumps(dict(event='ci-apt-writers-quiescent', units=observed)),
+          file=sys.stderr, flush=True)
+
+
 def acquire():
+    require_quiet_apt_writers()
     with candidate_cache() as cache:
         return acquire_from(cache)
 

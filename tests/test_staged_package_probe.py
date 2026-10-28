@@ -23,6 +23,29 @@ SPEC.loader.exec_module(probe)
 
 
 class StagedProbeSafetyTests(unittest.TestCase):
+    def test_apt_writer_precondition_observes_all_fixed_units(self):
+        state = b'LoadState=masked\nActiveState=inactive\n'
+        with patch.object(probe, 'run', return_value=state) as run:
+            probe.require_quiet_apt_writers()
+        self.assertEqual([call.args[0][2] for call in run.call_args_list], [
+            'apt-daily.timer', 'apt-daily-upgrade.timer',
+            'apt-daily.service', 'apt-daily-upgrade.service'])
+
+    def test_apt_writer_precondition_rejects_active_unmasked_or_malformed_state(self):
+        for raw in (b'LoadState=masked\nActiveState=active\n',
+                    b'LoadState=loaded\nActiveState=inactive\n',
+                    b'LoadState=masked\n', b'LoadState=masked\nLoadState=masked\n'):
+            with self.subTest(raw=raw), patch.object(probe, 'run', return_value=raw), \
+                    self.assertRaisesRegex(ValueError, 'masked and inactive'):
+                probe.require_quiet_apt_writers()
+
+    def test_nonquiet_apt_writers_stop_before_catalog_acquisition(self):
+        with patch.object(probe, 'require_quiet_apt_writers', side_effect=ValueError('active')), \
+                patch.object(probe, 'candidate_cache') as cache, \
+                self.assertRaisesRegex(ValueError, 'active'):
+            probe.acquire()
+        cache.assert_not_called()
+
     def observed_command(self, code, timeout=2):
         # Only this portable, unprivileged helper runs; never the Linux/Root PROGRAM.
         import base64

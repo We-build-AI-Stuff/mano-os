@@ -7,6 +7,11 @@ test ! -f /etc/mano-lab-prepared
 cd /opt/mano-lab
 mkdir -p evidence
 export DEBIAN_FRONTEND=noninteractive
+# The disposable lab owns package-index changes. Persistent masks survive the
+# btrfs reboot; scheduled refreshes must not race the catalog custody probes.
+systemctl mask --now apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service
+systemctl show apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service \
+  --property=Id --property=LoadState --property=ActiveState
 apt-get -o Acquire::Retries=3 update
 apt-get -o Acquire::Retries=3 -y upgrade
 apt-get -o Acquire::Retries=3 install -y --no-install-recommends python3 python3-jsonschema python3-apt gpgv python3-venv python3-pip bubblewrap apparmor acl git strace \
