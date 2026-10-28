@@ -3,6 +3,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -74,6 +75,34 @@ class ManRegenerationTests(unittest.TestCase):
         self.assertIn('--no-new-privs', args)
         with self.assertRaises(ValueError):
             probe.sandbox(Path('/private'), [], Path('/empty'), '../config')
+
+    def test_loopback_setup_capability_never_reaches_the_man_process(self):
+        unit = probe.unit_command()
+        ceiling = next(arg.split('=', 2)[2].split() for arg in unit
+                       if arg.startswith('--property=CapabilityBoundingSet='))
+        self.assertEqual(set(ceiling), {'CAP_SYS_ADMIN', 'CAP_SYS_CHROOT', 'CAP_SETUID',
+            'CAP_SETGID', 'CAP_SETPCAP', 'CAP_DAC_READ_SEARCH', 'CAP_NET_ADMIN'})
+        args = probe.sandbox(Path('/private'), [], Path('/empty'), 'a'*64)
+        added = [args[i+1] for i, arg in enumerate(args) if arg == '--cap-add']
+        self.assertEqual(set(added), {'CAP_SETUID', 'CAP_SETGID', 'CAP_SETPCAP'})
+        self.assertNotIn('CAP_NET_ADMIN', added)
+        host, row = worker()
+        row['state']['caps']['CapBnd'] = 1 << 12  # CAP_NET_ADMIN must be gone.
+        with self.assertRaises(ValueError):
+            probe.validate(row, host, 'a'*64)
+
+    def test_launch_failure_retains_bounded_binary_diagnostics_without_success(self):
+        raw = b'bwrap: loopback: Failed RTM_NEWADDR: No child processes\n'
+        error = subprocess.CalledProcessError(1, ['fixed'], output=b'', stderr=raw)
+        report = probe.launch_failure(error)
+        self.assertEqual(base64.b64decode(report['streams']['stderr']['base64']), raw)
+        self.assertTrue(report['launch_failed'])
+        self.assertFalse(report['fresh_generation_observed'])
+        self.assertFalse(report['publication_authorized'])
+        error.stdout = b'x'*65537
+        report = probe.launch_failure(error)
+        self.assertFalse(report['streams']['stdout']['complete'])
+        self.assertEqual(report['streams']['stdout']['bytes'], 65536)
 
     def test_worker_diagnostics_and_private_capability_free_identity(self):
         host, row = worker()

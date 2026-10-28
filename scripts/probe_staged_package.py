@@ -760,6 +760,16 @@ def main():
                 or baseline_after['entries'] != baseline_tree['entries']):
             raise ValueError('Baseline tree changed during staged experiment')
         changes = tree_delta(baseline_tree, candidate_tree)
+        retained_trees = {
+            'staged-tree-baseline.json': json.dumps(baseline_tree, sort_keys=True).encode(),
+            'staged-tree-baseline-after.json': json.dumps(baseline_after, sort_keys=True).encode(),
+            'staged-tree-candidate.json': json.dumps(candidate_tree, sort_keys=True).encode(),
+            'staged-tree-changes.json': json.dumps(changes, sort_keys=True).encode(),
+        }
+        # Bind already-collected raw indexes even if later regeneration fails.
+        for name, data in retained_trees.items():
+            with (Path('/opt/mano-lab/evidence') / name).open('xb') as stream:
+                stream.write(data)
         with contextlib.ExitStack() as descriptors:
             roots = []
             for root in (baseline, candidate):
@@ -903,6 +913,7 @@ def main():
         'staged-uid-drop-program.py': uid_program,
         'staged-uid-drop-comparison.json': json.dumps(uid_comparison,sort_keys=True).encode(),
         **retained_trace, **retained_commands, **man_cache_artifacts, **regeneration_artifacts,
+        **retained_trees,
         'staged-dpkg-log-before': before_log, 'staged-dpkg-log-after': after_log,
         'staged-installed-sl': payload, 'staged-loader-cache-after': cache,
         'staged-loader-cache-before': before_cache,
@@ -911,10 +922,6 @@ def main():
         'staged-fixture.so': (BASE / 'fixture.so').read_bytes(),
         'staged-baseline-property': baseline_property,
         'staged-baseline-status': baseline_status,
-        'staged-tree-baseline.json': json.dumps(baseline_tree, sort_keys=True).encode(),
-        'staged-tree-baseline-after.json': json.dumps(baseline_after, sort_keys=True).encode(),
-        'staged-tree-candidate.json': json.dumps(candidate_tree, sort_keys=True).encode(),
-        'staged-tree-changes.json': json.dumps(changes, sort_keys=True).encode(),
     }
     for record in records:
         record['artifact'] = 'staged-archive-' + record['filename']
@@ -924,7 +931,7 @@ def main():
             observations[record['name']], sort_keys=True, allow_nan=False).encode()
     for name, data in artifacts.items():
         if (name in retained_trace or name in retained_commands or name in man_cache_artifacts
-                or name in regeneration_artifacts):
+                or name in regeneration_artifacts or name in retained_trees):
             continue  # Already retained at the corresponding observation gate.
         with (Path('/opt/mano-lab/evidence') / name).open('xb') as stream:
             stream.write(data)

@@ -1,3 +1,58 @@
+## Failed fresh-cache launch retained; corrected setup and source metadata prepared
+
+Run 40693734664 at d356534fe5ef9de7b3c62cc6605d74217b434cbb is terminal FAILURE.
+Quality 122834883195 passed 864 tests (one Mac-specific skip); security 122834882711
+and merge-gate 122844329045 failed. The one-shot 22196 exited nonzero after
+retaining failed-run custody only. Artifact 12819527130 is 3,555,571 bytes, SHA256
+17fdde931c4ed63f4b7ffd2718c9bfb7a1fec1afaa2b6dc5a19fbd1dce7c64ed.
+Raw log/proof: pr134-d356534-security-failed-job.log and
+pr134-d356534-native-failure-proof.json. No twenty-fifth-gate acceptance or fresh
+UI inspection occurred. Latest fully accepted native remains d59f36e / native24.
+
+Failure happened in bubblewrap, before the guarded man process started:
+loopback: Failed RTM_NEWADDR: No child processes. The setup service lacks
+CAP_NET_ADMIN, required for interface configuration (Linux capabilities(7):
+https://man7.org/linux/man-pages/man7/capabilities.7.html). That missing capability
+is the likely setup cause, not a proved native fix yet. The follow-up adds it
+ONLY to the fixed setup service ceiling. Bubblewrap still retains only SETUID,
+SETGID and SETPCAP before setpriv clears groups and every capability set. The
+man guard still requires all five sets, including bounding, to equal zero.
+The regression rejects a child retaining NET_ADMIN. No private-network or kernel
+state check is disabled. Root/Linux execution remains disposable CI only.
+
+Tree manifests/delta are now retained before index parsing or regeneration so a
+later failure retains byte-to-tree context. Bounded binary launch failure streams
+are also saved before propagating the original failure. Successful fixed artifact
+names and all twenty-five acceptance gates remain unchanged. Full caller/script,
+source/description/link/filter, generated-state and production policies still apply.
+
+New local package_man_sources parses actual record bytes and compares direct A/B
+primary filenames and lstat timestamps with the hash-bound candidate tree. Every
+parent must be a real observed directory; traversal/absolute/binary-unrepresentable
+names stay unbound. Link metadata is compared without following its target. C-E
+virtual/cat records remain explicitly unresolved, never source paths derived from
+alias names or pointers. Complete source graph, descriptions, filters and all
+mutation/publication authority remain false. It is not wired into staging yet.
+
+A separate implementation agrees on native24 baseline and candidate inputs:
+baseline 3 indexes / 3,826 direct records / 3,602 primary / 3,596 bound, with four
+missing-or-aliased parents and two absent source files; candidate 5 indexes /
+3,830 direct / 3,606 primary, all 3,606 bound. Both retain 224 virtual records as
+unresolved. Exact code inspection confirms man-db 2.13.1 captures lstat time before
+following links; C alias pointer time is not assumed to prove alias source meaning.
+Research source files are bounded data extracted from the already hash-checked
+official tarball, never built or executed; its DSC PGP signature remains unverified.
+
+Focused portable suite now runs 117 tests, 108 pass and nine Linux-only checks
+skip on Mac. Repository lint/diff checks pass. Canonical writer/record framing at
+local 54bfab3 still need their first native reader/writer quality test. That test
+uses its own empty/single/max-size/split synthetic fixtures, never an untrusted
+staged DB in a native library on Mac. The two prepared commits can now be pushed
+with the setup correction because the prior VM run is terminal and preserved.
+Task-root outputs/CONTINUATION.md will hold the next exact head/run/session.
+No merge/publication/activation; all original phases 0-7 remain incomplete. Disk
+about 50 GiB free / 76 percent; no data deleted; preserve unrelated duplicate files.
+
 ## Canonical cache bytes and record framing prepared locally (2026-10-28)
 
 Remote and live CI remain d356534fe5ef9de7b3c62cc6605d74217b434cbb /

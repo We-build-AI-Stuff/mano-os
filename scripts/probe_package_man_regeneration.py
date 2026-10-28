@@ -9,6 +9,7 @@ import base64
 import hashlib
 import json
 import re
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -127,6 +128,34 @@ def validate(row, host, config_sha256):
             raise ValueError('Exact regeneration diagnostic bytes/hash required')
 
 
+def unit_command():
+    # NET_ADMIN is needed only to initialize loopback in the private network
+    # namespace. Bubblewrap drops it before setpriv; the man guard requires
+    # every capability set, including the bounding set, to be exactly zero.
+    return ['/usr/bin/systemd-run', '--quiet', '--pipe', '--wait', '--collect',
+            '--unit=mano-man-regeneration-ci.service', '--slice=mano-package.slice',
+            '--property=NoNewPrivileges=yes',
+            '--property=CapabilityBoundingSet=CAP_SYS_ADMIN CAP_SYS_CHROOT CAP_SETUID '
+            'CAP_SETGID CAP_SETPCAP CAP_DAC_READ_SEARCH CAP_NET_ADMIN',
+            '--property=MemoryMax=268435456', '--property=TasksMax=32',
+            '--property=RuntimeMaxSec=70', '--property=KillMode=control-group',
+            '--property=Restart=no', '--property=LimitCORE=0', '--property=LimitNOFILE=128',
+            '--property=LimitFSIZE=2097152']
+
+
+def launch_failure(error):
+    streams = {}
+    for label in ('stdout', 'stderr'):
+        original = getattr(error, label) or b''
+        if type(original) is not bytes:
+            raise ValueError('Binary launch diagnostics required')
+        raw = original[:65536]
+        streams[label] = dict(base64=base64.b64encode(raw).decode(), bytes=len(raw),
+            sha256=hashlib.sha256(raw).hexdigest(), complete=len(original) <= 65536)
+    return dict(schema_version='1.0', launch_failed=True, returncode=error.returncode,
+                streams=streams, fresh_generation_observed=False, publication_authorized=False)
+
+
 def regenerate(base, capture_source, host, state_masks, empty, config, run):
     """Called only after the staging controller's Linux/Root/disposable guard."""
     if sys.platform != 'linux':
@@ -153,21 +182,18 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
          'mano-man-cache-ci', str(cache)])
     run(['/usr/bin/mount', '--make-private', str(cache)])
     unit = 'mano-man-regeneration-ci.service'
-    argv = ['/usr/bin/systemd-run', '--quiet', '--pipe', '--wait', '--collect',
-            '--unit='+unit, '--slice=mano-package.slice',
-            '--property=NoNewPrivileges=yes',
-            '--property=CapabilityBoundingSet=CAP_SYS_ADMIN CAP_SYS_CHROOT CAP_SETUID '
-            'CAP_SETGID CAP_SETPCAP CAP_DAC_READ_SEARCH',
-            '--property=MemoryMax=268435456', '--property=TasksMax=32',
-            '--property=RuntimeMaxSec=70', '--property=KillMode=control-group',
-            '--property=Restart=no', '--property=LimitCORE=0', '--property=LimitNOFILE=128',
-            '--property=LimitFSIZE=2097152']
+    argv = unit_command()
     evidence = Path('/opt/mano-lab/evidence')
     for name, content in (('staged-man-regeneration-program.py', data),
                           ('staged-man-regeneration-config', config)):
         with (evidence / name).open('xb') as stream:
             stream.write(content)
-    raw = run(argv + sandbox(base, state_masks, empty, digest), timeout=80)
+    try:
+        raw = run(argv + sandbox(base, state_masks, empty, digest), timeout=80)
+    except subprocess.CalledProcessError as error:
+        with (evidence / 'staged-man-regeneration-launch-failure.json').open('x') as stream:
+            json.dump(launch_failure(error), stream, sort_keys=True)
+        raise
     # Save raw output before decoding/checking. Failure evidence is never success.
     with (evidence / 'staged-man-regeneration-worker.json').open('xb') as stream:
         stream.write(raw)
