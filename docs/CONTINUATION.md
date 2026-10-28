@@ -5,52 +5,59 @@ Phase 8 is optional. Frozen requirements: docs/spec-v2.1.md, SHA256
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 Never redefine completion around the prototype/CI evidence below.
 
-## Current checkout, CI and next action
+## Current checkout and accepted native evidence
 
 - Repository: We-build-AI-Stuff/mano-os, PR #134, feat/approved-package-apply.
-- Remote head: 3729ef2afe04c7fadeb17483cea2f4942d4bfea7.
-- Local implementation head: d121ce5 (virtual metadata helper, not pushed).
+- Remote accepted head: 3729ef2afe04c7fadeb17483cea2f4942d4bfea7.
+- Local implementation d121ce5 adds an unused virtual metadata helper; local
+  16341a4 condenses continuation history. Neither is pushed yet.
 - Base last verified: 65fdfc02e3dbb18f791a92374a24690ae4e1ba87.
-- Run 40700950648: quality 122860281543 SUCCESS, 895 tests with one Mac-specific
-  skip; recorded alignment regression and both native GNU DBM crosschecks pass.
-- Security job 122860282032 is still live. Current fresh regeneration, loopback
-  fix, canonical integration, merge-gate, artifact acceptance and UI are pending.
-- Exact-run one-shot: task outputs/continue_pr134_canonical_cache.py, local exec
-  session 1966; log pr134-canonical-cache-continuation.log. One transient API
-  error was observed; it retries the SAME run. Re-poll the same live handle.
-- It saves failed-run custody only on failure; on ALL3SUCCESS checks artifact
-  digest, tested merge base/head parents, thirteen runtime/probe source files
-  and all TWENTY-SIX acceptance options. It never reruns CI, merges or blesses UI.
-- Artifact stem: pr134-man-canonical-security (or -canonical-failed-security).
-- Do not push while the current run is live: workflow cancels earlier runs.
-  A timeout/API error is not terminal. A missing handle requires API/log checks.
-- After success, inspect actual raw and derived cache artifacts independently,
-  then view six fresh UI originals and eight crops/contact sheet. Write a new
-  exact-head/run/artifact/digest 15-image receipt. Never reuse an older receipt.
+- Run 40700950648 ALL3SUCCESS: quality 122860281543 (895 tests, one Mac-specific
+  skip), security 122860282032, merge-gate 122873536590.
+- Artifact 12822079446: 24,521,872 bytes, SHA256
+  277e10de15f373f613cdacc893bb042bc2dba07effa1bca59dae6edebd18e292.
+- Tested merge 5737edb307d7a906815bee3dee4526812586a421 has expected base/head
+  parents and thirteen identical runtime/probe source files.
+- One-shot local exec 1966 exited ZERO. All 26 staging options and prior complete
+  54-hash/45-flag/PAM/Stop/recovery/package/ELF chain passed independent acceptance.
+- Six fresh originals and eight crops/contact sheet were ACTUALLY viewed. Exact
+  15-PNG receipt: task outputs/acceptance-pr134-man-canonical/inspection.json.
+  Full 900/120 limits are visible; numeric regions are identical between pending
+  and effective. Physical provenance stays null (headless only).
+- Raw job logs/proof: outputs/pr134-3729ef2-{quality,security}-completed-job.log,
+  quality-proof.json and native26-proof.json. Do not restart the completed watcher.
 
-Task-root outputs/CONTINUATION.md holds local handles and last observation times.
-The full older continuation files are preserved in outputs/continuation-*-archive-*.md;
-Git history and docs/architecture/0117-staged-package-feasibility.md retain history.
-No agent /compact tool exists; never claim one was invoked. Keep this file compact.
+The fresh generator ran as UID [6,6,6], GID [12,12,12], groups [], NNP 1 and
+all five capability sets ZERO in private namespaces. It completed normally with
+bounded output and unchanged input trees. Fresh output: 28 databases / 1,040,384
+raw bytes. All five changed candidate indexes equal fresh logical records.
+Canonical output: 670,720 bytes, 4,862 records; all 4,515 primary records bind to
+observed source metadata. The 248 virtual/cat records still lack source-declaration/
+include/link/description/filter proof. Canonical artifact sizes: bytes 894,882;
+frames 1,921,997; source diagnostics 1,267,778. No authority follows from these facts.
 
-## Latest fully accepted native evidence
+Accounting remains 107/125 with 18 UNAPPROVED effects: etc/ld.so.cache and its
+parent, usr/local/lib and two synthetic library names, synthetic canary,
+var/cache/ldconfig/aux-cache and its parent, new de.UTF-8/ja.UTF-8 man-cache
+locale/cat6/index paths, modified root/de/ja indexes, and var/log/dpkg.log.
+Keep the strict negative guard; never whitelist synthetic effects to finish.
 
-Head d59f36e9948e754b86e9fb87fdbdd5db9b85c864 / run 40621100477 passed all three
-jobs: quality 122595065461 (855 tests), security 122595065099, gate 122601841693.
-Artifact 12788132725: 23,612,862 bytes, SHA256
-33a18552aca152a9199c58ae90cd1050a24904e31fde2782b48482c97f85447e.
-Tested merge 7c91eaf297157758222b19b2bad80aad99e48aeb has expected base/head
-parents and five matching source files. All 24 staging options and prior complete
-54-hash/45-flag/PAM/Stop/recovery/package/ELF chain passed independent acceptance.
-Six originals/eight crops/contact sheet were actually viewed; receipt in task
-outputs/acceptance-pr134-gdbm-decoding/inspection.json binds all 15 PNGs. Full
-900/120 values are readable; physical input provenance is null (headless only).
+The unused local virtual helper was now checked against ACTUAL accepted native26
+canonical artifacts. Both implementations agree on all 248 unique metadata-bound
+targets across 28 indexes. Evidence: pr134-virtual-metadata-native26-selfcheck.json.
+This is local derived analysis, not native execution of that helper or proof of
+source alias declarations. Decide next integration/stronger input confinement
+without changing that scope or weakening existing gates. No CI run is live now;
+refresh remote/base/reviews and disk before the next push. No merge/publication.
 
-Native accounting is 107/125, with 18 effects UNAPPROVED: etc, etc/ld.so.cache,
-usr/local/lib plus the two synthetic library names, usr/share/.mano-staged-ci-control,
-var/cache/ldconfig and aux-cache, new de.UTF-8/ja.UTF-8 man-cache directories/cat6/
-indexes, modified root/de/ja indexes, and var/log/dpkg.log. Keep the negative guard;
-never whitelist synthetic canary/library effects to claim completion.
+Earlier native24 d59f36e / run 40621100477 remains historical accepted evidence:
+artifact 12788132725, 23,612,862 bytes, SHA256
+33a18552aca152a9199c58ae90cd1050a24904e31fde2782b48482c97f85447e,
+24 options, 855 quality tests and a separate 15-PNG UI receipt. Do not mix sources.
+
+Task-root outputs/CONTINUATION.md holds operational pointers. Full older records
+are in outputs/continuation-*-archive-*.md, Git history and ADR 0117. No agent
+/compact tool exists; never claim one was invoked. Keep this file compact.
 
 ## Two failed follow-ups — not acceptance
 
@@ -82,8 +89,8 @@ Fresh-cache experiment uses read-only baseline tools/config, read-only candidate
 /usr/share/man, and an empty independent 16 MiB tmpfs. Setup alone receives
 NET_ADMIN; bubblewrap drops it before setpriv clears groups and all capability sets.
 The UID 6/GID 12 worker guard requires all five capability sets to be exactly zero.
-Tree/raw database/failure witnesses are retained before later checks. This complete
-current experiment has not passed native security yet. Production securebits stay
+Tree/raw database/failure witnesses are retained before later checks. The current experiment passed native security; complete source/read authority
+and adversarial confinement are still not proved. Production securebits stay
 43; CI staging uses separately tested 11 under 0xdb/NNP/private namespaces. The
 production keep-caps compatibility gap is not fixed by changing this experiment.
 
@@ -100,14 +107,15 @@ remain separate. Caps: 64 databases, 8 MiB raw/canonical totals, 65,536 records,
 All source/include/description/filter and generated-state/publication flags stay
 false. Old retained native24 local integration: 5 databases, 3,881 records,
 622,592 input bytes, 514,560 canonical bytes, 3,247,294 artifact bytes. Fourteen
-altered claims/artifacts reject. This is not current fresh-generation evidence.
+altered claims/artifacts reject. Those old-data numbers are historical; current fresh native26 counts are above.
 
 Primary metadata locally binds all 3,606 candidate A/B records; baseline has six
 missing primary sources (3,596/3,602 bind). Links use their own lstat timestamps.
 The 224 virtual C aliases remain source-declaration-unverified. New unused local
 package_man_virtual_metadata resolves their pointers to unique A/B records in the
 same index with exact name/section/extension/compression/filter/time and bound
-primary metadata. Both implementations match all 224 on old retained data; seven
+primary metadata. Both implementations matched all 224 on old retained data and all 248 on accepted
+native26 data; seven
 mismatch cases agree as unresolved. It never treats aliases/pointers as paths.
 This helper is NOT wired or pushed and does not change current gate26 verification.
 Local focused suite: 152 tests, 143 pass, nine Linux-only skips. Lint/diff pass.

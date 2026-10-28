@@ -1710,3 +1710,34 @@ native remains d59f36e / native24 with its own UI receipt. No new native accepta
 merge, publication or activation is claimed. All 18 unknown effects, full production
 runtime/staging/activation and original phases 0-7/release gates remain active.
 Disk about 48 GiB free / 76 percent used; no deletion; preserve unrelated duplicates.
+
+## Native26 acceptance: private fresh cache and deterministic artifacts
+
+Head 3729ef2afe04c7fadeb17483cea2f4942d4bfea7 / run 40700950648 passed all
+three jobs (895 quality tests, one Mac-specific skip), exact artifact digest,
+tested-merge parents/thirteen runtime source files and all 26 independent staging
+options plus the prior 54-hash/45-flag/security chain. Artifact 12822079446 is
+24,521,872 bytes, SHA256 277e10de15f373f613cdacc893bb042bc2dba07effa1bca59dae6edebd18e292.
+Tested merge 5737edb307d7a906815bee3dee4526812586a421 binds base 65fdfc02 and
+head 3729ef2. One-shot 1966 exited zero. Six fresh UI originals/eight crops and
+the contact sheet were viewed; the exact receipt binds 15 PNGs. Full 900/120 limits
+are readable. Physical provenance remains null; this is headless CI only.
+
+The fresh worker's observed UID/GID are 6/12, groups empty, NNP 1 and all five
+capability sets zero. It completes within the bounded command capture, its domain
+drains and input trees remain unchanged. Twenty-eight raw databases total
+1,040,384 bytes. All five changed candidate indexes equal freshly generated logical
+records. Deterministic output totals 670,720 bytes / 4,862 records. Primary metadata
+binds all 4,515 direct source records; 248 virtual/cat records still lack source
+alias/include/description/filter proof. No complete generated-state or publication
+authority follows. Accounting remains 107/125 with all 18 unsupported effects
+rejected, including the intentional synthetic negative fixtures.
+
+The unused local virtual helper was additionally checked as portable data analysis
+against these actual native26 canonical artifacts; both implementations bind all
+248 unique internal targets with matching primary metadata. This is not native
+execution of that helper or source alias declaration verification. No merge,
+candidate publication or boot activation occurred. Full original phases 0-7,
+production runtime/staging/coherent activation, physical/8 GiB and release gates
+remain active and incomplete. Detailed current state is kept in the compact
+continuation; full earlier continuation archives are preserved under task outputs.
