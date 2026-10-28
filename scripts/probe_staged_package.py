@@ -40,6 +40,7 @@ from mano_runtime.package_log_time import bind_controller_window
 from mano_runtime.package_postconditions import MAX_STATUS, database, database_records
 from mano_runtime.package_tree import delta as tree_delta
 from mano_runtime.package_tree_worker import REQUIRED_CAPS as TREE_CAPS
+from mano_runtime.package_trigger_arguments import require_arguments
 from mano_runtime.package_trigger_declarations import baseline_sources
 from mano_runtime.package_trigger_linkage import require_sources
 
@@ -767,6 +768,9 @@ def main():
         trigger_linkage = require_sources(before_log, after_log, before_status, after,
             baseline_tree, candidate_tree, records, observations,
             lambda path, maximum: candidate_read(baseline, path, maximum))
+        trigger_arguments = require_arguments(exec_trace, before_log, after_log,
+            before_status, after, baseline_tree, candidate_tree, records, observations,
+            lambda path, maximum: candidate_read(baseline, path, maximum))
         old, new = database(before_status), database(after)
         old_records, new_records = database_records(before_status), database_records(after)
         approved = {(r['name'], r['architecture']) for r in records}
@@ -873,6 +877,7 @@ def main():
                 dpkg_log_time_samples=clock_samples, dpkg_log_time_window=log_time,
                 baseline_trigger_sources=trigger_sources,
                 trigger_declaration_linkage=trigger_linkage,
+                observed_trigger_arguments=trigger_arguments,
                 archive_container_identity_bound=True,
                 candidate_inventoried_payload_paths_match=True,
                 host_namespaces=host_namespaces,

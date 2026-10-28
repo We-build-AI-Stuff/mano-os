@@ -1158,3 +1158,32 @@ changes. Three focused guard tests plus fifteen outcome/decoder tests passed;
 lint, shell syntax and diff checks passed. Source 43c7ed45d05195ac536addeff9c3ff44d034f074
 is pushed; fresh native validation must pass all jobs and twenty acceptance options.
 Old failed artifacts cannot substitute. Full goal remains incomplete; no merge.
+
+## Observed trigger argument linkage prepared locally; native run still pending
+
+Current running native CI is 40612599127 at remote 43c7ed45d05195ac536addeff9c3ff44d034f074.
+Completed quality job 122567494075 passed all 830 tests; raw connected job log and
+SHA-bound proof retained. Security-lab remains running, not accepted. This source
+requires twenty acceptance options, including --process-outcomes. Re-poll the same
+run/watch session 45178; do not restart on an observation timeout.
+
+Next LOCAL source adds package_trigger_arguments.require_arguments. It recomputes
+signed-control/baseline declaration activation linkage and installed package identity,
+then requires each observed callback's exact postinst/triggered argv frame to name
+exactly the supported trigger set. Reordered names are equivalent; duplicate, empty,
+missing, additional and unknown names reject. Multi-Arch same uses qualified info
+paths. Unknown successful maintainer scripts, duplicate or missing callbacks reject.
+The guard reports bounded argument linkage only; ancestry, coverage, script bytes at
+exec, effects and all change/publication authority remain false. No script executes
+on Mac. Source reference: Debian deb-triggers(5), and Debian Policy maintainer-script
+exit-status guidance. This is necessary evidence, not callback authorization.
+
+Six new tests plus existing staging/linkage/outcome/decoder regressions: all 67
+passed locally. New module recomputed both callbacks on archived accepted 75fdfe3
+bytes; independent implementation agrees and rejects twelve altered reports. This
+is local analysis of old evidence, not fresh native twenty-one-option acceptance.
+Lint, embedded worker/helper compilation and diff checks passed. Future acceptance
+adds --trigger-arguments after --process-outcomes (TWENTY-ONE); old/current twenty
+option source must not be tested with the new requirement. No new artifact names.
+Hold the next source push until the live twenty-option run is terminal and inspected.
+Keep all current/failed evidence; full goal remains active and incomplete. No merge.
