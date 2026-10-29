@@ -44,7 +44,7 @@ def guard():
 def main():
     caps = guard()
     if (len(sys.argv) not in {2, 3} or sys.argv[1] not in
-            {'baseline', 'candidate', 'regenerated-man-cache'}
+            {'baseline', 'candidate', 'regenerated-man-cache', 'man-cache-control'}
             or (len(sys.argv) == 3 and sys.argv[2] != '--admission-only')):
         raise ValueError('Fixed snapshot role required')
     role = sys.argv[1]

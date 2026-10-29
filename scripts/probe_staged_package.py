@@ -43,6 +43,7 @@ from mano_runtime.package_man_cache import read_index, read_regenerated_index
 from mano_runtime.package_man_canonical import derive as derive_canonical_man
 from mano_runtime.package_man_regeneration import collect as collect_regenerated_man
 from mano_runtime.package_man_regeneration import compare as compare_regenerated_man
+from mano_runtime.package_man_regeneration import compare_policy_pair
 from mano_runtime.package_man_regeneration import inputs as man_regeneration_inputs
 from mano_runtime.package_postconditions import MAX_STATUS, database, database_records
 from mano_runtime.package_tree import delta as tree_delta
@@ -404,7 +405,7 @@ def payload_observation(record):
 
 
 def tree_observation(role, *, admission_only=False):
-    if role not in {'baseline', 'candidate', 'regenerated-man-cache'}:
+    if role not in {'baseline', 'candidate', 'regenerated-man-cache', 'man-cache-control'}:
         raise ValueError('Fixed snapshot role required')
     program = ('import sys;sys.path.insert(0,"/opt/mano-lab/src");'
                'from mano_runtime.package_tree_worker import main;main()')
@@ -825,6 +826,41 @@ def main():
                             'staged-man-regeneration-worker.json'}:
                 with (Path('/opt/mano-lab/evidence') / name).open('xb') as stream:
                     stream.write(data)
+        control_tree = tree_observation('man-cache-control')
+        control_fd = os.open(BASE / 'man-cache-control',
+                             os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            control_bytes, control_bundle = collect_regenerated_man(control_tree,
+                lambda path, maximum: read_regenerated_index(control_fd, path, maximum,
+                    control_tree['entries'][path]))
+        finally:
+            os.close(control_fd)
+        control_bytes['artifact'] = 'staged-man-control-bytes.json'
+        control_artifacts = {
+            'staged-man-control-tree.json': json.dumps(control_tree, sort_keys=True).encode(),
+            control_bytes['artifact']: control_bundle,
+        }
+        for name, data in control_artifacts.items():
+            with (Path('/opt/mano-lab/evidence') / name).open('xb') as stream:
+                stream.write(data)
+        regeneration_artifacts.update(control_artifacts)
+        policy_pair = compare_policy_pair(control_bundle, regeneration_bundle)
+        control_worker = json.loads((Path('/opt/mano-lab/evidence') /
+                                     'staged-man-regeneration-control.json').read_bytes())
+        control_worker['domain_drained'] = True
+        policy_pair.update(control_worker=control_worker, control_raw=control_bytes,
+                           control_fixture_unchanged=True,
+                           guard_source_sha256=sha((Path('/opt/mano-lab/evidence') /
+                               'staged-man-cache-guard.c').read_bytes()),
+                           guard_binary_sha256=sha((Path('/opt/mano-lab/evidence') /
+                               'staged-man-cache-guard').read_bytes()))
+        policy_data = json.dumps(policy_pair, sort_keys=True).encode()
+        regeneration_artifacts['staged-man-input-policy.json'] = policy_data
+        with (Path('/opt/mano-lab/evidence') / 'staged-man-input-policy.json').open('xb') as stream:
+            stream.write(policy_data)
+        for name in ('staged-man-cache-guard.c', 'staged-man-cache-guard',
+                     'staged-man-regeneration-control.json'):
+            regeneration_artifacts[name] = (Path('/opt/mano-lab/evidence') / name).read_bytes()
         regeneration_comparison = compare_regenerated_man(regeneration_bundle, {
             path: man_cache_artifacts[rows['candidate']['artifact']]
             for path, rows in man_cache_bytes['databases'].items()
@@ -967,6 +1003,7 @@ def main():
                 man_cache_bytes=man_cache_bytes,
                 man_cache_decoding=man_cache_decoding,
                 man_cache_canonical=canonical_man,
+                man_cache_input_policy=policy_pair,
                 man_cache_regeneration=dict(inputs=regeneration_inputs,
                     worker=regeneration_worker, raw=regeneration_bytes,
                     comparison=regeneration_comparison,

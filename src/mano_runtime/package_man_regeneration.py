@@ -117,3 +117,58 @@ def compare(raw_bundle, candidate_files):
     if len(canonical(result)) > MAX_SERIALIZED:
         raise ValueError('Regeneration comparison output budget')
     return result
+
+
+def compare_policy_pair(control_bundle, restricted_bundle):
+    """Require every logical index to survive confinement, including unchanged ones.
+
+    Physical allocation, unused blocks and timestamps may differ between runs.
+    Both complete active-record maps must agree; neither run gains authority.
+    """
+    total_bytes, total_records = 0, 0
+
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            if key in result:
+                raise ValueError('Duplicate cache bundle path')
+            result[key] = value
+        return result
+
+    def load(bundle):
+        nonlocal total_bytes, total_records
+        if type(bundle) is not bytes or len(bundle) > MAX_SERIALIZED:
+            raise ValueError('Bounded cache policy comparison required')
+        files = json.loads(bundle, object_pairs_hook=pairs)
+        if type(files) is not dict or not 1 <= len(files) <= MAX_DATABASES:
+            raise ValueError('Bounded complete cache map required')
+        result = {}
+        for path, encoded in sorted(files.items()):
+            if (type(path) is not str or not index_path('var/cache/man/' + path)
+                    or type(encoded) is not str
+                    or len(encoded) > 4 * (MAX_DATABASE_BYTES + 2) // 3):
+                raise ValueError('Fixed cache path and bounded bytes required')
+            raw = base64.b64decode(encoded, validate=True)
+            if len(raw) > MAX_DATABASE_BYTES:
+                raise ValueError('Cache database byte budget')
+            total_bytes += len(raw)
+            if total_bytes > 2 * MAX_TOTAL_BYTES:
+                raise ValueError('Cache pair aggregate byte budget')
+            decoded = decode(raw)
+            total_records += decoded['decoded_records']
+            if total_records > 2 * MAX_TOTAL_RECORDS:
+                raise ValueError('Cache pair aggregate record budget')
+            result[path] = {row['key_base64']: row['value_base64']
+                            for row in decoded['records']}
+        return result
+
+    control, restricted = load(control_bundle), load(restricted_bundle)
+    if control != restricted:
+        raise ValueError('Input restrictions changed the complete logical cache output')
+    return dict(profile='man-cache-input-policy-pair-v1',
+                control_sha256=hashlib.sha256(control_bundle).hexdigest(),
+                restricted_sha256=hashlib.sha256(restricted_bundle).hexdigest(),
+                databases=len(control), records=sum(map(len, control.values())),
+                all_index_paths_equal=True, all_logical_records_equal=True,
+                cache_sources_verified=False, generated_state_validated=False,
+                changes_authorized=False, publication_authorized=False)

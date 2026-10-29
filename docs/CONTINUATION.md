@@ -1,9 +1,33 @@
 # mano-OS continuation — current state and full scope
 
-Updated 2026-10-28. Full original v2.1 phases 0–7 remain ACTIVE/incomplete;
+Updated 2026-10-29. Full original v2.1 phases 0–7 remain ACTIVE/incomplete;
 Phase 8 is optional. Frozen requirements: docs/spec-v2.1.md, SHA256
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 Never redefine completion around the prototype/CI evidence below.
+
+## Prepared paired input-policy experiment — native verification pending
+
+The new fixed CI-only `native/mano_man_cache_guard.c` requires UID 6/GID 12,
+empty groups, NNP and zero capability sets. Landlock ABI 5+ limits readable
+inputs and writable cache/tmp trees; seccomp denies privilege/namespace changes
+and network socket families. It reports positive-before/negative-after file and
+temporary-executable controls, plus inherited restrictions after child exec.
+The existing general task guard and production package executor are unchanged.
+
+The controller now runs an unrestricted comparison and the restricted generator
+against the same immutable inputs in separate empty 16 MiB caches. Both process
+domains must drain. A public test-owned control file must retain its bytes and
+metadata. Both complete logical index maps must match; the control is never a
+fallback or publication authority. Source, binary, both raw worker reports,
+both tree/byte witnesses and the policy-pair report are retained and hashed.
+
+Local checks: 73 focused tests, 72 passed and one Linux-native-only skip;
+repository lint and diff whitespace checks passed. Native C compilation and
+successful kernel enforcement have NOT been tested on this Mac. Independent
+acceptance adds explicit option 27, `--man-input-policy`, depending on all prior
+26 options. The new checker and its CLI wiring still need native artifacts and
+negative self-checks. No new native run has been accepted. Last accepted evidence
+below remains the previous source, not proof for these new changes.
 
 ## Current checkout and accepted native evidence
 

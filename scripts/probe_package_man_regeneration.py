@@ -8,6 +8,7 @@ import ast
 import base64
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -28,15 +29,23 @@ state=dict(uid=list(os.getresuid()),gid=list(os.getresgid()),groups=sorted(os.ge
 assert state['uid']==[6]*3 and state['gid']==[12]*3
 assert 0 not in state['groups'] and set(state['groups'])<={12}
 assert state['nnp']==1 and set(state['caps'].values())=={0}
-assert len(sys.argv)==2 and len(sys.argv[1])==64
+assert len(sys.argv)==3 and len(sys.argv[1])==64 and sys.argv[2] in {'control','restricted'}
 config=Path('/etc/manpath.config').read_bytes()
 assert len(config)<=65536 and hashlib.sha256(config).hexdigest()==sys.argv[1]
 assert list(Path('/var/cache/man').iterdir())==[]
 env={'PATH':'/usr/sbin:/usr/bin:/bin','LANG':'C.UTF-8','TZ':'UTC0',
      'PYTHONDONTWRITEBYTECODE':'1','HOME':'/nonexistent'}
-result=run_observed(['/usr/bin/mandb','--create','--quiet','/usr/share/man'],env,60)
+mode=sys.argv[2]
+command=(['/run/man-cache-guard'] if mode=='restricted' else
+         ['/usr/bin/mandb','--create','--quiet','/usr/share/man'])
+result=run_observed(command,env,60)
+input_guard=None
+if mode=='restricted' and result['returncode']==0 and result['capture_complete']:
+    header,separator,_=base64.b64decode(result['stdout']['base64']).partition(b'\n')
+    assert separator and len(header)<=4096
+    input_guard=json.loads(header)
 print(json.dumps(dict(state=state,config_sha256=hashlib.sha256(config).hexdigest(),
-    initial_cache_empty=True,result=result)))
+    initial_cache_empty=True,mode=mode,input_guard=input_guard,result=result)))
 '''
 
 
@@ -72,20 +81,24 @@ def config_profile(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
-def sandbox(base, state_masks, empty, config_sha256):
-    if re.fullmatch('[a-f0-9]{64}', config_sha256) is None:
+def sandbox(base, state_masks, empty, config_sha256, *, mode='restricted'):
+    if re.fullmatch('[a-f0-9]{64}', config_sha256) is None or mode not in {'control', 'restricted'}:
         raise ValueError('Configuration digest required')
     return ['/usr/bin/bwrap', '--die-with-parent', '--new-session', '--unshare-pid',
             '--unshare-net', '--unshare-ipc', '--unshare-uts', '--unshare-cgroup',
             '--ro-bind', str(base / 'baseline'), '/',
             '--ro-bind', str(base / 'candidate/usr/share/man'), '/usr/share/man',
-            '--bind', str(base / 'regenerated-man-cache'), '/var/cache/man',
+            '--bind', str(base / ('man-cache-control' if mode == 'control'
+                                  else 'regenerated-man-cache')), '/var/cache/man',
             '--proc', '/proc', '--dev', '/dev',
-            '--tmpfs', '/run', '--tmpfs', '/tmp', '--tmpfs', '/home', '--tmpfs', '/root',
+            '--tmpfs', '/run', '--perms', '1777', '--tmpfs', '/tmp',
+            '--tmpfs', '/home', '--tmpfs', '/root',
             '--tmpfs', '/opt', '--tmpfs', '/mnt', '--tmpfs', '/media', '--tmpfs', '/srv',
             *[arg for path in state_masks for arg in ('--tmpfs', path)],
             '--tmpfs', '/.snapshots',
             '--ro-bind', str(base / 'man-regeneration.py'), '/run/man-regeneration.py',
+            '--ro-bind', str(base / 'man-cache-guard'), '/run/man-cache-guard',
+            '--bind', str(base / 'man-cache-control-file'), '/run/man-cache-control',
             '--ro-bind', str(empty), '/etc/shadow', '--ro-bind', str(empty), '/etc/gshadow',
             '--clearenv', '--setenv', 'PATH', '/usr/sbin:/usr/bin:/bin',
             '--setenv', 'LANG', 'C.UTF-8', '--setenv', 'TZ', 'UTC0',
@@ -94,10 +107,10 @@ def sandbox(base, state_masks, empty, config_sha256):
             '--cap-add', 'CAP_SETPCAP', '--chdir', '/',
             '/usr/bin/setpriv', '--no-new-privs', '--reuid', '6', '--regid', '12',
             '--clear-groups', '--bounding-set=-all', '--inh-caps=-all', '--ambient-caps=-all',
-            '/usr/bin/python3', '-I', '-B', '/run/man-regeneration.py', config_sha256]
+            '/usr/bin/python3', '-I', '-B', '/run/man-regeneration.py', config_sha256, mode]
 
 
-def validate(row, host, config_sha256):
+def validate(row, host, config_sha256, *, require_input_guard=False):
     state = row['state']
     for key in ('uid', 'gid', 'groups'):
         if type(state[key]) is not list or any(type(v) is not int for v in state[key]):
@@ -126,14 +139,41 @@ def validate(row, host, config_sha256):
         if (len(raw) > 65536 or type(field['bytes']) is not int or field['bytes'] != len(raw)
                 or field['sha256'] != hashlib.sha256(raw).hexdigest()):
             raise ValueError('Exact regeneration diagnostic bytes/hash required')
+    if require_input_guard:
+        require_guard(row)
 
 
-def unit_command():
+def require_guard(row):
+    expected = {'groups_empty', 'nnp', 'all_capability_sets_zero',
+        'control_read_before_allowed', 'control_write_before_allowed',
+        'control_read_denied', 'control_write_denied', 'tmp_exec_before_allowed',
+        'tmp_exec_denied', 'cache_write_allowed', 'namespace_change_denied',
+        'identity_change_denied', 'child_exec_inheritance_verified', 'seccomp_enforced'}
+    guard = row['input_guard']
+    if (row['mode'] != 'restricted' or type(guard) is not dict
+            or set(guard) != expected | {'profile', 'landlock_abi', 'uid', 'gid'}
+            or guard['profile'] != 'man-cache-landlock-seccomp-v1'
+            or type(guard['landlock_abi']) is not int or not 5 <= guard['landlock_abi'] <= 4096
+            or type(guard['uid']) is not int or guard['uid'] != 6
+            or type(guard['gid']) is not int or guard['gid'] != 12
+            or any(guard[key] is not True for key in expected)):
+        raise ValueError('Exact native input guard and inherited denial controls required')
+    raw = base64.b64decode(row['result']['stdout']['base64'], validate=True)
+    first, separator, _ = raw.partition(b'\n')
+    if not separator or len(first) > 4096 or json.loads(first) != guard:
+        raise ValueError('Guard report must bind the captured command bytes')
+
+
+def unit_command(*, mode='restricted'):
     # NET_ADMIN is needed only to initialize loopback in the private network
     # namespace. Bubblewrap drops it before setpriv; the man guard requires
     # every capability set, including the bounding set, to be exactly zero.
+    if mode not in {'control', 'restricted'}:
+        raise ValueError('Fixed man-cache unit mode required')
+    unit = ('mano-man-regeneration-control-ci.service' if mode == 'control'
+            else 'mano-man-regeneration-ci.service')
     return ['/usr/bin/systemd-run', '--quiet', '--pipe', '--wait', '--collect',
-            '--unit=mano-man-regeneration-ci.service', '--slice=mano-package.slice',
+            '--unit='+unit, '--slice=mano-package.slice',
             '--property=NoNewPrivileges=yes',
             '--property=CapabilityBoundingSet=CAP_SYS_ADMIN CAP_SYS_CHROOT CAP_SETUID '
             'CAP_SETGID CAP_SETPCAP CAP_DAC_READ_SEARCH CAP_NET_ADMIN',
@@ -173,44 +213,76 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
     with source.open('xb') as stream:
         stream.write(data)
     source.chmod(0o444)  # Fixed source is readable through the child's RO bind.
-    cache = base / 'regenerated-man-cache'
-    cache.mkdir(mode=0o700)
-    # This mount exists only in the disposable VM. Its 16 MiB ceiling also
-    # bounds aggregate cache writes, including a malicious manual-parser input.
-    run(['/usr/bin/mount', '-t', 'tmpfs', '-o',
-         'size=16777216,nosuid,nodev,noexec,mode=0755,uid=6,gid=12',
-         'mano-man-cache-ci', str(cache)])
-    run(['/usr/bin/mount', '--make-private', str(cache)])
-    unit = 'mano-man-regeneration-ci.service'
-    argv = unit_command()
     evidence = Path('/opt/mano-lab/evidence')
+    native_source = Path('/opt/mano-lab/native/mano_man_cache_guard.c').read_bytes()
+    binary = base / 'man-cache-guard'
+    run(['/usr/bin/cc', '-std=c11', '-O2', '-Wall', '-Wextra', '-Werror',
+         '-fstack-protector-strong', '-D_FORTIFY_SOURCE=2',
+         '/opt/mano-lab/native/mano_man_cache_guard.c', '-lseccomp',
+         '-Wl,-z,relro,-z,now', '-o', str(binary)])
+    binary.chmod(0o555)
     for name, content in (('staged-man-regeneration-program.py', data),
-                          ('staged-man-regeneration-config', config)):
+                          ('staged-man-regeneration-config', config),
+                          ('staged-man-cache-guard.c', native_source),
+                          ('staged-man-cache-guard', binary.read_bytes())):
         with (evidence / name).open('xb') as stream:
             stream.write(content)
-    try:
-        raw = run(argv + sandbox(base, state_masks, empty, digest), timeout=80)
-    except subprocess.CalledProcessError as error:
-        with (evidence / 'staged-man-regeneration-launch-failure.json').open('x') as stream:
-            json.dump(launch_failure(error), stream, sort_keys=True)
-        raise
-    # Save raw output before decoding/checking. Failure evidence is never success.
-    with (evidence / 'staged-man-regeneration-worker.json').open('xb') as stream:
-        stream.write(raw)
-    group = Path('/sys/fs/cgroup/mano.slice/mano-package.slice') / unit
-    deadline = time.monotonic() + 5
-    while True:
+    control = base / 'man-cache-control-file'
+    with control.open('xb') as stream:
+        stream.write(b'mano public disposable cache-policy control\n')
+    os.chown(control, 6, 12)
+    control.chmod(0o600)
+
+    def control_identity():
+        info = control.lstat()
+        return (control.read_bytes(), info.st_dev, info.st_ino, info.st_mode,
+                info.st_uid, info.st_gid, info.st_nlink, info.st_size,
+                info.st_mtime_ns, info.st_ctime_ns)
+
+    original = control_identity()
+    observations = {}
+    for mode in ('control', 'restricted'):
+        role = 'man-cache-control' if mode == 'control' else 'regenerated-man-cache'
+        cache = base / role
+        cache.mkdir(mode=0o700)
+        # Separate fresh caches; the control is never a publication fallback.
+        run(['/usr/bin/mount', '-t', 'tmpfs', '-o',
+             'size=16777216,nosuid,nodev,noexec,mode=0755,uid=6,gid=12',
+             'mano-man-cache-ci', str(cache)])
+        run(['/usr/bin/mount', '--make-private', str(cache)])
+        unit = ('mano-man-regeneration-control-ci.service' if mode == 'control'
+                else 'mano-man-regeneration-ci.service')
+        stem = ('staged-man-regeneration-control' if mode == 'control'
+                else 'staged-man-regeneration-worker')
         try:
-            events = dict(line.split() for line in
-                          (group / 'cgroup.events').read_text().splitlines())
-        except FileNotFoundError:
-            break
-        if events.get('populated') == '0':
-            break
-        if time.monotonic() >= deadline:
-            raise ValueError('Fresh cache process domain did not drain')
-        time.sleep(.02)
-    row = json.loads(raw)
-    row['domain_drained'] = True
-    validate(row, host, digest)
+            raw = run(unit_command(mode=mode) +
+                      sandbox(base, state_masks, empty, digest, mode=mode), timeout=80)
+        except subprocess.CalledProcessError as error:
+            with (evidence / (stem + '-launch-failure.json')).open('x') as stream:
+                json.dump(launch_failure(error), stream, sort_keys=True)
+            raise
+        # Preserve captured worker bytes before parsing or asserting success.
+        with (evidence / (stem + '.json')).open('xb') as stream:
+            stream.write(raw)
+        group = Path('/sys/fs/cgroup/mano.slice/mano-package.slice') / unit
+        deadline = time.monotonic() + 5
+        while True:
+            try:
+                events = dict(line.split() for line in
+                              (group / 'cgroup.events').read_text().splitlines())
+            except FileNotFoundError:
+                break
+            if events.get('populated') == '0':
+                break
+            if time.monotonic() >= deadline:
+                raise ValueError('Fresh cache process domain did not drain')
+            time.sleep(.02)
+        row = json.loads(raw)
+        row['domain_drained'] = True
+        validate(row, host, digest, require_input_guard=mode == 'restricted')
+        if (row['mode'] != mode or (mode == 'control' and row['input_guard'] is not None)
+                or control_identity() != original):
+            raise ValueError('Fixed comparison mode and unchanged control fixture required')
+        observations[mode] = (raw, row)
+    raw, row = observations['restricted']
     return data, config, raw, row

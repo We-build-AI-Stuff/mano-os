@@ -3,6 +3,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import unittest
@@ -43,6 +44,18 @@ def tree(raw):
 
 
 class ManRegenerationTests(unittest.TestCase):
+    @unittest.skipUnless(sys.platform == 'linux' and
+                         Path('/tmp/mano-man-cache-guard').is_file(),
+                         'Linux CI compiled native guard required')
+    def test_native_entrypoint_refuses_other_users_and_arbitrary_commands(self):
+        self.assertNotEqual(os.geteuid(), 0)
+        self.assertNotEqual(os.geteuid(), 6)
+        for args in ([], ['--probe-child'], ['/usr/bin/true'], ['--probe-child', 'extra']):
+            result = subprocess.run(['/tmp/mano-man-cache-guard', *args],
+                                    capture_output=True, timeout=5, check=False)
+            self.assertEqual(result.returncode, 125)
+            self.assertEqual(result.stdout, b'')
+
     def test_config_mapping_rejects_nested_duplicate_missing_or_ambiguous_root(self):
         raw = b'# baseline\nMANDB_MAP /usr/share/man /var/cache/man\n'
         self.assertEqual(probe.config_profile(raw), hashlib.sha256(raw).hexdigest())
@@ -65,7 +78,8 @@ class ManRegenerationTests(unittest.TestCase):
         self.assertIn(('--ro-bind', '/private/baseline', '/'), binds)
         self.assertIn(('--ro-bind', '/private/candidate/usr/share/man', '/usr/share/man'), binds)
         self.assertEqual([row for row in binds if row[0] == '--bind'],
-                         [('--bind', '/private/regenerated-man-cache', '/var/cache/man')])
+                         [('--bind', '/private/regenerated-man-cache', '/var/cache/man'),
+                          ('--bind', '/private/man-cache-control-file', '/run/man-cache-control')])
         self.assertIn('--cap-drop', args)
         self.assertEqual(args[args.index('--cap-drop')+1], 'ALL')
         self.assertIn('--clear-groups', args)
@@ -75,6 +89,66 @@ class ManRegenerationTests(unittest.TestCase):
         self.assertIn('--no-new-privs', args)
         with self.assertRaises(ValueError):
             probe.sandbox(Path('/private'), [], Path('/empty'), '../config')
+
+    def test_control_mode_has_separate_cache_and_fixed_unit(self):
+        args = probe.sandbox(Path('/private'), [], Path('/empty'), 'a'*64, mode='control')
+        self.assertIn('/private/man-cache-control', args)
+        self.assertNotIn('/private/regenerated-man-cache', args)
+        self.assertEqual(args[-1], 'control')
+        self.assertIn('--unit=mano-man-regeneration-control-ci.service',
+                      probe.unit_command(mode='control'))
+        for mode in ('arbitrary', '../restricted', None):
+            with self.assertRaises(ValueError):
+                probe.unit_command(mode=mode)
+            with self.assertRaises(ValueError):
+                probe.sandbox(Path('/private'), [], Path('/empty'), 'a'*64, mode=mode)
+
+    def test_native_guard_claims_must_bind_captured_bytes_and_all_controls(self):
+        host, row = worker()
+        controls = ('groups_empty nnp all_capability_sets_zero control_read_before_allowed '
+                    'control_write_before_allowed control_read_denied control_write_denied '
+                    'tmp_exec_before_allowed tmp_exec_denied cache_write_allowed '
+                    'namespace_change_denied identity_change_denied '
+                    'child_exec_inheritance_verified seccomp_enforced').split()
+        guard = dict.fromkeys(controls, True)
+        guard.update(profile='man-cache-landlock-seccomp-v1', landlock_abi=5, uid=6, gid=12)
+        row.update(mode='restricted', input_guard=guard)
+        row['result']['stdout'] = stream(json.dumps(guard).encode()+b'\n')
+        probe.validate(row, host, 'a'*64, require_input_guard=True)
+        for key in controls:
+            bad = copy.deepcopy(row)
+            bad['input_guard'][key] = False
+            bad['result']['stdout'] = stream(json.dumps(bad['input_guard']).encode()+b'\n')
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                probe.validate(bad, host, 'a'*64, require_input_guard=True)
+        for key, value in (('landlock_abi', True), ('landlock_abi', 4), ('uid', True),
+                           ('gid', 0), ('profile', 'other'), ('extra', True)):
+            bad = copy.deepcopy(row)
+            bad['input_guard'][key] = value
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                probe.validate(bad, host, 'a'*64, require_input_guard=True)
+        row['result']['stdout'] = stream(b'{}\n')
+        with self.assertRaises(ValueError):
+            probe.validate(row, host, 'a'*64, require_input_guard=True)
+
+    def test_policy_pair_compares_every_index_and_value_and_rejects_duplicates(self):
+        raw = bytes(database(((b'key', b'value'),)))
+        encoded = base64.b64encode(raw).decode()
+        bundle = json.dumps({'index.db': encoded, 'de/index.db': encoded}).encode()
+        result = regen.compare_policy_pair(bundle, bundle)
+        self.assertEqual(result['databases'], 2)
+        self.assertEqual(result['records'], 2)
+        self.assertFalse(result['publication_authorized'])
+        other = base64.b64encode(bytes(database(((b'key', b'changed'),)))).decode()
+        for bad in (json.dumps({'index.db': encoded}).encode(),
+                    json.dumps({'index.db': encoded, 'de/index.db': other}).encode(),
+                    b'{"index.db":"AA==","index.db":"AA=="}', b'[]', b'{}',
+                    b'{"../index.db":"AA=="}', b'{"index.db":"???"}'):
+            with self.subTest(raw=bad[:80]), self.assertRaises(ValueError):
+                regen.compare_policy_pair(bundle, bad)
+        for limit in ('MAX_DATABASES', 'MAX_TOTAL_BYTES', 'MAX_TOTAL_RECORDS', 'MAX_SERIALIZED'):
+            with patch.object(regen, limit, 0), self.assertRaises(ValueError):
+                regen.compare_policy_pair(bundle, bundle)
 
     def test_loopback_setup_capability_never_reaches_the_man_process(self):
         unit = probe.unit_command()
