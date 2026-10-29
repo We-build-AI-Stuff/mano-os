@@ -871,6 +871,11 @@ def main():
             with (Path('/opt/mano-lab/evidence') / name).open('xb') as stream:
                 stream.write(data)
         regeneration_artifacts.update(canonical_artifacts)
+        from probe_package_man_source_bytes import capture_sources
+        source_bytes, source_artifacts = capture_sources(BASE,
+            canonical_artifacts['staged-man-canonical-bytes.json'], baseline_tree, candidate_tree,
+            state_masks, empty, regeneration_inputs['config_sha256'], run)
+        regeneration_artifacts.update(source_artifacts)
         for role, observed in (('baseline', baseline_tree), ('candidate', candidate_tree)):
             current = tree_observation(role)
             if (current['manifest_sha256'] != observed['manifest_sha256']
@@ -1004,6 +1009,7 @@ def main():
                 man_cache_decoding=man_cache_decoding,
                 man_cache_canonical=canonical_man,
                 man_cache_input_policy=policy_pair,
+                man_source_bytes=source_bytes,
                 man_cache_regeneration=dict(inputs=regeneration_inputs,
                     worker=regeneration_worker, raw=regeneration_bytes,
                     comparison=regeneration_comparison,

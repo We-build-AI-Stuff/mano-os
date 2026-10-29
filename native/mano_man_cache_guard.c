@@ -70,7 +70,7 @@ static void rule(int ruleset, const char *path, uint64_t access, int directory) 
     close(fd);
 }
 
-static int restrict_files(void) {
+static int restrict_files(int source_bytes) {
     int abi = syscall(SYS_landlock_create_ruleset, NULL, 0, LANDLOCK_CREATE_RULESET_VERSION);
     if (abi < 5) { errno = ENOTSUP; fail("man guard requires Landlock ABI 5"); }
     uint64_t read = LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_READ_DIR;
@@ -98,6 +98,10 @@ static int restrict_files(void) {
         rule(fd, files[n], LANDLOCK_ACCESS_FS_READ_FILE, 0);
     rule(fd, "/dev/null", LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_WRITE_FILE, 0);
     rule(fd, SELF, LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_EXECUTE, 0);
+    if (source_bytes) {
+        rule(fd, "/run/man-source-reader.py", LANDLOCK_ACCESS_FS_READ_FILE, 0);
+        rule(fd, "/run/man-source-paths.json", LANDLOCK_ACCESS_FS_READ_FILE, 0);
+    }
     if (syscall(SYS_landlock_restrict_self, fd, 0)) fail("man guard Landlock enforcement");
     close(fd);
     return abi;
@@ -190,11 +194,13 @@ static void wait_ok(pid_t pid) {
 }
 
 int main(int argc, char **argv) {
-    if (argc != 1 && !(argc == 2 && !strcmp(argv[1], "--probe-child")))
+    int source_bytes = argc == 2 && !strcmp(argv[1], "--source-bytes");
+    int probe_child = argc == 2 && !strcmp(argv[1], "--probe-child");
+    if (argc != 1 && !source_bytes && !probe_child)
         { errno = EINVAL; fail("man guard fixed entrypoint"); }
     identity();
     if (syscall(SYS_close_range, 3U, ~0U, 0)) fail("man guard FD closure");
-    if (argc == 2) {
+    if (probe_child) {
         denied_open(O_RDONLY);
         denied_open(O_WRONLY);
         syscall_checks();
@@ -207,7 +213,7 @@ int main(int argc, char **argv) {
     pid_t before = fork();
     if (before == 0) { execl(EXEC_PROBE, EXEC_PROBE, (char *)NULL); _exit(125); }
     wait_ok(before); /* Demonstrates that mount/DAC alone previously allowed this exec. */
-    int abi = restrict_files();
+    int abi = restrict_files(source_bytes);
     restrict_syscalls();
     identity();
     denied_open(O_RDONLY);
@@ -224,15 +230,21 @@ int main(int argc, char **argv) {
     pid_t child = fork();
     if (child == 0) { execl(SELF, SELF, "--probe-child", (char *)NULL); _exit(125); }
     wait_ok(child);
-    printf("{\"profile\":\"man-cache-landlock-seccomp-v1\",\"landlock_abi\":%d,"
+    printf("{\"profile\":\"man-cache-landlock-seccomp-v2\",\"role\":\"%s\",\"landlock_abi\":%d,"
            "\"uid\":6,\"gid\":12,\"groups_empty\":true,\"nnp\":true,"
            "\"all_capability_sets_zero\":true,\"control_read_before_allowed\":true,"
            "\"control_write_before_allowed\":true,\"control_read_denied\":true,"
            "\"control_write_denied\":true,\"tmp_exec_before_allowed\":true,"
            "\"tmp_exec_denied\":true,\"cache_write_allowed\":true,"
            "\"namespace_change_denied\":true,\"identity_change_denied\":true,"
-           "\"child_exec_inheritance_verified\":true,\"seccomp_enforced\":true}\n", abi);
+           "\"child_exec_inheritance_verified\":true,\"seccomp_enforced\":true}\n",
+           source_bytes ? "source-bytes" : "mandb", abi);
     if (fflush(stdout)) fail("man guard report flush");
+    if (source_bytes) {
+        execl("/usr/bin/python3", "/usr/bin/python3", "-I", "-B",
+              "/run/man-source-reader.py", (char *)NULL);
+        fail("man guard fixed source reader exec");
+    }
     execl("/usr/bin/mandb", "/usr/bin/mandb", "--create", "--quiet", "/usr/share/man", (char *)NULL);
     fail("man guard fixed mandb exec");
 }

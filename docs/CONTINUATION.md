@@ -8,31 +8,66 @@ Do not redefine completion around a prototype, CI slice or the checks below.
 ## Repository and latest accepted source
 
 We-build-AI-Stuff/mano-os; PR #134; branch feat/approved-package-apply.
-Accepted head ab85fb7a7bcd9a3f2cd6d58489967091a98522db, base
+Accepted head 3a03c7134f586d0f0274c52f4b9407e46b588514, base
 65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Tested merge
-c0966a68bd8fce3066b571f54f98f3d15d90c6ea has exactly those parents;
-sixteen runtime/probe/native/workflow source files match the head.
+f2df245fd895ffab84024935d63088c24e3b33fa has exactly those parents;
+seventeen runtime/probe/native/workflow source files match the head.
 
-CI run 40802181056 ALL THREE SUCCESS:
-- quality 123212611617: 906 tests, one Mac-specific skip; strict native guard
+CI run 40805180421 ALL THREE SUCCESS:
+- quality 123222302366: 923 tests, one Mac-specific skip; strict native guard
   compilation and wrong-user/arbitrary-command refusals passed.
-- security-lab 123212611801; merge-gate 123220553066.
-- Artifact 12867512215: 24,887,122 bytes, SHA256
-  5fe4de70f6e39d700b051b549bd2475e344a20fdbf38c6a8cbc5ad9d1e83dee5.
-- Fixed observer exec 75723 COMPLETED ZERO. Do not restart it. All 27 staging
+- security-lab 123222302653; merge-gate 123230627602.
+- Artifact 12869130930: 25,335,017 bytes, SHA256
+  4055f6966c70653a91f96cddc71e841f145ca16ad6cfc302428d7a089e0ca3c1.
+- Fixed observer exec 93059 COMPLETED ZERO. Do not restart it. All 28 staging
   gates plus the prior 54-hash/45-flag/PAM/Stop/recovery/package/ELF chain passed.
 - Six fresh UI originals and eight crops/contact sheet ACTUALLY viewed; 15-PNG
-  receipt: task outputs/acceptance-pr134-man-input-policy/inspection.json.
+  receipt: task outputs/acceptance-pr134-man-source-metadata/inspection.json.
   Full 900/120 values are legible; pending/effective numeric pixels identical.
   Headless only; physical input provenance remains null.
 
-Exact proof/logs in task outputs: pr134-ab85fb7-native27-proof.json,
-pr134-ab85fb7-{quality,security}-completed-job.log, quality-proof.json,
-pr134-man-input-policy-{security-acceptance,continuation}.log and artifact
+Exact proof/logs in task outputs: pr134-3a03c71-native28-proof.json,
+pr134-3a03c71-{quality,security}-completed-job.log, quality-proof.json,
+pr134-man-source-metadata-{security-acceptance,continuation}.log and artifact
 metadata/ZIP. Prior native26 head3729ef2/run40700950648 is historical evidence.
 All older detailed continuation files are archived under task outputs and Git.
 
-## What native27 actually demonstrated
+## Next source-byte capture prepared locally, native29 unverified
+
+The new package_man_source_bytes module prepares an exact terminal-file manifest
+from recomputed cache/source chains, then a fixed Linux UID6/GID12/empty-groups
+worker reads opaque bytes through descriptor-relative nofollow paths. It checks
+seven stat fields before/after and content hashes. It does not decompress,
+interpret or execute manual bytes. Manifest is Root-owned mode0444/nlink1;
+source root/parents must be trusted real directories. FIFO/symlink escapes and
+changed metadata/content are rejected. Bounds:8192 files,1MiB/file,16MiB total,
+4MiB manifest and24MiB output. Native27 metadata yields3198 terminal files,
+11,596,108 requested bytes and a1,047,431-byte manifest; no source files were
+read on Mac. A second implementation reconstructs that manifest exactly.
+
+Cache guard profilev2 adds only the fixed --source-bytes entrypoint and a role
+field (mandb or source-bytes). Only that role gains read access to two fixed
+Root-owned /run files; arbitrary commands/paths are not accepted. Normal cache
+controls and the existing task/production guards remain unchanged. Source role
+uses its own70s/256MiB/32-task domain and fresh private16MiB cache, preventing
+control probes from changing the retained regenerated-cache tree. Program,
+manifest and raw guard+capture frame are retained before validation, including
+bounded failure stdout/stderr. Staging rechecks inputs afterwards as before.
+
+Independent gate29 --man-source-bytes requires all earlier28 gates and adds
+three fixed artifacts (total58). It recomputes the manifest from raw cache and
+observed layers, checks exact Git program/native-source provenance, fixed-role
+native controls, exact hashes/counts/canonical base64 and nonauthority flags.
+Guard schema v1/v2 is selected by tested Git C source, never by worker claims;
+the old native27 v1 artifact was reaccepted. All28 omitted-dependency cases
+reject; the gate28 path is unchanged. Two capture validators agree and reject
+12 synthetic altered captures. Local focused104 tests:103 pass/one Linux skip;
+Python repo lint/diff pass. C profilev2 compilation and actual source-reader
+execution have NOT been tested; both must run only in fresh disposable CI.
+The reader reports stat-fields verification, not complete xattr metadata proof.
+All includes/alias/description/filter semantics and publication remain false.
+
+## Guard and cache controls carried through native28
 
 Fixed cache guard requires UID6/GID12, empty groups, NNP1 and all five capability
 sets ZERO. Debian kernel reported Landlock ABI6. Positive-before/denied-after
@@ -56,10 +91,10 @@ Existing general task guard and production package executor are unchanged.
 Production securebits43 UID-drop compatibility is still unfinished; CI profile11
 is separate evidence. Native27 does not fix that production gap.
 
-## Prepared source-metadata integration, not yet native28 accepted
+## Source-metadata integration accepted in native28
 
-Feature commits 6b3b507,263d6f1,d7e2527 follow accepted head ab85fb7. Before the
-next push refresh base/reviews/disk; next exact-head CI and gate28 are required.
+Feature commits 6b3b507,263d6f1,d7e2527 are included in accepted head 3a03c71.
+Native28 emitted all five artifacts; independent acceptance and UI receipt passed.
 
 Canonical derivation now takes baseline_tree and emits two additional artifacts:
 staged-man-source-links.json and staged-man-virtual-targets.json. The source
@@ -93,7 +128,8 @@ and pr134-man-runtime-source-links-native26-*selfcheck.json.
 New explicit --man-source-metadata is gate28 and requires all earlier 27 gates.
 All 27 omitted dependencies reject. The gate27 path retains its original
 canonical checker. Independent checker: task outputs/accept_man_source_metadata.py.
-Next staging artifact count55. Local/data-only results are not fresh native28 CI.
+Native28 staging artifact count55. The fresh native artifacts now corroborate
+the local data-only checks; source semantics and publication remain unverified.
 
 ## Current implementation boundaries and rejected effects
 
@@ -125,7 +161,7 @@ those failed outcomes. All old logs/artifacts are retained.
 
 ## All acceptance dependencies
 
-Native27 uses the first27; new source requires ALL28:
+Native28 uses the first28; new source requires ALL29:
 --payload-closure --control-metadata --file-lists --database-files
 --change-accounting --log-observation --log-decoding --log-scope
 --trigger-declarations --trigger-linkage --log-sequence --log-time-window
@@ -133,7 +169,7 @@ Native27 uses the first27; new source requires ALL28:
 --command-diagnostics --uid-drop-comparison --compatible-stage
 --process-outcomes --trigger-arguments --cache-tag-metadata
 --man-cache-bytes --gdbm-decoding --man-regeneration --man-canonical
---man-input-policy --man-source-metadata
+--man-input-policy --man-source-metadata --man-source-bytes
 
 Use task outputs/run_pr134_acceptance.py from repository cwd. Each option has
 an explicit artifact set; never promote an old schema to stronger proof.

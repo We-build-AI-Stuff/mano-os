@@ -144,24 +144,30 @@ def validate(row, host, config_sha256, *, require_input_guard=False):
 
 
 def require_guard(row):
+    if row['mode'] != 'restricted':
+        raise ValueError('Restricted worker mode required')
+    guard = row['input_guard']
+    validate_native_guard(guard, role='mandb')
+    raw = base64.b64decode(row['result']['stdout']['base64'], validate=True)
+    first, separator, _ = raw.partition(b'\n')
+    if not separator or len(first) > 4096 or json.loads(first) != guard:
+        raise ValueError('Guard report must bind the captured command bytes')
+
+
+def validate_native_guard(guard, *, role):
     expected = {'groups_empty', 'nnp', 'all_capability_sets_zero',
         'control_read_before_allowed', 'control_write_before_allowed',
         'control_read_denied', 'control_write_denied', 'tmp_exec_before_allowed',
         'tmp_exec_denied', 'cache_write_allowed', 'namespace_change_denied',
         'identity_change_denied', 'child_exec_inheritance_verified', 'seccomp_enforced'}
-    guard = row['input_guard']
-    if (row['mode'] != 'restricted' or type(guard) is not dict
-            or set(guard) != expected | {'profile', 'landlock_abi', 'uid', 'gid'}
-            or guard['profile'] != 'man-cache-landlock-seccomp-v1'
+    if (role not in {'mandb', 'source-bytes'} or type(guard) is not dict
+            or set(guard) != expected | {'profile', 'role', 'landlock_abi', 'uid', 'gid'}
+            or guard['profile'] != 'man-cache-landlock-seccomp-v2' or guard['role'] != role
             or type(guard['landlock_abi']) is not int or not 5 <= guard['landlock_abi'] <= 4096
             or type(guard['uid']) is not int or guard['uid'] != 6
             or type(guard['gid']) is not int or guard['gid'] != 12
             or any(guard[key] is not True for key in expected)):
         raise ValueError('Exact native input guard and inherited denial controls required')
-    raw = base64.b64decode(row['result']['stdout']['base64'], validate=True)
-    first, separator, _ = raw.partition(b'\n')
-    if not separator or len(first) > 4096 or json.loads(first) != guard:
-        raise ValueError('Guard report must bind the captured command bytes')
 
 
 def unit_command(*, mode='restricted'):
