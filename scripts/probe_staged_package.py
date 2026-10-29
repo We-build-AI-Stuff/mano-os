@@ -984,6 +984,8 @@ def main():
         record['payload_observation_artifact'] = 'staged-payload-' + record['name'] + '.json'
         artifacts[record['payload_observation_artifact']] = json.dumps(
             observations[record['name']], sort_keys=True, allow_nan=False).encode()
+    if len(artifacts) > 64 or sum(len(data) for data in artifacts.values()) > 200_000_000:
+        raise ValueError('Staged artifact count and total uncompressed byte budgets required')
     for name, data in artifacts.items():
         if (name in retained_trace or name in retained_commands or name in man_cache_artifacts
                 or name in regeneration_artifacts or name in retained_trees):

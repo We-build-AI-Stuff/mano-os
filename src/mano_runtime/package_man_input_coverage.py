@@ -30,7 +30,8 @@ def bind(packet, candidate, source, content):
            for report in (source, content)):
         raise ValueError('Exact source and content capture hashes required')
     if (source.get('profile') != PROFILE or source.get('scope') != SCOPE
-            or content.get('profile') != 'man-source-gzip-content-v1'
+            or content.get('profile') not in
+                {'man-source-gzip-content-v1', 'man-source-gzip-content-v2'}
             or source.get('observed_manual_root_regular_files_captured') is not True
             or source.get('all_captured_content_hashes_match') is not True
             or source.get('manifest_sha256') != packet_sha

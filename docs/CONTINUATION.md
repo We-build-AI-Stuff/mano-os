@@ -5,6 +5,37 @@ optional. Specification: docs/spec-v2.1.md, SHA256
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 Do not redefine completion around a prototype, CI slice or the checks below.
 
+## Pending native32: bounded decoded-source custody
+
+The content worker now has explicit `man-source-gzip-content-v2` output and writes
+one fixed exclusive nofollow/CLOEXEC 0600 binary under its private cache. Canonical
+records bind manifest SHA, compressed SHA, expanded SHA and exact expanded bytes;
+each record is written only after GNU output equality. It streams one file at a
+time, bounds expansion at 8 MiB/file and 64 MiB total, file count at 8192, names at
+4 MiB total and binary size at 72 MiB. Failed writes cannot later finish a bundle.
+
+The Root controller waits for domain drain, verifies UID6/GID12/mode0600/nlink1,
+copies bounded data to a fixed exclusive Root-owned file, verifies stable source
+FD identity and freezes the copy 0444 before inspecting report metadata. A fixed
+service stop precedes acquisition of partial output on launch failure. Content-only
+tmpfs grows from 16 to 128 MiB; file-size limit grows from 2 to 72 MiB. Other roles
+retain their limits; 256 MiB memory, 32 tasks and 190-second runtime stay enforced.
+The overall 64-artifact/200,000,000-byte uncompressed budget is checked by the
+producer too. No path text is executed or used to open a source include.
+
+Independent task-output reader uses its own bounded binary parser, with no
+producer import or inflation. It checks order, counts, exact bytes and both native
+decoder hashes. New `--man-expanded-inputs` gate depends on all prior 31 gates;
+legacy discard-only evidence retains its original validation. Protocol selection
+is bound to the exact tested Git worker, not a self-reported profile. Synthetic
+tests cover corruption, truncation, count/length inflation, false hash relabeling,
+cross-binding, partial writes and reads, and missing records. Synthetic GNU/native
+witnesses are fabricated fixtures and prove no Linux controls.
+
+Native32 CI and real artifact acceptance have NOT yet passed. Native31 below is
+still the latest accepted evidence. Full source semantics/runtime closure and
+publication remain false; all original version requirements remain outstanding.
+
 ## Latest accepted native31: complete observed regular manual-file coverage
 
 PR #134, branch feat/approved-package-apply; repository We-build-AI-Stuff/mano-os.

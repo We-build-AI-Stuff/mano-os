@@ -2,8 +2,8 @@
 
 The standalone worker loads two fixed immutable support modules. Real captured
 sources are decoded only after the native guard has installed confinement.
-Expanded bytes are compared against GNU gzip and then discarded; reports bind
-hashes and framing, not roff/include/description semantics or publication.
+Expanded bytes are compared against GNU gzip and retained as bounded inert data;
+reports bind hashes and framing, not source semantics or publication.
 """
 import base64
 import hashlib
@@ -12,6 +12,7 @@ import os
 import selectors
 import signal
 import stat
+import struct
 import subprocess
 import sys
 import time
@@ -20,6 +21,105 @@ MAX_EXPANDED_TOTAL = 64 * 1024**2
 MAX_MEMBER_TOTAL = 16384
 MAX_REPORT_BYTES = 16 * 1024**2
 MAX_CAPTURE_BYTES = 24 * 1024**2 + 4097
+EXPANDED_MAGIC = b'MANO-MAN-EXPANDED\x00\x01'
+MAX_BUNDLE_BYTES = 72 * 1024**2
+MAX_PATH_BYTES = 4 * 1024**2
+CONTENT_PROFILE = 'man-source-gzip-content-v2'
+
+
+class ExpandedInputs:
+    """Stream inert decoded data to an already opened, exclusive private file.
+
+    This writer never opens source paths. Its caller owns output descriptor
+    custody and must drain the native domain before collecting the result.
+    Construction alone does not enable retention in the fixed worker.
+    """
+
+    def __init__(self, stream, manifest_sha256, files):
+        if (type(manifest_sha256) is not str or len(manifest_sha256) != 64
+                or any(c not in '0123456789abcdef' for c in manifest_sha256)
+                or type(files) is not dict or not 1 <= len(files) <= 8192):
+            raise ValueError('Bounded expanded-input manifest binding required')
+        if any(type(path) is not str for path in files):
+            raise ValueError('Text expanded-input paths required')
+        paths = sorted(files)
+        encoded_paths = {}
+        for path in paths:
+            if (type(path) is not str or not path or
+                    any(c in path for c in '\0\\\n\r\t')):
+                raise ValueError('Canonical expanded-input path required')
+            encoded = path.encode('utf-8', errors='strict')
+            parts = path.split('/')
+            if (len(encoded) > 4096 or len(parts) > 128 or
+                    any(p in {'', '.', '..'} or len(p.encode()) > 255 for p in parts)):
+                raise ValueError('Bounded expanded-input path components required')
+            if type(files[path]) is not dict:
+                raise ValueError('Compressed-input metadata required')
+            digest = files[path].get('sha256')
+            if (type(digest) is not str or len(digest) != 64 or
+                    any(c not in '0123456789abcdef' for c in digest)):
+                raise ValueError('Exact compressed-input digest required')
+            encoded_paths[path] = encoded
+        if sum(map(len, encoded_paths.values())) > MAX_PATH_BYTES:
+            raise ValueError('Aggregate expanded-input path budget')
+        self.stream = stream
+        self.paths = paths
+        self.names = encoded_paths
+        self.inputs = {path: files[path]['sha256'] for path in paths}
+        self.count = self.total = self.size = 0
+        self.digest = hashlib.sha256()
+        self.closed = False
+        self.failed = False
+        self._write(EXPANDED_MAGIC + bytes.fromhex(manifest_sha256) +
+                    struct.pack('>I', len(paths)))
+
+    def _write(self, data):
+        if self.size + len(data) > MAX_BUNDLE_BYTES:
+            raise ValueError('Expanded-input artifact byte budget')
+        view = memoryview(data)
+        try:
+            while view:
+                written = self.stream.write(view)
+                if type(written) is not int or not 0 < written <= len(view):
+                    raise OSError('Complete expanded-input artifact write required')
+                self.digest.update(view[:written])
+                self.size += written
+                view = view[written:]
+        except BaseException:
+            self.failed = True
+            raise
+
+    def append(self, path, input_sha256, expanded):
+        if (self.closed or self.failed or self.count >= len(self.paths)
+                or path != self.paths[self.count]
+                or input_sha256 != self.inputs[path] or type(expanded) is not bytes
+                or len(expanded) > 8 * 1024**2
+                or self.total + len(expanded) > MAX_EXPANDED_TOTAL):
+            raise ValueError('Ordered bounded expanded-input record required')
+        name = self.names[path]
+        header = (struct.pack('>IQ', len(name), len(expanded)) + name +
+                  bytes.fromhex(input_sha256) + hashlib.sha256(expanded).digest())
+        # Check the entire record before publishing any of its prefix.
+        if self.size + len(header) + len(expanded) > MAX_BUNDLE_BYTES:
+            raise ValueError('Expanded-input artifact byte budget')
+        self._write(header)
+        self._write(expanded)
+        self.count += 1
+        self.total += len(expanded)
+
+    def finish(self):
+        if self.closed or self.failed or self.count != len(self.paths):
+            raise ValueError('Exactly one complete expanded-input bundle required')
+        try:
+            self.stream.flush()
+        except BaseException:
+            self.failed = True
+            raise
+        self.closed = True
+        return dict(profile='man-expanded-inputs-binary-v1',
+                    artifact='staged-man-expanded-inputs.bin',
+                    sha256=self.digest.hexdigest(), bytes=self.size,
+                    source_files=self.count, expanded_bytes=self.total)
 
 
 def sha(data):
@@ -121,7 +221,7 @@ def read_fixed(path, maximum, *, mode=None):
     return raw
 
 
-def process_files(value, codec):
+def process_files(value, codec, *, expanded_sink=None):
     files, total, members = {}, 0, 0
     serialized_bytes = 2
     for path, encoded in sorted(value['files'].items()):
@@ -142,18 +242,25 @@ def process_files(value, codec):
         if serialized_bytes > MAX_REPORT_BYTES:
             raise ValueError('Source content report budget')
         files[path] = row
-    return dict(profile='man-source-gzip-content-v1', files=files, source_files=len(files),
+        if expanded_sink is not None:
+            expanded_sink.append(path, row['input_sha256'], expanded)
+    result = dict(profile='man-source-gzip-content-v1', files=files, source_files=len(files),
         expanded_bytes=total, gzip_members=members, both_decoders_equal=True,
         roff_interpreted=False, source_declarations_verified=False,
         transitive_source_graph_verified=False, descriptions_verified=False,
         compression_filters_verified=False, runtime_closure_verified=False,
         generated_state_validated=False, changes_authorized=False, publication_authorized=False)
+    if expanded_sink is not None:
+        result.update(profile='man-source-gzip-content-v2',
+                      expanded_inputs=expanded_sink.finish())
+    return result
 
 
 def validate_report(value, manifest_value):
     """Check native evidence without running an inflater in the controller."""
     expected = manifest_value['files']
-    if (type(value) is not dict or value.get('profile') != 'man-source-gzip-content-v1'
+    if (type(value) is not dict or value.get('profile') not in
+            {'man-source-gzip-content-v1', 'man-source-gzip-content-v2'}
             or type(value.get('files')) is not dict or set(value['files']) != set(expected)
             or type(value.get('source_files')) is not int or value['source_files'] != len(expected)
             or value.get('both_decoders_equal') is not True):
@@ -203,12 +310,33 @@ def validate_report(value, manifest_value):
                  'generated_state_validated', 'changes_authorized', 'publication_authorized'):
         if value.get(name) is not False:
             raise ValueError('Native decompression cannot grant source semantics or authority')
-    return dict(profile=value['profile'], source_files=len(expected), expanded_bytes=total,
+    summary = dict(profile=value['profile'], source_files=len(expected), expanded_bytes=total,
                 gzip_members=members, both_decoders_equal=True, roff_interpreted=False,
                 source_declarations_verified=False, transitive_source_graph_verified=False,
                 descriptions_verified=False, compression_filters_verified=False,
                 runtime_closure_verified=False, generated_state_validated=False,
                 changes_authorized=False, publication_authorized=False)
+    if value['profile'] == 'man-source-gzip-content-v2':
+        retained = value.get('expanded_inputs')
+        expected_size = 55 + sum(76 + len(path.encode()) for path in expected) + total
+        if (type(retained) is not dict or set(retained) !=
+                {'profile', 'artifact', 'sha256', 'bytes', 'source_files', 'expanded_bytes'}
+                or retained['profile'] != 'man-expanded-inputs-binary-v1'
+                or retained['artifact'] != 'staged-man-expanded-inputs.bin'
+                or type(retained['sha256']) is not str or len(retained['sha256']) != 64
+                or any(c not in '0123456789abcdef' for c in retained['sha256'])
+                or type(retained['bytes']) is not int
+                or not retained['bytes'] == expected_size <= MAX_BUNDLE_BYTES
+                or type(retained['source_files']) is not int
+                or retained['source_files'] != len(expected)
+                or type(retained['expanded_bytes']) is not int
+                or retained['expanded_bytes'] != total):
+            raise ValueError('Exact bounded expanded-input metadata required')
+        # Metadata is not byte custody; only a separate reader can prove that.
+        summary['expanded_inputs'] = dict(retained)
+    elif 'expanded_inputs' in value:
+        raise ValueError('Legacy discard-only reports cannot claim byte retention')
+    return summary
 
 
 def main():
@@ -225,7 +353,13 @@ def main():
     if not separator or len(first) > 4096 or json.loads(first).get('role') != 'source-bytes':
         raise ValueError('Prior fixed source-byte capture required')
     validate_capture(packet, body)
-    result = process_files(json.loads(body), codec)
+    output_fd = os.open('/var/cache/man/expanded-inputs.bin',
+        os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+    with os.fdopen(output_fd, 'wb', buffering=0) as output:
+        sink = ExpandedInputs(output, sha(packet), json.loads(packet)['files'])
+        result = process_files(json.loads(body), codec, expanded_sink=sink)
+    if result['profile'] != CONTENT_PROFILE:
+        raise ValueError('Fixed retained-source content profile required')
     gzip_binary = read_fixed('/usr/bin/gzip', 16*1024**2)
     module_path = getattr(codec.zlib, '__file__', None)
     if module_path is None:

@@ -97,6 +97,8 @@ class ManualContentTests(unittest.TestCase):
         with patch.object(probe.sys, 'platform', 'darwin'):
             with self.assertRaises(PermissionError):
                 probe.capture_content(Path('/private'), {}, [], Path('/empty'), '', None)
+            with self.assertRaises(PermissionError):
+                probe.freeze_expanded_inputs(Path('/private'), Path('/empty'))
 
     def test_content_unit_keeps_other_roles_budgets_and_gets_a_fixed_role(self):
         command = probe.content_sandbox(Path('/private'), [], Path('/empty'), 'a'*64)
@@ -109,6 +111,8 @@ class ManualContentTests(unittest.TestCase):
         self.assertIn('--property=RuntimeMaxSec=190', unit)
         self.assertIn('--property=MemoryMax=268435456', unit)
         self.assertIn('--property=TasksMax=32', unit)
+        self.assertIn('--property=LimitFSIZE=75497472', unit)
+        self.assertIn('--property=LimitFSIZE=2097152', probe.source_unit())
         self.assertIn('--property=RuntimeMaxSec=70', probe.source_unit())
 
     @unittest.skipUnless(sys.platform == 'linux', 'Actual GNU gzip only in Linux CI')

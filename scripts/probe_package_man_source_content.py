@@ -4,6 +4,7 @@ import json
 import os
 import selectors
 import signal
+import stat
 import subprocess
 import sys
 import time
@@ -12,10 +13,55 @@ from pathlib import Path
 from probe_package_man_regeneration import validate_native_guard
 from probe_package_man_source_bytes import fixture_identity, source_sandbox, source_unit
 
-from mano_runtime.package_man_source_content import validate_report
+from mano_runtime.package_man_source_content import MAX_BUNDLE_BYTES, validate_report
 
 FILES = {'staged-man-content-reader.py', 'staged-man-content-gzip.py',
-         'staged-man-content-capture.txt'}
+         'staged-man-content-capture.txt', 'staged-man-expanded-inputs.bin'}
+
+
+def freeze_expanded_inputs(cache, evidence):
+    """Collect only a fixed drained-domain leaf; no native data parser runs here."""
+    if sys.platform != 'linux' or os.geteuid() != 0:
+        raise PermissionError('Disposable Debian Root custody collector required')
+    if (cache != Path('/.snapshots/.mano-staged-package-ci/man-content-cache')
+            or evidence != Path('/opt/mano-lab/evidence')):
+        raise ValueError('Fixed expanded-input custody locations required')
+    source_fd = os.open(cache / 'expanded-inputs.bin',
+        os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+    destination = evidence / 'staged-man-expanded-inputs.bin'
+    with os.fdopen(source_fd, 'rb', buffering=0) as source:
+        before = os.fstat(source.fileno())
+        if (not stat.S_ISREG(before.st_mode) or before.st_uid != 6 or before.st_gid != 12
+                or stat.S_IMODE(before.st_mode) != 0o600 or before.st_nlink != 1
+                or not 0 <= before.st_size <= MAX_BUNDLE_BYTES):
+            raise ValueError('Private single-link bounded worker output required')
+        target_fd = os.open(destination,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+        with os.fdopen(target_fd, 'wb') as target:
+            try:
+                copied = 0
+                while True:
+                    data = source.read(min(65536, MAX_BUNDLE_BYTES-copied+1))
+                    if not data:
+                        break
+                    copied += len(data)
+                    if copied > MAX_BUNDLE_BYTES:
+                        raise ValueError('Worker expanded-input output exceeded custody budget')
+                    if target.write(data) != len(data):
+                        raise OSError('Complete frozen expanded-input copy required')
+                after = os.fstat(source.fileno())
+                def identity(info):
+                    return (info.st_dev, info.st_ino, info.st_uid, info.st_gid, info.st_mode,
+                        info.st_nlink, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+                if copied != before.st_size or identity(before) != identity(after):
+                    raise ValueError('Worker expanded-input output changed during custody')
+            finally:
+                try:
+                    target.flush()
+                finally:
+                    os.fchmod(target.fileno(), 0o444)
+    # Only Root-owned frozen data is handed to later pure validators.
+    return destination.read_bytes()
 
 
 def bounded_capture(command, *, timeout, stdout_limit=16*1024**2+4097,
@@ -87,6 +133,8 @@ def content_unit():
     command[command.index('--unit=mano-man-source-ci.service')] = (
         '--unit=mano-man-content-ci.service')
     command[command.index('--property=RuntimeMaxSec=70')] = '--property=RuntimeMaxSec=190'
+    command[command.index('--property=LimitFSIZE=2097152')] = (
+        '--property=LimitFSIZE=75497472')
     return command
 
 
@@ -123,7 +171,7 @@ def capture_content(base, baseline, masks, empty, config_digest, run):
     cache = base / 'man-content-cache'
     cache.mkdir(mode=0o700)
     run(['/usr/bin/mount', '-t', 'tmpfs', '-o',
-         'size=16777216,nosuid,nodev,noexec,mode=0755,uid=6,gid=12',
+         'size=134217728,nosuid,nodev,noexec,mode=0755,uid=6,gid=12',
          'mano-man-content-ci', str(cache)])
     run(['/usr/bin/mount', '--make-private', str(cache)])
     control = base / 'man-cache-control-file'
@@ -140,6 +188,10 @@ def capture_content(base, baseline, masks, empty, config_digest, run):
         # The launcher process group is separate from the service domain. Stop
         # the fixed service too; its KillMode covers native descendants.
         run(['/usr/bin/systemctl', 'stop', 'mano-man-content-ci.service'], timeout=10)
+        try:
+            freeze_expanded_inputs(cache, evidence)
+        except FileNotFoundError:
+            pass  # The worker may have refused before creating its fixed output.
         raise
     artifacts['staged-man-content-capture.txt'] = raw
     with (evidence / 'staged-man-content-capture.txt').open('xb') as stream:
@@ -157,6 +209,8 @@ def capture_content(base, baseline, masks, empty, config_digest, run):
         if time.monotonic() >= deadline:
             raise ValueError('Content verification process domain did not drain')
         time.sleep(.02)
+    expanded = freeze_expanded_inputs(cache, evidence)
+    artifacts['staged-man-expanded-inputs.bin'] = expanded
     first, separator, body = raw.partition(b'\n')
     if not separator or len(first) > 4096 or len(body) > 16*1024**2:
         raise ValueError('Bounded native content capture required')
@@ -164,6 +218,10 @@ def capture_content(base, baseline, masks, empty, config_digest, run):
     validate_native_guard(native, role='source-content')
     value = json.loads(body)
     report = validate_report(value, json.loads((base / 'man-source-paths.json').read_bytes()))
+    retained = report['expanded_inputs']
+    if (retained['bytes'] != len(expanded)
+            or retained['sha256'] != hashlib.sha256(expanded).hexdigest()):
+        raise ValueError('Frozen expanded-input artifact must match worker digest and length')
     source_capture = (evidence / 'staged-man-source-capture.txt').read_bytes()
     packet = (base / 'man-source-paths.json').read_bytes()
     def sha(data):
@@ -186,5 +244,10 @@ def capture_content(base, baseline, masks, empty, config_digest, run):
         gzip_executable_sha256=value['gzip_executable_sha256'], zlib_module=module,
         capture_sha256=sha(raw), capture_bytes=len(raw),
         worker_sha256=sha(body), worker_bytes=len(body),
-        program_sha256=sha(program), codec_sha256=sha(codec))
+        program_sha256=sha(program), codec_sha256=sha(codec),
+        expanded_inputs_custody=dict(domain_drained=True, source_uid=6, source_gid=12,
+            source_mode=0o600, source_nlink=1, source_fd_identity_unchanged=True,
+            frozen_uid=0, frozen_mode=0o444, frozen_before_validation=True,
+            artifact_sha256=sha(expanded), artifact_bytes=len(expanded),
+            cache_tmpfs_bytes=134217728, file_size_limit_bytes=MAX_BUNDLE_BYTES))
     return report, artifacts
