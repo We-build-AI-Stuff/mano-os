@@ -1,5 +1,6 @@
 """Synthetic bytes only; no staged-source inflation or native host execution."""
 import base64
+import copy
 import hashlib
 import io
 import json
@@ -142,3 +143,24 @@ class ExpandedInputsTests(unittest.TestCase):
         self.assertEqual(report['profile'], 'man-source-gzip-content-v1')
         self.assertNotIn('expanded_inputs', report)
         self.assertNotIn('expanded_inputs', json.dumps(report['files']))
+
+    def test_report_metadata_cannot_relabel_legacy_or_claim_false_retention(self):
+        raw = member(b'fixture')
+        manifest = dict(files={'x': dict(bytes=len(raw), sha256=hashlib.sha256(raw).hexdigest())})
+        sink = content.ExpandedInputs(io.BytesIO(), 'a'*64, manifest['files'])
+        with patch.object(content, 'verify_gnu', side_effect=witness):
+            report = content.process_files(dict(files={'x': base64.b64encode(raw).decode()}),
+                                           codec, expanded_sink=sink)
+        for mutate in (lambda r: r.update(profile='man-source-gzip-content-v1'),
+                       lambda r: r.pop('expanded_inputs'),
+                       lambda r: r['expanded_inputs'].update(bytes=True),
+                       lambda r: r['expanded_inputs'].update(bytes=999),
+                       lambda r: r['expanded_inputs'].update(expanded_bytes=True),
+                       lambda r: r['expanded_inputs'].update(source_files=True),
+                       lambda r: r['expanded_inputs'].update(sha256='A'*64),
+                       lambda r: r['expanded_inputs'].update(artifact='../other.bin'),
+                       lambda r: r['expanded_inputs'].update(extra=True)):
+            changed = copy.deepcopy(report)
+            mutate(changed)
+            with self.subTest(mutate=mutate), self.assertRaises(ValueError):
+                content.validate_report(changed, manifest)
