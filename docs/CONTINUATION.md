@@ -32,6 +32,31 @@ pr134-man-source-metadata-{security-acceptance,continuation}.log and artifact
 metadata/ZIP. Prior native26 head3729ef2/run40700950648 is historical evidence.
 All older detailed continuation files are archived under task outputs and Git.
 
+## Local follow-up: bounded gzip framing, not wired or pushed
+
+package_man_gzip prepares the next unprivileged source-content step. It checks
+RFC1952 header/method/reserved flags, optional bounded fields and header CRC,
+raw DEFLATE EOF, CRC32 and ISIZE, concatenated members and explicit bounded
+zero-padding compatibility regions. Original names/comments remain inert
+hashes; header time is never source authority. Native zlib output uses a
+nonzero ceiling and no unbounded flush. Limits:1MiB input,8MiB expansion,
+128members and64KiB padding. Source/roff/generated-state authority stays false.
+
+Portable tests use self-created synthetic streams only: exact binary data,
+stored/fixed/dynamic strategies, every truncation, bad headers/checksums/size,
+reserved DEFLATE block and compressed bombs/limits. A Linux-only GNU gzip
+crosscheck is prepared but has NOT run yet (including zero padding between
+members). No actual staged source was decompressed on Mac or Root. This helper
+is UNUSED; integration must execute only inside a guarded UID6 CI worker and
+compare a second decoder before any real-source claims.
+
+Focused suite now112 tests:110 pass,two Linux-only skips; Python lint/diff pass.
+Official framing/API references read as data:
+https://www.rfc-editor.org/info/rfc1952/
+https://docs.python.org/3.13/library/zlib.html
+Native29 still tests head53c6536/run40808929043; quality937tests passed,
+security123234381112 and observer57842 remain live. Do not push and cancel it.
+
 ## Next source-byte capture prepared locally, native29 unverified
 
 The new package_man_source_bytes module prepares an exact terminal-file manifest
