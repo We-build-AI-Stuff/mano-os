@@ -9,7 +9,12 @@ from mano_protocol.packages import result
 MAX_STATUS = 16 * 1024**2
 
 
-def database(data):
+def database_records(data):
+    """Keep every field, including continuation lines, for outside-plan checks.
+
+    Field order and header case have no semantic authority. Duplicate fields,
+    parser bodies and malformed names are refused rather than silently dropped.
+    """
     if not isinstance(data, bytes) or len(data) > MAX_STATUS:
         raise ValueError("Bounded dpkg status bytes required")
     records = {}
@@ -17,15 +22,19 @@ def database(data):
         if not paragraph:
             continue
         message = Parser().parsestr(paragraph)
-        if message.defects:
+        if message.defects or message.get_payload():
             raise ValueError("Malformed dpkg status record")
         fields = {}
-        for key in ('Package', 'Architecture', 'Status', 'Version'):
-            values = message.get_all(key, [])
-            if len(values) != 1:
-                raise ValueError("Missing or duplicate dpkg identity/state")
-            fields[key] = values[0]
-        name, arch, state, version = (fields[k] for k in fields)
+        for key, value in message.raw_items():
+            lowered = key.lower()
+            if (not re.fullmatch(r'[!-9;-~]+', key) or lowered in fields
+                    or '\0' in value):
+                raise ValueError("Invalid or duplicate dpkg status field")
+            fields[lowered] = value
+        required = ('package', 'architecture', 'status', 'version')
+        if any(key not in fields for key in required):
+            raise ValueError("Missing dpkg identity/state")
+        name, arch, state, version = (fields[k] for k in required)
         if (not re.fullmatch(r'[a-z0-9][a-z0-9+.-]{1,63}', name)
                 or not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,31}', arch)
                 or not re.fullmatch(r'[A-Za-z0-9.+:~_-]{1,256}', version)
@@ -38,8 +47,13 @@ def database(data):
         key = (name, arch)
         if key in records:
             raise ValueError("Duplicate dpkg package identity")
-        records[key] = (state, version)
+        records[key] = fields
     return records
+
+
+def database(data):
+    return {key: (fields['status'], fields['version'])
+            for key, fields in database_records(data).items()}
 
 
 def verify(before, after, plan):
@@ -48,7 +62,9 @@ def verify(before, after, plan):
     result(plan, expected=args)
     if hashlib.sha256(before).hexdigest() != plan['status_sha256']:
         raise ValueError("Package plan differs from before-checkpoint status")
-    old, new = database(before), database(after)
+    old_records, new_records = database_records(before), database_records(after)
+    old = {key: (row['status'], row['version']) for key, row in old_records.items()}
+    new = {key: (row['status'], row['version']) for key, row in new_records.items()}
     remaining = set(old) | set(new)
     for change in plan['changes']:
         key = (change['name'], change['architecture'])
@@ -63,7 +79,7 @@ def verify(before, after, plan):
         elif current != ('install ok installed', change['candidate']):
             raise ValueError("Approved package version is not fully installed")
         remaining.discard(key)
-    if any(old.get(key) != new.get(key) for key in remaining):
+    if any(old_records.get(key) != new_records.get(key) for key in remaining):
         raise ValueError("Package database changed outside the approved change set")
     for requested in plan['requested']:
         candidates = [value for (name, _), value in new.items() if name == requested['name']]

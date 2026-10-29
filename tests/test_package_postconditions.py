@@ -2,7 +2,7 @@ import copy
 import hashlib
 import unittest
 
-from mano_runtime.package_postconditions import database, verify
+from mano_runtime.package_postconditions import database, database_records, verify
 
 
 def status(name, version='1', state='install ok installed', arch='amd64'):
@@ -79,3 +79,40 @@ class PackagePostconditionTests(unittest.TestCase):
         self.assertEqual(verify(self.before, after, plan)['changes_verified'], 2)
         with self.assertRaises(ValueError):
             verify(self.before, self.after, plan)
+
+    def test_unapproved_package_metadata_cannot_change_behind_same_version_and_state(self):
+        for field in (b'Depends: trusted-runtime\n', b'Conffiles:\n /etc/example hash\n',
+                      b'Triggers-Pending: malicious-trigger\n', b'X-Unknown: value\n'):
+            baseline = self.before.replace(b'Description:', field + b'Description:')
+            plan = copy.deepcopy(self.plan)
+            plan['status_sha256'] = hashlib.sha256(baseline).hexdigest()
+            target = baseline + status('sl', plan['changes'][0]['candidate'])
+            verify(baseline, target, plan)
+            mutations = [target.replace(field, b'', 1),
+                         target.replace(field, field.replace(b'value', b'other')
+                                        if b'value' in field else field + b'X-Extra: other\n', 1)]
+            for changed in mutations:
+                with self.subTest(field=field, changed=changed), self.assertRaises(ValueError):
+                    verify(baseline, changed, plan)
+
+    def test_duplicate_non_identity_fields_and_parser_body_are_refused(self):
+        for suffix in (b'Depends: aa\ndepends: bb\n',
+                       b'Description: duplicate\n', b'Bad field: ignored\n',
+                       b'X-Unknown: bad\0value\n'):
+            data = self.before.rstrip(b'\n') + b'\n' + suffix + b'\n'
+            with self.subTest(suffix=suffix), self.assertRaises(ValueError):
+                database_records(data)
+
+    def test_header_order_and_case_do_not_grant_or_remove_authority(self):
+        baseline = self.before.replace(b'Description: fixture',
+                                        b'Description: fixture\n continuation\n .\n final')
+        record = database_records(baseline)[('bash', 'amd64')]
+        reordered = ('\n'.join(key.upper() + ': ' + value
+                               for key, value in reversed(list(record.items()))) + '\n\n').encode()
+        self.assertEqual(database_records(baseline), database_records(reordered))
+        plan = copy.deepcopy(self.plan)
+        plan['status_sha256'] = hashlib.sha256(baseline).hexdigest()
+        target = reordered + status('sl', plan['changes'][0]['candidate'])
+        verify(baseline, target, plan)
+        with self.assertRaises(ValueError):
+            verify(baseline, target.replace(b' continuation', b' changed'), plan)
