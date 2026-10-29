@@ -18,6 +18,46 @@ def packet():
 
 
 class OpaqueManualSourceTests(unittest.TestCase):
+    def test_v2_captures_unindexed_regular_files_with_explicit_scope(self):
+        tree, path = candidate()
+        extra = 'usr/share/man/man6/unindexed.6.gz'
+        tree['entries'][extra] = dict(tree['entries'][path], hardlink_anchor=extra,
+                                     bytes=1, sha256=hashlib.sha256(b'x').hexdigest())
+        rehash(tree)
+        request = sources.prepare({'var/cache/man/index.db': index()}, tree, tree)
+        value = sources.manifest(request)
+        self.assertEqual(value['profile'], 'man-source-opaque-bytes-v2')
+        self.assertEqual(value['scope'], 'observed-manual-root-regular-files')
+        self.assertEqual(value['indexed_files'], ['man6/sl.6.gz'])
+        self.assertEqual(set(value['files']), {'man6/sl.6.gz', 'man6/unindexed.6.gz'})
+        body = dict(profile=sources.PROFILE, manifest_sha256=hashlib.sha256(request).hexdigest(),
+                    files={'man6/sl.6.gz': '', 'man6/unindexed.6.gz': 'eA=='},
+                    source_files=2, source_bytes=1, all_file_stat_fields_verified=True,
+                    source_content_interpreted=False, changes_authorized=False,
+                    publication_authorized=False)
+        report = sources.validate_capture(request, json.dumps(body).encode())
+        self.assertEqual((report['indexed_source_files'],
+                          report['additional_manual_files']), (1, 1))
+        self.assertFalse(report['source_content_interpreted'])
+        del body['files']['man6/unindexed.6.gz']
+        with self.assertRaises(ValueError):
+            sources.validate_capture(request, json.dumps(body).encode())
+
+    def test_v2_scope_subset_and_unindexed_metadata_cannot_be_downgraded(self):
+        good = json.loads(packet())
+        for field, bad in (('profile', 'man-source-opaque-bytes-v1'),
+                           ('scope', 'resolved-index-files'), ('indexed_files', []),
+                           ('indexed_files', ['man6/absent.6.gz']),
+                           ('indexed_files', ['man6/sl.6.gz', 'man6/sl.6.gz'])):
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                sources.manifest(json.dumps(dict(good, **{field: bad})).encode())
+        tree, path = candidate()
+        extra = 'usr/share/man/man6/unindexed.6.gz'
+        tree['entries'][extra] = dict(tree['entries'][path], hardlink_anchor=extra, mode=0o666)
+        rehash(tree)
+        with self.assertRaises(ValueError):
+            sources.prepare({'var/cache/man/index.db': index()}, tree, tree)
+
     def test_capture_requires_complete_exact_bytes_and_cannot_claim_interpretation(self):
         request = packet()
         value = dict(profile=sources.PROFILE, manifest_sha256=hashlib.sha256(request).hexdigest(),

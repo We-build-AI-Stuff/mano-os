@@ -115,6 +115,7 @@ def capture_sources(base, canonical_bundle, baseline, candidate, masks, empty, c
     if fixture_identity(control) != original:
         raise ValueError('Source acquisition changed the public control fixture')
     report.update(guard=native, domain_drained=True, control_fixture_unchanged=True,
+                  observed_manual_root_regular_files_captured=True,
                   capture_sha256=hashlib.sha256(raw).hexdigest(), capture_bytes=len(raw),
                   program_sha256=hashlib.sha256(program).hexdigest(),
                   source_declarations_verified=False, transitive_source_graph_verified=False,

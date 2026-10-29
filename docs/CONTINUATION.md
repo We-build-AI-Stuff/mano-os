@@ -40,6 +40,23 @@ observed manual root are outside it. Extend coverage with explicit version/scope
 and backward verification next. Accounting remains 107/125 with 18 rejected
 effects, including intentional synthetic negatives. No merge or activation.
 
+## Local v2 manual-input coverage prepared, not native-validated
+
+The next opaque-source protocol is man-source-opaque-bytes-v2 with explicit
+observed-manual-root-regular-files scope and a distinct indexed_files subset.
+Preparation preserves complete indexed source-chain checks and adds every
+observed regular file under the manual root. The worker retains its fixed UID6
+role, nofollow descriptors, metadata/hash checks and byte budgets. A pure binding
+checks exact candidate inventory, opaque capture and content capture hashes,
+counts, drain/control flags and both-decoder coverage. No extra artifact is
+introduced; source semantics and runtime/publication authority remain false.
+
+The independent coverage gate depends on all 30 earlier gates, requires v2 and
+rejects the older indexed-only protocol. Current focused 126 tests pass with
+three Linux skips; lint/diff pass. Real v2 capture/decoder coverage remains
+UNRUN. Independent synthetic and backward acceptance verification is in progress.
+This local source cannot inherit the accepted native30 CI results above.
+
 ## Accepted streaming controller output bounds
 
 Local content collection now enforces stdout/stderr limits while reading with

@@ -880,6 +880,9 @@ def main():
         source_content, content_artifacts = capture_content(BASE, baseline_tree, state_masks,
             empty, regeneration_inputs['config_sha256'], run)
         regeneration_artifacts.update(content_artifacts)
+        from mano_runtime.package_man_input_coverage import bind as bind_input_coverage
+        input_coverage = bind_input_coverage((BASE / 'man-source-paths.json').read_bytes(),
+                                            candidate_tree, source_bytes, source_content)
         for role, observed in (('baseline', baseline_tree), ('candidate', candidate_tree)):
             current = tree_observation(role)
             if (current['manifest_sha256'] != observed['manifest_sha256']
@@ -1015,6 +1018,7 @@ def main():
                 man_cache_input_policy=policy_pair,
                 man_source_bytes=source_bytes,
                 man_source_content=source_content,
+                man_input_coverage=input_coverage,
                 man_cache_regeneration=dict(inputs=regeneration_inputs,
                     worker=regeneration_worker, raw=regeneration_bytes,
                     comparison=regeneration_comparison,

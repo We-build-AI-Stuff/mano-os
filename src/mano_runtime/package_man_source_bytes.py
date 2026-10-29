@@ -18,7 +18,8 @@ MAX_FILE_BYTES = 1024**2
 MAX_TOTAL_BYTES = 16 * 1024**2
 MAX_MANIFEST_BYTES = 4 * 1024**2
 MAX_OUTPUT_BYTES = 24 * 1024**2
-PROFILE = 'man-source-opaque-bytes-v1'
+PROFILE = 'man-source-opaque-bytes-v2'
+SCOPE = 'observed-manual-root-regular-files'
 STAT_FIELDS = ('uid', 'gid', 'mode', 'nlink', 'bytes', 'mtime_ns', 'ctime_ns')
 
 
@@ -46,8 +47,9 @@ def manifest(raw):
         raise ValueError('Bounded manual source manifest required')
     value = json.loads(raw, object_pairs_hook=unique)
     if (type(value) is not dict or set(value) !=
-            {'profile', 'baseline_sha256', 'candidate_sha256', 'files'}
+            {'profile', 'scope', 'baseline_sha256', 'candidate_sha256', 'indexed_files', 'files'}
             or value['profile'] != PROFILE or type(value['files']) is not dict
+            or value['scope'] != SCOPE
             or not 1 <= len(value['files']) <= MAX_FILES):
         raise ValueError('Fixed opaque manual source profile required')
     for key in ('baseline_sha256', 'candidate_sha256'):
@@ -71,6 +73,13 @@ def manifest(raw):
         total += row['bytes']
         if total > MAX_TOTAL_BYTES:
             raise ValueError('Aggregate manual source byte budget')
+    indexed = value['indexed_files']
+    if (type(indexed) is not list or not indexed or len(indexed) > MAX_FILES
+            or any(type(path) is not str for path in indexed)
+            or indexed != sorted(set(indexed)) or not set(indexed) <= value['files'].keys()):
+        raise ValueError('Complete distinct indexed source subset required')
+    for path in indexed:
+        relative_path(path)
     return value
 
 
@@ -79,8 +88,13 @@ def prepare(index_files, baseline, candidate):
     from mano_runtime.package_man_source_links import inspect, metadata_hash
 
     graph = inspect(index_files, candidate, baseline=baseline)
-    paths = sorted({row['terminal_path'] for row in graph['sources'].values()
-                    if row['primary_symlink_chain_bound'] is True})
+    if graph['all_primary_symlink_chains_bound'] is not True:
+        raise ValueError('All indexed primary source chains must bind before broad capture')
+    indexed = sorted({row['terminal_path'].removeprefix('usr/share/man/')
+                      for row in graph['sources'].values()
+                      if row['primary_symlink_chain_bound'] is True})
+    paths = sorted(path for path, row in candidate['entries'].items()
+                   if path.startswith('usr/share/man/') and row['kind'] == 'file')
     files = {}
     for path in paths:
         if not path.startswith('usr/share/man/'):
@@ -91,7 +105,8 @@ def prepare(index_files, baseline, candidate):
         files[path.removeprefix('usr/share/man/')] = dict(
             **{key: row[key] for key in STAT_FIELDS}, sha256=row['sha256'],
             observed_metadata_sha256=metadata_hash(row))
-    packet = json.dumps(dict(profile=PROFILE, baseline_sha256=baseline['manifest_sha256'],
+    packet = json.dumps(dict(profile=PROFILE, scope=SCOPE, indexed_files=indexed,
+        baseline_sha256=baseline['manifest_sha256'],
         candidate_sha256=candidate['manifest_sha256'], files=files),
         sort_keys=True, allow_nan=False).encode()
     manifest(packet)
@@ -206,6 +221,8 @@ def validate_capture(packet, raw):
     return dict(profile=PROFILE, manifest_sha256=hashlib.sha256(packet).hexdigest(),
                 worker_sha256=hashlib.sha256(raw).hexdigest(), worker_bytes=len(raw),
                 source_files=len(requested['files']), source_bytes=total,
+                scope=SCOPE, indexed_source_files=len(requested['indexed_files']),
+                additional_manual_files=len(requested['files'])-len(requested['indexed_files']),
                 all_captured_content_hashes_match=True, source_content_interpreted=False,
                 changes_authorized=False, publication_authorized=False)
 
