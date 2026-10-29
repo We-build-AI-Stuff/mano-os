@@ -5,34 +5,42 @@ optional. Specification: docs/spec-v2.1.md, SHA256
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 Do not redefine completion around a prototype, CI slice or the checks below.
 
-## Repository and latest accepted source
+## Latest accepted native content source
 
-We-build-AI-Stuff/mano-os; PR #134; branch feat/approved-package-apply.
-Accepted head 53c653640d2f58e6b3cc0a7981ed99d2c9f825db, base
-65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Tested merge
-f8a8b14de65a2c83aad53eed11aee489aad36fae has exactly those parents;
-nineteen runtime/probe/native/workflow source files match the head.
+Repository We-build-AI-Stuff/mano-os; PR #134, branch feat/approved-package-apply.
+Head 21301dd210e4a35bf035c65d15f42567a354255b, current base
+65fdfc02e3dbb18f791a92374a24690ae4e1ba87, tested merge
+73dad168f4b1f43ae81365e638b1bc6bfc89c644 with exact parents and 22 matching sources.
+Run 40889068851 ALL THREE SUCCESS: quality 123500588211 (953 tests, one platform
+skip), security 123500589031, merge-gate 123515349458. Artifact 12905043700 is
+37,862,807 bytes, SHA256
+097b6e1a982be1972b5c519c72209917da076ebb5c41ebc8f6c5c39505744e3c.
+Collector 56013 TERMINAL EXIT ZERO; do not restart it. All 30 staging gates and
+prior 54-hash/45-flag/PAM/Stop/recovery/package/ELF chain passed. Six fresh UI
+originals and eight crops/contact sheet were actually viewed. Fifteen-PNG receipt
+in task outputs/acceptance-pr134-man-source-content/inspection.json binds full
+900/120 values and equal pending/effective numeric pixels. Headless only;
+physical input provenance remains null.
 
-CI run 40808929043 ALL THREE SUCCESS:
-- quality 123234381330: 937 tests, one Mac-specific skip; strict native guard
-  compilation and wrong-user/arbitrary-command refusals passed.
-- security-lab 123234381112; merge-gate 123241809619.
-- Artifact 12869459845: 37,218,521 bytes, SHA256
-  d0336b597561d737707c745f45bfdf30075de0a9ff677abc50c4a2ae65fc7534.
-- Fixed observer exec 57842 COMPLETED ZERO. Do not restart it. All 29 staging
-  gates plus the prior 54-hash/45-flag/PAM/Stop/recovery/package/ELF chain passed.
-- Six fresh UI originals and eight crops/contact sheet ACTUALLY viewed; 15-PNG
-  receipt: task outputs/acceptance-pr134-man-source-bytes/inspection.json.
-  Full 900/120 values are legible; pending/effective numeric pixels identical.
-  Headless only; physical input provenance remains null.
+Proof: task outputs/pr134-21301dd-native30-proof.json; completed quality/security
+logs, quality receipt, pr134-man-source-content-bounded-security ZIP/metadata and
+acceptance/collector logs. Fresh raw content capture is 5,579,786 bytes. All
+3,198 files/members expand to 35,024,800 bytes with zlib/GNU output equality.
+Profile v3/source-content, Landlock ABI6, UID6/GID12, empty groups, zero caps,
+NNP, domain drain, unchanged control and input/live-tree rechecks pass. Builtin
+zlib binds /usr/bin/python3.13. Artifact has 61 staging files and 122,419,659
+uncompressed bytes. Real inflation occurred only in the confined VM worker.
+Independent acceptance audits compressed framing/provenance/native comparison;
+it does not independently inflate or reacquire expanded source bytes.
 
-Exact proof/logs in task outputs: pr134-53c6536-native29-proof.json,
-pr134-53c6536-{quality,security}-completed-job.log, quality-proof.json,
-pr134-man-source-bytes-{security-acceptance,continuation}.log and artifact
-metadata/ZIP. Prior native26 head3729ef2/run40700950648 is historical evidence.
-All older detailed continuation files are archived under task outputs and Git.
+No source declarations/includes/descriptions/filter semantics, complete runtime
+closure, generated-state validation or publication authority is granted. The
+opaque capture covers resolved-index source files; four regular files in the
+observed manual root are outside it. Extend coverage with explicit version/scope
+and backward verification next. Accounting remains 107/125 with 18 rejected
+effects, including intentional synthetic negatives. No merge or activation.
 
-## Local follow-up: streaming controller output bounds
+## Accepted streaming controller output bounds
 
 Local content collection now enforces stdout/stderr limits while reading with
 nonblocking pipes, rather than collecting unlimited bytes before checking size.
@@ -43,7 +51,7 @@ systemd service to cover its separate process domain. The final worker report
 budget includes its trailing newline. Portable self-created process fixtures
 cover stdout/stderr overflow, normal nonzero exit, closed pipes and inherited
 pipes. Sixteen focused tests pass with two Linux-only skips; lint/diff pass.
-These additional changes are not in live run 40884679399 and need fresh CI.
+These changes passed the fresh native30 run above; the earlier failed run remains historical.
 
 ## First content CI: failed overall, successful VM report retained
 
@@ -54,7 +62,7 @@ members with status 2 and partial output, while Python accepts that compatibilit
 extension. The fixed content worker already rejects every nonzero GNU status,
 truncated output or byte disagreement. Correct the synthetic crosscheck to
 record this incompatibility and verify the content worker rejects it; do not
-accept status 2 or silently strip padding. The Linux correction remains unrun.
+accept status 2 or silently strip padding. The Linux correction passed the fresh 953-test quality job above.
 Full quality log is retained in task outputs/pr134-3715996-quality-completed-job.log.
 Security job 123485106169 passed; quality and merge-gate failed. Observer 34188
 terminated with failed-run custody and no acceptance attempted. Artifact
@@ -67,27 +75,18 @@ zlib binds /usr/bin/python3.13. Domain drain/control preservation are reported;
 61 staged artifacts total 122,392,075 uncompressed bytes. This is diagnostic
 inspection of a failed run, not independent acceptance. Full closure,
 generated-state validity and publication authority remain false. The correction
-and streaming limits require a fresh exact-head run. No merge.
+and streaming limits passed the fresh exact-head run above. No merge.
 
-## Local follow-up: guarded gzip content, native validation pending
+## Accepted content scope and limits
 
-The local content worker is wired through a fixed source-content role in native
-man-cache guard profilev3. It compares bounded zlib expansion against the fixed
-/usr/bin/gzip -cd command via stdin, then discards expanded bytes. Header names
-and comments remain inert. Immutable support files, exact input/runtime hashes,
-control preservation and process-domain drain bind the report. Source and other
-roles keep their existing budgets; content has 190s/256MiB/32tasks, per-file 10s,
-8MiB expansion, aggregate 64MiB/16384 members and 16MiB report ceilings.
-
-The independent content acceptance gate depends on all 29 prior gates. It binds
-compressed headers/trailers/DEFLATE slices and native dual-decoder evidence; it
-does not independently inflate or reacquire expanded source bytes. Real-source
-inflation is restricted to the confined UID6 Debian worker. Local portable tests
-use synthetic streams only. Current focused 118 tests pass with 3 Linux skips; lint
-and whitespace pass. Three independent synthetic/dependency acceptance tests
-also pass. Native compilation, GNU comparison and real content CI remain UNRUN.
-Source declarations, roff/includes/descriptions/filters, full runtime closure,
-generated-state validation and publication authority remain false.
+The source-content role in guard profile v3 compares bounded zlib expansion
+against fixed /usr/bin/gzip -cd on stdin and discards expanded bytes. Header
+names/comments remain inert. Immutable support files and exact input/runtime
+hashes bind the report. Content has 190s/256MiB/32tasks, per-file 10s and 8MiB,
+aggregate 64MiB/16384 members and a 16MiB report ceiling. Other roles retain
+their budgets. The content gate depends on all 29 prior gates. Independent
+acceptance binds compressed framing and native comparison evidence without
+repeating real inflation on Root/Mac. Semantics and publication remain false.
 
 ## Opaque source-byte capture accepted in native29
 
@@ -221,7 +220,7 @@ those failed outcomes. All old logs/artifacts are retained.
 
 ## All acceptance dependencies
 
-Native29 uses ALL29; the future content gate must depend on every one:
+Native30 uses ALL30; every subsequent input-coverage gate must retain them:
 --payload-closure --control-metadata --file-lists --database-files
 --change-accounting --log-observation --log-decoding --log-scope
 --trigger-declarations --trigger-linkage --log-sequence --log-time-window
@@ -229,7 +228,7 @@ Native29 uses ALL29; the future content gate must depend on every one:
 --command-diagnostics --uid-drop-comparison --compatible-stage
 --process-outcomes --trigger-arguments --cache-tag-metadata
 --man-cache-bytes --gdbm-decoding --man-regeneration --man-canonical
---man-input-policy --man-source-metadata --man-source-bytes
+--man-input-policy --man-source-metadata --man-source-bytes --man-source-content
 
 Use task outputs/run_pr134_acceptance.py from repository cwd. Each option has
 an explicit artifact set; never promote an old schema to stronger proof.
@@ -265,7 +264,7 @@ paid-provider/key/auth experiments. No new merge is authorized by this document.
 Root/Linux/VM probes ONLY disposable Debian CI. Ordinary unprivileged portable
 Python/file/data analysis is allowed Mac. Never run native DB readers on staged
 bytes there. Keep VM images/models off Mac; no silent user-data deletion.
-Disk last43 GiBfree/79%; warn <20 GiB or >90%, stop large downloads <10 GiB.
+Disk last 40 GiB free/81%; warn <20 GiB or >90%, stop large downloads <10 GiB.
 Preserve unrelated duplicate files (do not stage/delete):
 - docs/architecture/0109-privileged-package-stop-domain 2.md
 - packaging/systemd/mano-package 2.slice
