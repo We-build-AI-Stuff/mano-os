@@ -160,9 +160,9 @@ def validate_native_guard(guard, *, role):
         'control_read_denied', 'control_write_denied', 'tmp_exec_before_allowed',
         'tmp_exec_denied', 'cache_write_allowed', 'namespace_change_denied',
         'identity_change_denied', 'child_exec_inheritance_verified', 'seccomp_enforced'}
-    if (role not in {'mandb', 'source-bytes'} or type(guard) is not dict
+    if (role not in {'mandb', 'source-bytes', 'source-content'} or type(guard) is not dict
             or set(guard) != expected | {'profile', 'role', 'landlock_abi', 'uid', 'gid'}
-            or guard['profile'] != 'man-cache-landlock-seccomp-v2' or guard['role'] != role
+            or guard['profile'] != 'man-cache-landlock-seccomp-v3' or guard['role'] != role
             or type(guard['landlock_abi']) is not int or not 5 <= guard['landlock_abi'] <= 4096
             or type(guard['uid']) is not int or guard['uid'] != 6
             or type(guard['gid']) is not int or guard['gid'] != 12

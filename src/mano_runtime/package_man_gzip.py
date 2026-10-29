@@ -101,7 +101,8 @@ def decode(raw, *, maximum=MAX_EXPANDED_BYTES):
             end_offset=cursor, header_bytes=payload-start, header_sha256=sha(raw[start:payload]),
             flags=flags, header_mtime=mtime, extra_flags=xfl, operating_system=operating_system,
             optional_fields=fields, header_crc16=header_crc,
-            deflate_bytes=trailer-payload, expanded_bytes=len(expanded),
+            deflate_bytes=trailer-payload, deflate_sha256=sha(raw[payload:trailer]),
+            expanded_bytes=len(expanded),
             expanded_sha256=sha(expanded), crc32=crc))
         chunks.append(expanded)
         total += len(expanded)

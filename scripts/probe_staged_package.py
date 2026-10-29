@@ -876,6 +876,10 @@ def main():
             canonical_artifacts['staged-man-canonical-bytes.json'], baseline_tree, candidate_tree,
             state_masks, empty, regeneration_inputs['config_sha256'], run)
         regeneration_artifacts.update(source_artifacts)
+        from probe_package_man_source_content import capture_content
+        source_content, content_artifacts = capture_content(BASE, baseline_tree, state_masks,
+            empty, regeneration_inputs['config_sha256'], run)
+        regeneration_artifacts.update(content_artifacts)
         for role, observed in (('baseline', baseline_tree), ('candidate', candidate_tree)):
             current = tree_observation(role)
             if (current['manifest_sha256'] != observed['manifest_sha256']
@@ -1010,6 +1014,7 @@ def main():
                 man_cache_canonical=canonical_man,
                 man_cache_input_policy=policy_pair,
                 man_source_bytes=source_bytes,
+                man_source_content=source_content,
                 man_cache_regeneration=dict(inputs=regeneration_inputs,
                     worker=regeneration_worker, raw=regeneration_bytes,
                     comparison=regeneration_comparison,

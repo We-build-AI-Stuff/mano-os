@@ -32,32 +32,25 @@ pr134-man-source-bytes-{security-acceptance,continuation}.log and artifact
 metadata/ZIP. Prior native26 head3729ef2/run40700950648 is historical evidence.
 All older detailed continuation files are archived under task outputs and Git.
 
-## Local follow-up: bounded gzip framing, not wired or pushed
+## Local follow-up: guarded gzip content, native validation pending
 
-package_man_gzip prepares the next unprivileged source-content step. It checks
-RFC1952 header/method/reserved flags, optional bounded fields and header CRC,
-raw DEFLATE EOF, CRC32 and ISIZE, concatenated members and explicit bounded
-zero-padding compatibility regions. Original names/comments remain inert
-hashes; header time is never source authority. Native zlib output uses a
-nonzero ceiling and no unbounded flush. Limits:1MiB input,8MiB expansion,
-128members and64KiB padding. Source/roff/generated-state authority stays false.
+The local content worker is wired through a fixed source-content role in native
+man-cache guard profilev3. It compares bounded zlib expansion against the fixed
+/usr/bin/gzip -cd command via stdin, then discards expanded bytes. Header names
+and comments remain inert. Immutable support files, exact input/runtime hashes,
+control preservation and process-domain drain bind the report. Source and other
+roles keep their existing budgets; content has190s/256MiB/32tasks, per-file10s,
+8MiB expansion, aggregate64MiB/16384members and16MiB report ceilings.
 
-Portable tests use self-created synthetic streams only: exact binary data,
-stored/fixed/dynamic strategies, every truncation, bad headers/checksums/size,
-reserved DEFLATE block and compressed bombs/limits. A Linux-only GNU gzip
-crosscheck is prepared but has NOT run yet (including zero padding between
-members). No actual staged source was decompressed on Mac or Root. This helper
-is UNUSED; integration must execute only inside a guarded UID6 CI worker and
-compare a second decoder before any real-source claims.
-
-Focused suite now112 tests:110 pass,two Linux-only skips; Python lint/diff pass.
-Official framing/API references read as data:
-https://www.rfc-editor.org/info/rfc1952/
-https://docs.python.org/3.13/library/zlib.html
-Native29 head53c6536/run40808929043 is now fully accepted above. Observer57842
-completed EXIT0; no CI/watcher is live. Local gzip helper a1c7e24 is unpushed.
-Next implement a fixed guarded content role, bounded per-file/aggregate decoding
-and a second decoder, preserving all29 existing gates and full goal scope.
+The independent content acceptance gate depends on all29 prior gates. It binds
+compressed headers/trailers/DEFLATE slices and native dual-decoder evidence; it
+does not independently inflate or reacquire expanded source bytes. Real-source
+inflation is restricted to the confined UID6 Debian worker. Local portable tests
+use synthetic streams only. Current focused118tests pass with3Linuxskips; lint
+and whitespace pass. Three independent synthetic/dependency acceptance tests
+also pass. Native compilation, GNU comparison and real content CI remain UNRUN.
+Source declarations, roff/includes/descriptions/filters, full runtime closure,
+generated-state validation and publication authority remain false.
 
 ## Opaque source-byte capture accepted in native29
 

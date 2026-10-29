@@ -50,7 +50,8 @@ class ManRegenerationTests(unittest.TestCase):
     def test_native_entrypoint_refuses_other_users_and_arbitrary_commands(self):
         self.assertNotEqual(os.geteuid(), 0)
         self.assertNotEqual(os.geteuid(), 6)
-        for args in ([], ['--probe-child'], ['--source-bytes'], ['/usr/bin/true'],
+        for args in ([], ['--probe-child'], ['--source-bytes'], ['--source-content'],
+                     ['/usr/bin/true'],
                      ['--probe-child', 'extra']):
             result = subprocess.run(['/tmp/mano-man-cache-guard', *args],
                                     capture_output=True, timeout=5, check=False)
@@ -112,7 +113,7 @@ class ManRegenerationTests(unittest.TestCase):
                     'namespace_change_denied identity_change_denied '
                     'child_exec_inheritance_verified seccomp_enforced').split()
         guard = dict.fromkeys(controls, True)
-        guard.update(profile='man-cache-landlock-seccomp-v2', role='mandb',
+        guard.update(profile='man-cache-landlock-seccomp-v3', role='mandb',
                      landlock_abi=5, uid=6, gid=12)
         row.update(mode='restricted', input_guard=guard)
         row['result']['stdout'] = stream(json.dumps(guard).encode()+b'\n')
