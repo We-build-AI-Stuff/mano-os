@@ -29,6 +29,26 @@ acceptance adds explicit option 27, `--man-input-policy`, depending on all prior
 negative self-checks. No new native run has been accepted. Last accepted evidence
 below remains the previous source, not proof for these new changes.
 
+## Local source-link follow-up, not part of the running CI head
+
+New unused `package_man_source_links` walks observed symlinks component by
+component inside the manual tree, enforcing ownership, real parent directories,
+cycle/depth/path/report limits and a terminal regular-file metadata/content hash.
+It never opens those paths or interprets source content. A second implementation
+agrees on all 4,515 primary sources in accepted native26 data and 13 adversarial
+cases. 4,453 bind; 62 leave the manual hierarchy through /etc/alternatives.
+Do not permit arbitrary external targets. The next graph design must bind the
+immutable baseline alternatives selectors actually visible to the worker, since
+only candidate /usr/share/man is overlaid. Full includes/alias declarations,
+descriptions/filter semantics and publication remain unverified.
+
+Local focused suite now runs 83 tests, 82 pass and one Linux-native-only skip;
+repository lint/diff checks pass. Evidence lives in task outputs under
+pr134-man-source-links-native26-{local,unresolved,independent-selfcheck}.json.
+The running CI remains head ab85fb7, run 40802181056; its quality job succeeded
+with 906 tests (one skip), security job 123212611801 is running as of 01:53 UTC.
+One-shot exec 75723 is live; do not restart it without checking its handle.
+
 ## Current checkout and accepted native evidence
 
 - Repository: We-build-AI-Stuff/mano-os, PR #134, feat/approved-package-apply.
@@ -141,7 +161,8 @@ same index with exact name/section/extension/compression/filter/time and bound
 primary metadata. Both implementations matched all 224 on old retained data and all 248 on accepted
 native26 data; seven
 mismatch cases agree as unresolved. It never treats aliases/pointers as paths.
-This helper is NOT wired or pushed and does not change current gate26 verification.
+The virtual helper is now pushed with ab85fb7, but remains unwired and does not
+change the source-declaration evidence boundary.
 Local focused suite: 152 tests, 143 pass, nine Linux-only skips. Lint/diff pass.
 
 Research GNU GDBM 1.24/man-db 2.13.1 source tarballs were read as data, matched to
@@ -193,7 +214,7 @@ proactive subagents, other-chat messages, paid-provider/key/auth experiments.
 Root/Linux/VM work ONLY in disposable Debian CI; never on the Mac. Ordinary
 unprivileged portable Python/file/data checks are allowed. Never use a native
 DB library on untrusted staged bytes on Mac. No local VM/model downloads.
-Disk last ~48 GiB free / 76% used. Warn below 20 GiB or above 90%; stop new large
+Disk last 43 GiB free / 79% used. Warn below 20 GiB or above 90%; stop new large
 downloads below 10 GiB. Never silently delete user data. No data was deleted.
 Preserve unrelated untracked duplicates:
 - docs/architecture/0109-privileged-package-stop-domain 2.md
