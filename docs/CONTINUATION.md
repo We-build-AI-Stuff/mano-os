@@ -25,9 +25,28 @@ Local checks: 73 focused tests, 72 passed and one Linux-native-only skip;
 repository lint and diff whitespace checks passed. Native C compilation and
 successful kernel enforcement have NOT been tested on this Mac. Independent
 acceptance adds explicit option 27, `--man-input-policy`, depending on all prior
-26 options. The new checker and its CLI wiring still need native artifacts and
-negative self-checks. No new native run has been accepted. Last accepted evidence
+26 options. The new checker and its CLI wiring still need native artifacts. Eleven
+altered-evidence self-checks reject, including a record change with rebound hashes. No new native run has been accepted. Last accepted evidence
 below remains the previous source, not proof for these new changes.
+
+## Baseline alternatives metadata binding prepared locally
+
+The optional runtime-overlay source-link profile now checks both complete tree
+digests, uses candidate /usr/share/man with baseline ancestor metadata, and binds
+only exact root-owned absolute /etc/alternatives selectors with trusted baseline
+parents. Each selector must match its candidate counterpart and return inside
+manuals; generic external files, changed selectors, cycles, unsafe parents and
+unsupported relative selectors remain unbound. Combined manual/selector hops
+share the depth limit. No filesystem permissions or native guards are changed.
+
+Both independent data-only walkers now agree on all 4,515/4,515 primary chains
+using retained native26 metadata, including all 62 selectors, plus 15 selector
+fixtures. Evidence: task outputs/pr134-man-runtime-source-links-native26-
+{local,independent-selfcheck}.json. Full roff include/alias/description/filter
+semantics and production authority remain unverified. The helper is unused,
+local and unpushed while native27 runs. Focused suite: 87 tests, 86 pass and one
+Linux-only skip; repo lint/diff pass. Do not confuse this local analysis with
+native validation of the helper or new artifacts for the running source.
 
 ## Local source-link follow-up, not part of the running CI head
 

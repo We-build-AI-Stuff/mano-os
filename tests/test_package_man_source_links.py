@@ -19,7 +19,80 @@ def fixture():
     return tree, source, target
 
 
+def alternatives_fixture():
+    candidate_tree, source, target = fixture()
+    entries = candidate_tree['entries']
+    for parent in ('etc', 'etc/alternatives'):
+        entries[parent] = copy.deepcopy(entries['usr'])
+    entries[source]['target'] = '/etc/alternatives/man-source'
+    entries['etc/alternatives/man-source'] = dict(
+        kind='symlink', uid=0, gid=0, mode=0o777, mtime_ns=1,
+        ctime_ns=1, nlink=1, xattrs={}, target='/'+target)
+    rehash(candidate_tree)
+    return copy.deepcopy(candidate_tree), candidate_tree, source, target
+
+
 class ManualSourceLinkTests(unittest.TestCase):
+    def test_runtime_graph_binds_baseline_selector_and_candidate_manual_content(self):
+        baseline, tree, source, target = alternatives_fixture()
+        baseline['entries'][target]['sha256'] = 'a'*64  # Overlay must use candidate bytes.
+        rehash(baseline)
+        strict = links.inspect({'var/cache/man/index.db': index(kind=b'B')}, tree)
+        self.assertFalse(strict['all_primary_symlink_chains_bound'])
+        report = links.inspect({'var/cache/man/index.db': index(kind=b'B')}, tree,
+                               baseline=baseline)
+        self.assertTrue(report['all_primary_symlink_chains_bound'])
+        self.assertEqual(report['sources'][source]['terminal_sha256'],
+                         hashlib.sha256(b'data').hexdigest())
+        selector = report['sources'][source]['symlinks'][1]
+        self.assertEqual(selector['path'], 'etc/alternatives/man-source')
+        self.assertEqual(selector['metadata_sha256'],
+                         links.metadata_hash(baseline['entries'][selector['path']]))
+        self.assertEqual(report['baseline_sha256'], baseline['manifest_sha256'])
+        self.assertFalse(report['transitive_source_graph_verified'])
+
+    def test_candidate_selector_changes_do_not_get_replaced_by_baseline_claims(self):
+        baseline, tree, source, _ = alternatives_fixture()
+        tree['entries']['etc/alternatives/man-source']['target'] = '/usr/share/man/other'
+        rehash(tree)
+        report = links.inspect({'var/cache/man/index.db': index(kind=b'B')}, tree,
+                               baseline=baseline)
+        self.assertEqual(report['sources'][source]['reason'],
+                         'baseline-candidate-alternatives-selector-differs')
+        baseline['entries']['usr']['uid'] = 6  # Stale hash must reject before walking.
+        with self.assertRaises(ValueError):
+            links.inspect({'var/cache/man/index.db': index(kind=b'B')}, tree, baseline=baseline)
+
+    def test_actual_baseline_ancestors_and_selector_parents_must_be_trusted(self):
+        for path in ('usr', 'usr/share', 'etc', 'etc/alternatives'):
+            baseline, tree, _, _ = alternatives_fixture()
+            baseline['entries'][path]['mode'] = 0o777
+            rehash(baseline)
+            report = links.inspect({'var/cache/man/index.db': index(kind=b'B')}, tree,
+                                   baseline=baseline)
+            with self.subTest(path=path):
+                self.assertFalse(report['all_primary_symlink_chains_bound'])
+
+    def test_selector_targets_cycles_and_nonselectors_fail_closed(self):
+        for target in ('/etc/shadow', '/outside', '../man', '',
+                       '/etc/alternatives/man-source', '/etc/alternatives/../shadow'):
+            baseline, tree, source, _ = alternatives_fixture()
+            for observed in (baseline, tree):
+                observed['entries']['etc/alternatives/man-source']['target'] = target
+                rehash(observed)
+            report = links.inspect({'var/cache/man/index.db': index(kind=b'B')}, tree,
+                                   baseline=baseline)
+            with self.subTest(target=target):
+                self.assertFalse(report['sources'][source]['primary_symlink_chain_bound'])
+        for values in (dict(uid=6), dict(kind='file')):
+            baseline, tree, _, _ = alternatives_fixture()
+            for observed in (baseline, tree):
+                observed['entries']['etc/alternatives/man-source'].update(values)
+                rehash(observed)
+            report = links.inspect({'var/cache/man/index.db': index(kind=b'B')}, tree,
+                                   baseline=baseline)
+            self.assertFalse(report['all_primary_symlink_chains_bound'])
+
     def test_bound_link_and_terminal_hash_are_data_only(self):
         tree, source, target = fixture()
         rehash(tree)

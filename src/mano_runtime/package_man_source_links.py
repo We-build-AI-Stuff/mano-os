@@ -10,6 +10,7 @@ import json
 import re
 
 from mano_runtime.package_man_sources import bind
+from mano_runtime.package_tree import delta
 
 ROOT = ('usr', 'share', 'man')
 MAX_LINKS = 40
@@ -23,7 +24,7 @@ def metadata_hash(row):
                                     allow_nan=False).encode()).hexdigest()
 
 
-def resolve(entries, primary):
+def resolve(entries, primary, *, alternatives=None):
     """Interpret only hash-bound tree data supplied by inspect(), never open paths."""
     if (type(primary) is not str or not primary.startswith('/'.join(ROOT) + '/')
             or len(primary.encode()) > MAX_PATH_BYTES):
@@ -81,6 +82,43 @@ def resolve(entries, primary):
                     or len(target.encode()) > MAX_PATH_BYTES):
                 return unresolved('unsupported-source-link-target')
             links.append(dict(path=path, target=target, metadata_sha256=metadata_hash(row)))
+            # The experiment overlays candidate manuals on a baseline root.
+            # Only a fixed baseline alternatives selector may leave and reenter
+            # that manual tree. Candidate selectors must still agree, since an
+            # eventual candidate activation would otherwise choose other bytes.
+            while alternatives is not None and target.startswith('/etc/alternatives/'):
+                baseline_entries, candidate_entries = alternatives
+                components = target.split('/')
+                if (len(components) != 4 or components[3] in {'', '.', '..'}
+                        or len(components[3].encode()) > 255):
+                    return unresolved('unsupported-alternatives-selector-path')
+                for parent in ('etc', 'etc/alternatives'):
+                    parent_row = baseline_entries.get(parent, {})
+                    if (parent_row.get('kind') != 'directory'
+                            or type(parent_row.get('uid')) is not int or parent_row['uid'] != 0
+                            or type(parent_row.get('mode')) is not int
+                            or parent_row['mode'] & 0o022):
+                        return unresolved('untrusted-baseline-alternatives-parent')
+                    directories[parent] = metadata_hash(parent_row)
+                selector = target[1:]
+                selected = baseline_entries.get(selector)
+                if selected is None or selected != candidate_entries.get(selector):
+                    return unresolved('baseline-candidate-alternatives-selector-differs')
+                if (selected.get('kind') != 'symlink'
+                        or type(selected.get('uid')) is not int or selected['uid'] != 0):
+                    return unresolved('unsupported-baseline-alternatives-selector')
+                state = (selector, tuple(pending))
+                if state in seen:
+                    return unresolved('source-link-cycle')
+                seen.add(state)
+                if len(links) >= MAX_LINKS:
+                    return unresolved('source-link-depth-budget')
+                target = selected.get('target')
+                if (type(target) is not str or not target or '\0' in target
+                        or len(target.encode()) > MAX_PATH_BYTES or not target.startswith('/')):
+                    return unresolved('unsupported-baseline-alternatives-target')
+                links.append(dict(path=selector, target=target,
+                                  metadata_sha256=metadata_hash(selected)))
             parts = target.split('/')
             if target.startswith('/'):
                 if tuple(parts[1:len(ROOT)+1]) != ROOT:
@@ -109,8 +147,19 @@ def resolve(entries, primary):
     return unresolved('source-link-target-is-directory')
 
 
-def inspect(index_files, candidate):
+def inspect(index_files, candidate, *, baseline=None):
     primary = bind(index_files, candidate)  # Checks input budgets and complete tree digest.
+    entries, alternatives = candidate['entries'], None
+    if baseline is not None:
+        delta(baseline, baseline)
+        # Reflect the actual mount overlay. Candidate /etc and ancestor metadata
+        # must not silently replace the baseline inputs used by the generator.
+        entries = {path: row for path, row in candidate['entries'].items()
+                   if path == 'usr/share/man' or path.startswith('usr/share/man/')}
+        for ancestor in ('usr', 'usr/share'):
+            if ancestor in baseline['entries']:
+                entries[ancestor] = baseline['entries'][ancestor]
+        alternatives = (baseline['entries'], candidate['entries'])
     sources, indexes, count, bound = {}, {}, 0, 0
     for path, index in primary['indexes'].items():
         rows = {}
@@ -122,7 +171,7 @@ def inspect(index_files, candidate):
             count += 1
             source = row['primary_path']
             if source not in sources:
-                sources[source] = resolve(candidate['entries'], source)
+                sources[source] = resolve(entries, source, alternatives=alternatives)
             result = sources[source]
             rows[key] = dict(primary_path=source,
                             primary_symlink_chain_bound=result['primary_symlink_chain_bound'])
@@ -139,6 +188,11 @@ def inspect(index_files, candidate):
         transitive_source_graph_verified=False, descriptions_verified=False,
         compression_filters_verified=False, cache_sources_verified=False,
         generated_state_validated=False, changes_authorized=False, publication_authorized=False)
+    if baseline is not None:
+        report.update(profile='man-db-runtime-primary-source-links-v1',
+                      baseline_sha256=baseline['manifest_sha256'],
+                      runtime_manual_layer='candidate', runtime_other_layer='baseline',
+                      alternatives_profile='equal-root-owned-absolute-selectors-v1')
     if len(json.dumps(report, sort_keys=True, allow_nan=False).encode()) > MAX_REPORT_BYTES:
         raise ValueError('Manual source-link report budget')
     return report
