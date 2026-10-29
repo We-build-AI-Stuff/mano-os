@@ -183,7 +183,7 @@ def acquire(root, packet):
                   all_file_stat_fields_verified=True, source_content_interpreted=False,
                   changes_authorized=False, publication_authorized=False)
     encoded = json.dumps(result, sort_keys=True, allow_nan=False).encode()
-    if len(encoded) > MAX_OUTPUT_BYTES:
+    if len(encoded)+1 > MAX_OUTPUT_BYTES:
         raise ValueError('Opaque manual source output budget')
     return encoded
 

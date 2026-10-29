@@ -52,9 +52,17 @@ counts, drain/control flags and both-decoder coverage. No extra artifact is
 introduced; source semantics and runtime/publication authority remain false.
 
 The independent coverage gate depends on all 30 earlier gates, requires v2 and
-rejects the older indexed-only protocol. Current focused 126 tests pass with
+rejects the older indexed-only protocol. Current focused 127 tests pass with
 three Linux skips; lint/diff pass. Real v2 capture/decoder coverage remains
-UNRUN. Independent synthetic and backward acceptance verification is in progress.
+UNRUN. The producer and independent v2 manifest match on actual retained native30
+metadata: 3,202 regular files, 3,198 indexed files, 11,609,535 compressed bytes.
+The original 30-gate artifact still passes all 30 staging checks and fails gate31;
+relabeling its old capture profile/manifest hash cannot hide the four missing
+files. Full synthetic v2 source/content/coverage acceptance passes with five
+negative cases; native controls/GNU witnesses in that test are explicitly mocked.
+Older native29 guard-v2/source-v1 backward acceptance also passes. All CLI
+predecessor checks pass while both earlier option paths remain valid. Source
+output bounds now include the newline, with an exact boundary regression.
 This local source cannot inherit the accepted native30 CI results above.
 
 ## Accepted streaming controller output bounds

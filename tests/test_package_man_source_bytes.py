@@ -2,9 +2,11 @@ import copy
 import hashlib
 import json
 import os
+import stat
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from test_package_man_sources import candidate, index, rehash
@@ -18,6 +20,17 @@ def packet():
 
 
 class OpaqueManualSourceTests(unittest.TestCase):
+    def test_worker_output_ceiling_includes_its_trailing_newline(self):
+        root = SimpleNamespace(st_mode=stat.S_IFDIR | 0o755, st_uid=0)
+        with patch.object(sources.os, 'fstat', return_value=root), \
+                patch.object(sources, 'read_relative', return_value=b''):
+            body = sources.acquire(123, packet())
+            with patch.object(sources, 'MAX_OUTPUT_BYTES', len(body)), \
+                    self.assertRaises(ValueError):
+                sources.acquire(123, packet())
+            with patch.object(sources, 'MAX_OUTPUT_BYTES', len(body)+1):
+                self.assertEqual(sources.acquire(123, packet()), body)
+
     def test_v2_captures_unindexed_regular_files_with_explicit_scope(self):
         tree, path = candidate()
         extra = 'usr/share/man/man6/unindexed.6.gz'

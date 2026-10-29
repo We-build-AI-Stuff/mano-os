@@ -17,13 +17,15 @@ def fixture():
     rehash(tree)
     packet = prepare({'var/cache/man/index.db': index()}, tree, tree)
     # Fabricated native witness summaries: this test proves only metadata binding.
-    source = dict(scope='observed-manual-root-regular-files',
+    source = dict(profile='man-source-opaque-bytes-v2',
+        scope='observed-manual-root-regular-files',
         observed_manual_root_regular_files_captured=True, all_captured_content_hashes_match=True,
         manifest_sha256=hashlib.sha256(packet).hexdigest(), capture_sha256='a'*64,
         domain_drained=True, control_fixture_unchanged=True, source_files=2, source_bytes=1,
         indexed_source_files=1, additional_manual_files=1,
         changes_authorized=False, publication_authorized=False)
-    content = dict(manifest_sha256=source['manifest_sha256'], input_capture_sha256='a'*64,
+    content = dict(profile='man-source-gzip-content-v1',
+        manifest_sha256=source['manifest_sha256'], input_capture_sha256='a'*64,
         capture_sha256='b'*64, domain_drained=True, control_fixture_unchanged=True,
         both_decoders_equal=True, source_files=2, expanded_bytes=10, gzip_members=2,
         changes_authorized=False, publication_authorized=False)
@@ -57,6 +59,7 @@ class ManualInputCoverageTests(unittest.TestCase):
     def test_cross_capture_mismatch_incomplete_domain_and_false_counts_reject(self):
         packet, tree, source, content = fixture()
         for which, field, bad in ((0, 'source_files', True), (0, 'indexed_source_files', 2),
+                (0, 'profile', 'man-source-opaque-bytes-v1'),
                 (0, 'observed_manual_root_regular_files_captured', False),
                 (1, 'input_capture_sha256', 'c'*64), (1, 'both_decoders_equal', False),
                 (1, 'domain_drained', False), (1, 'control_fixture_unchanged', False),

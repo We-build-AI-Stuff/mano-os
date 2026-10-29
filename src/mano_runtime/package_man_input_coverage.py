@@ -3,7 +3,7 @@ import hashlib
 import json
 import re
 
-from mano_runtime.package_man_source_bytes import SCOPE, STAT_FIELDS, manifest
+from mano_runtime.package_man_source_bytes import PROFILE, SCOPE, STAT_FIELDS, manifest
 from mano_runtime.package_man_source_links import metadata_hash
 from mano_runtime.package_tree import delta
 
@@ -29,7 +29,8 @@ def bind(packet, candidate, source, content):
            re.fullmatch('[a-f0-9]{64}', report['capture_sha256']) is None
            for report in (source, content)):
         raise ValueError('Exact source and content capture hashes required')
-    if (source.get('scope') != SCOPE
+    if (source.get('profile') != PROFILE or source.get('scope') != SCOPE
+            or content.get('profile') != 'man-source-gzip-content-v1'
             or source.get('observed_manual_root_regular_files_captured') is not True
             or source.get('all_captured_content_hashes_match') is not True
             or source.get('manifest_sha256') != packet_sha
