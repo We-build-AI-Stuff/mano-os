@@ -8,27 +8,27 @@ Do not redefine completion around a prototype, CI slice or the checks below.
 ## Repository and latest accepted source
 
 We-build-AI-Stuff/mano-os; PR #134; branch feat/approved-package-apply.
-Accepted head 3a03c7134f586d0f0274c52f4b9407e46b588514, base
+Accepted head 53c653640d2f58e6b3cc0a7981ed99d2c9f825db, base
 65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Tested merge
-f2df245fd895ffab84024935d63088c24e3b33fa has exactly those parents;
-seventeen runtime/probe/native/workflow source files match the head.
+f8a8b14de65a2c83aad53eed11aee489aad36fae has exactly those parents;
+nineteen runtime/probe/native/workflow source files match the head.
 
-CI run 40805180421 ALL THREE SUCCESS:
-- quality 123222302366: 923 tests, one Mac-specific skip; strict native guard
+CI run 40808929043 ALL THREE SUCCESS:
+- quality 123234381330: 937 tests, one Mac-specific skip; strict native guard
   compilation and wrong-user/arbitrary-command refusals passed.
-- security-lab 123222302653; merge-gate 123230627602.
-- Artifact 12869130930: 25,335,017 bytes, SHA256
-  4055f6966c70653a91f96cddc71e841f145ca16ad6cfc302428d7a089e0ca3c1.
-- Fixed observer exec 93059 COMPLETED ZERO. Do not restart it. All 28 staging
+- security-lab 123234381112; merge-gate 123241809619.
+- Artifact 12869459845: 37,218,521 bytes, SHA256
+  d0336b597561d737707c745f45bfdf30075de0a9ff677abc50c4a2ae65fc7534.
+- Fixed observer exec 57842 COMPLETED ZERO. Do not restart it. All 29 staging
   gates plus the prior 54-hash/45-flag/PAM/Stop/recovery/package/ELF chain passed.
 - Six fresh UI originals and eight crops/contact sheet ACTUALLY viewed; 15-PNG
-  receipt: task outputs/acceptance-pr134-man-source-metadata/inspection.json.
+  receipt: task outputs/acceptance-pr134-man-source-bytes/inspection.json.
   Full 900/120 values are legible; pending/effective numeric pixels identical.
   Headless only; physical input provenance remains null.
 
-Exact proof/logs in task outputs: pr134-3a03c71-native28-proof.json,
-pr134-3a03c71-{quality,security}-completed-job.log, quality-proof.json,
-pr134-man-source-metadata-{security-acceptance,continuation}.log and artifact
+Exact proof/logs in task outputs: pr134-53c6536-native29-proof.json,
+pr134-53c6536-{quality,security}-completed-job.log, quality-proof.json,
+pr134-man-source-bytes-{security-acceptance,continuation}.log and artifact
 metadata/ZIP. Prior native26 head3729ef2/run40700950648 is historical evidence.
 All older detailed continuation files are archived under task outputs and Git.
 
@@ -54,10 +54,12 @@ Focused suite now112 tests:110 pass,two Linux-only skips; Python lint/diff pass.
 Official framing/API references read as data:
 https://www.rfc-editor.org/info/rfc1952/
 https://docs.python.org/3.13/library/zlib.html
-Native29 still tests head53c6536/run40808929043; quality937tests passed,
-security123234381112 and observer57842 remain live. Do not push and cancel it.
+Native29 head53c6536/run40808929043 is now fully accepted above. Observer57842
+completed EXIT0; no CI/watcher is live. Local gzip helper a1c7e24 is unpushed.
+Next implement a fixed guarded content role, bounded per-file/aggregate decoding
+and a second decoder, preserving all29 existing gates and full goal scope.
 
-## Next source-byte capture prepared locally, native29 unverified
+## Opaque source-byte capture accepted in native29
 
 The new package_man_source_bytes module prepares an exact terminal-file manifest
 from recomputed cache/source chains, then a fixed Linux UID6/GID12/empty-groups
@@ -87,8 +89,11 @@ Guard schema v1/v2 is selected by tested Git C source, never by worker claims;
 the old native27 v1 artifact was reaccepted. All28 omitted-dependency cases
 reject; the gate28 path is unchanged. Two capture validators agree and reject
 12 synthetic altered captures. Local focused104 tests:103 pass/one Linux skip;
-Python repo lint/diff pass. C profilev2 compilation and actual source-reader
-execution have NOT been tested; both must run only in fresh disposable CI.
+Python repo lint/diff pass. C profilev2 compiled under strict warnings. Native29 executed the source reader
+as UID6/GID12/groups empty with all capability sets zero and Landlock ABI6.
+It captured3198 files/11,596,108 bytes; all stat fields and hashes matched.
+Capture frame is15,561,203 bytes; source domain drained and control unchanged.
+Artifact uncompressed total116,798,944 stays below the unchanged200MB cap.
 The reader reports stat-fields verification, not complete xattr metadata proof.
 All includes/alias/description/filter semantics and publication remain false.
 
@@ -186,7 +191,7 @@ those failed outcomes. All old logs/artifacts are retained.
 
 ## All acceptance dependencies
 
-Native28 uses the first28; new source requires ALL29:
+Native29 uses ALL29; the future content gate must depend on every one:
 --payload-closure --control-metadata --file-lists --database-files
 --change-accounting --log-observation --log-decoding --log-scope
 --trigger-declarations --trigger-linkage --log-sequence --log-time-window
