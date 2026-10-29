@@ -866,7 +866,7 @@ def main():
             for path, rows in man_cache_bytes['databases'].items()
             if rows['candidate'] is not None})
         canonical_man, canonical_artifacts = derive_canonical_man(
-            regeneration_bundle, candidate_tree)
+            regeneration_bundle, candidate_tree, baseline=baseline_tree)
         for name, data in canonical_artifacts.items():
             with (Path('/opt/mano-lab/evidence') / name).open('xb') as stream:
                 stream.write(data)

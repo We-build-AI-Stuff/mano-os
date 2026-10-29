@@ -5,6 +5,31 @@ Phase 8 is optional. Frozen requirements: docs/spec-v2.1.md, SHA256
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 Never redefine completion around the prototype/CI evidence below.
 
+## Local source metadata pipeline integration — gate 28 prepared
+
+Canonical derivation now accepts a bound baseline observation. The staging
+controller supplies it and retains two additional reports:
+staged-man-source-links.json and staged-man-virtual-targets.json. Source-link
+and virtual-target helpers are now WIRED LOCALLY, not yet pushed/native tested.
+The summary joins each metadata-bound virtual pointer to its actual primary
+runtime source chain; pointer metadata alone cannot count as a bound chain.
+
+Independent reconstruction on accepted native26 data matches all five canonical/
+source artifacts exactly: 4,515 primary chains and 248 virtual target chains,
+8,330,674 combined artifact bytes. Ten altered summaries/artifacts/hashes/roles
+reject, including terminal-content forgery with its artifact hash rebound and
+false semantic/publication claims. Local focused suite: 90 tests, 89 pass and
+one Linux-only skip; repository lint/diff pass. Evidence: task outputs/
+pr134-man-source-metadata-native26-{integrated,negative}-selfcheck.json.
+
+New explicit --man-source-metadata is gate 28 and requires all earlier 27 gates.
+All 27 omitted-dependency cases reject; the gate-27 command/legacy canonical
+checker path is preserved (CLI selfcheck JSON retained). This does not upgrade
+current run 40802181056, which tests ab85fb7 without these two artifacts. Existing
+observer 75723 is live; wait for its outcome before pushing newer local commits.
+Source includes, alias declarations, descriptions/filters, generated state and
+publication remain false. Native artifact count for the next source becomes 55.
+
 ## Prepared paired input-policy experiment — native verification pending
 
 The new fixed CI-only `native/mano_man_cache_guard.c` requires UID 6/GID 12,

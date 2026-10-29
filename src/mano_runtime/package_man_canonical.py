@@ -12,7 +12,9 @@ from mano_runtime.package_gdbm_decode import decode
 from mano_runtime.package_gdbm_encode import encode, require_canonical
 from mano_runtime.package_man_cache import MAX_DATABASE_BYTES, index_path
 from mano_runtime.package_man_records import parse
+from mano_runtime.package_man_source_links import inspect as inspect_source_links
 from mano_runtime.package_man_sources import bind
+from mano_runtime.package_man_virtual_metadata import inspect as inspect_virtual_targets
 
 MAX_DATABASES = 64
 MAX_BYTES = 8 * 1024**2
@@ -21,6 +23,7 @@ MAX_REPORT_BYTES = 16 * 1024**2
 MAX_ARTIFACT_BYTES = 32 * 1024**2
 FILES = {'staged-man-canonical-bytes.json', 'staged-man-canonical-frames.json',
          'staged-man-canonical-sources.json'}
+SOURCE_FILES = {'staged-man-source-links.json', 'staged-man-virtual-targets.json'}
 
 
 def serialize(value):
@@ -39,7 +42,7 @@ def unique_object(pairs):
     return result
 
 
-def derive(raw_bundle, candidate):
+def derive(raw_bundle, candidate, *, baseline=None):
     if type(raw_bundle) is not bytes or len(raw_bundle) > MAX_REPORT_BYTES:
         raise ValueError('Bounded retained regeneration bundle required')
     raw_files = json.loads(raw_bundle, object_pairs_hook=unique_object)
@@ -78,6 +81,29 @@ def derive(raw_bundle, candidate):
     artifacts = {'staged-man-canonical-bytes.json': serialize(canonical_files),
                  'staged-man-canonical-frames.json': serialize(frame_reports),
                  'staged-man-canonical-sources.json': serialize(sources)}
+    source_metadata = None
+    if baseline is not None:
+        linked = inspect_source_links(binary_files, candidate, baseline=baseline)
+        virtual = inspect_virtual_targets(binary_files, candidate)
+        virtual_chains = 0
+        for path, index in virtual['indexes'].items():
+            for row in index['virtual_links'].values():
+                if row['virtual_target_metadata_bound'] is True:
+                    target = linked['indexes'][path]['records'][row['target_key_base64']]
+                    virtual_chains += int(target['primary_symlink_chain_bound'])
+        artifacts.update({'staged-man-source-links.json': serialize(linked),
+                          'staged-man-virtual-targets.json': serialize(virtual)})
+        source_metadata = dict(baseline_sha256=baseline['manifest_sha256'],
+            primary_chains_bound=linked['primary_symlink_chains_bound'],
+            all_primary_chains_bound=linked['all_primary_symlink_chains_bound'],
+            virtual_records=virtual['virtual_records'],
+            virtual_targets_metadata_bound=virtual['virtual_targets_metadata_bound'],
+            virtual_target_chains_bound=virtual_chains,
+            all_virtual_target_chains_bound=virtual_chains == virtual['virtual_records'],
+            source_declarations_verified=False, transitive_source_graph_verified=False,
+            descriptions_verified=False, compression_filters_verified=False,
+            generated_state_validated=False, changes_authorized=False,
+            publication_authorized=False)
     if sum(map(len, artifacts.values())) > MAX_ARTIFACT_BYTES:
         raise ValueError('Canonical derivation aggregate artifact budget')
     summary = dict(schema_version='1.0', profile='derived-man-cache-canonical-v1',
@@ -95,5 +121,7 @@ def derive(raw_bundle, candidate):
         descriptions_verified=False, compression_filters_verified=False,
         all_records_source_bound=False, cache_sources_verified=False,
         generated_state_validated=False, changes_authorized=False, publication_authorized=False)
+    if source_metadata is not None:
+        summary['source_metadata'] = source_metadata
     serialize(summary)
     return summary, artifacts

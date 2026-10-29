@@ -4,7 +4,10 @@ import json
 import unittest
 from unittest.mock import patch
 
+from test_package_man_records import database
+from test_package_man_source_links import alternatives_fixture
 from test_package_man_sources import candidate, index, rehash
+from test_package_man_virtual_metadata import inputs as virtual_inputs
 
 from mano_runtime import package_man_canonical as canonical
 from mano_runtime.package_gdbm_encode import require_canonical
@@ -15,6 +18,50 @@ def bundle(raw, path='index.db'):
 
 
 class DerivedManCacheTests(unittest.TestCase):
+    def test_runtime_sources_and_virtual_targets_bind_actual_canonical_bytes(self):
+        baseline, tree, _, _ = alternatives_fixture()
+        packet = bundle(database(virtual_inputs()))
+        summary, artifacts = canonical.derive(packet, tree, baseline=baseline)
+        self.assertEqual(set(artifacts), canonical.FILES | canonical.SOURCE_FILES)
+        metadata = summary['source_metadata']
+        self.assertEqual(metadata['primary_chains_bound'], 1)
+        self.assertEqual(metadata['virtual_targets_metadata_bound'], 1)
+        self.assertEqual(metadata['virtual_target_chains_bound'], 1)
+        self.assertTrue(metadata['all_virtual_target_chains_bound'])
+        self.assertFalse(metadata['source_declarations_verified'])
+        self.assertFalse(metadata['publication_authorized'])
+        for name in canonical.SOURCE_FILES:
+            self.assertEqual(summary['artifacts'][name], dict(bytes=len(artifacts[name]),
+                             sha256=hashlib.sha256(artifacts[name]).hexdigest()))
+            report = json.loads(artifacts[name])
+            self.assertFalse(report['transitive_source_graph_verified'])
+            self.assertFalse(report['publication_authorized'])
+        self.assertFalse(summary['all_records_source_bound'])
+        self.assertFalse(summary['generated_state_validated'])
+
+    def test_metadata_target_does_not_imply_its_runtime_source_chain_is_bound(self):
+        baseline, tree, _, _ = alternatives_fixture()
+        tree['entries']['etc/alternatives/man-source']['target'] = '/outside'
+        rehash(tree)
+        summary, _ = canonical.derive(bundle(database(virtual_inputs())), tree, baseline=baseline)
+        metadata = summary['source_metadata']
+        self.assertEqual(metadata['virtual_targets_metadata_bound'], 1)
+        self.assertEqual(metadata['virtual_target_chains_bound'], 0)
+        self.assertFalse(metadata['all_primary_chains_bound'])
+        self.assertFalse(metadata['all_virtual_target_chains_bound'])
+
+    def test_runtime_baseline_digest_and_combined_artifact_budget_are_mandatory(self):
+        baseline, tree, _, _ = alternatives_fixture()
+        packet = bundle(database(virtual_inputs()))
+        _, original = canonical.derive(packet, tree)
+        with patch.object(canonical, 'MAX_ARTIFACT_BYTES', sum(map(len, original.values()))):
+            canonical.derive(packet, tree)
+            with self.assertRaises(ValueError):
+                canonical.derive(packet, tree, baseline=baseline)
+        baseline['entries']['usr']['uid'] = 6
+        with self.assertRaises(ValueError):
+            canonical.derive(packet, tree, baseline=baseline)
+
     def test_raw_and_canonical_input_identity_are_separate_and_all_bytes_bound(self):
         tree, _ = candidate()
         raw = bytearray(index())
