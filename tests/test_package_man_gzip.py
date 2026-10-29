@@ -111,10 +111,19 @@ class BoundedManualGzipTests(unittest.TestCase):
         self.assertNotEqual(os.geteuid(), 0)
         self.assertTrue(Path('/usr/bin/gzip').is_file())
         for raw in (member(b'fixture', hcrc=True, name=b'../../never-written'),
-                    member(b'first')+member(b'second')+b'\0'*8,
-                    member(b'first')+b'\0\0'+member(b'second')):
+                    member(b'first')+member(b'second')+b'\0'*8):
             expected, _ = framed.decode(raw)
             process = subprocess.run(['/usr/bin/gzip', '-cd'], input=raw,
                                      capture_output=True, timeout=5, check=False)
             self.assertEqual(process.returncode, 0, process.stderr)
             self.assertEqual(process.stdout, expected)
+        # Python's bounded compatibility extension accepts a padding gap, but
+        # GNU gzip stops after the first member. Content authority requires both
+        # decoders to agree normally, so this case must not pass that worker.
+        raw = member(b'first')+b'\0\0'+member(b'second')
+        self.assertEqual(framed.decode(raw)[0], b'firstsecond')
+        process = subprocess.run(['/usr/bin/gzip', '-cd'], input=raw,
+                                 capture_output=True, timeout=5, check=False)
+        self.assertEqual(process.returncode, 2)
+        self.assertEqual(process.stdout, b'first')
+        self.assertIn(b'trailing garbage', process.stderr)

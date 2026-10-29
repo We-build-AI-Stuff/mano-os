@@ -92,6 +92,8 @@ class ManualContentTests(unittest.TestCase):
         result = content.verify_gnu(raw, b'fixture')
         self.assertEqual(result['output_bytes'], 7)
         for stream, expected in ((raw, b'wrong'), (raw[:-1], b'fixture'),
-                                 (member(b'A'*100000), b'A')):
+                                 (member(b'A'*100000), b'A'),
+                                 (member(b'first')+b'\0\0'+member(b'second'),
+                                  b'firstsecond')):
             with self.assertRaises(ValueError):
                 content.verify_gnu(stream, expected)

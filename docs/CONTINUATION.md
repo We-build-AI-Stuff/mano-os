@@ -32,6 +32,20 @@ pr134-man-source-bytes-{security-acceptance,continuation}.log and artifact
 metadata/ZIP. Prior native26 head3729ef2/run40700950648 is historical evidence.
 All older detailed continuation files are archived under task outputs and Git.
 
+## First content CI: quality failure retained, VM still running
+
+Revision 37159961d71ebf5dc5fadc0fe95cab56fdc6b5e9, run 40884679399:
+quality job 123485106826 compiled the native guard with strict warnings and ran
+951 tests. One test failed because GNU gzip rejects zero padding between two
+members with status 2 and partial output, while Python accepts that compatibility
+extension. The fixed content worker already rejects every nonzero GNU status,
+truncated output or byte disagreement. Correct the synthetic crosscheck to
+record this incompatibility and verify the content worker rejects it; do not
+accept status 2 or silently strip padding. The Linux correction remains unrun.
+Full quality log is retained in task outputs/pr134-3715996-quality-completed-job.log.
+Security job 123485106169 is still live at this note; preserve its final outcome
+and failed-run artifacts before pushing a correction. No acceptance or merge.
+
 ## Local follow-up: guarded gzip content, native validation pending
 
 The local content worker is wired through a fixed source-content role in native
@@ -39,14 +53,14 @@ man-cache guard profilev3. It compares bounded zlib expansion against the fixed
 /usr/bin/gzip -cd command via stdin, then discards expanded bytes. Header names
 and comments remain inert. Immutable support files, exact input/runtime hashes,
 control preservation and process-domain drain bind the report. Source and other
-roles keep their existing budgets; content has190s/256MiB/32tasks, per-file10s,
-8MiB expansion, aggregate64MiB/16384members and16MiB report ceilings.
+roles keep their existing budgets; content has 190s/256MiB/32tasks, per-file 10s,
+8MiB expansion, aggregate 64MiB/16384 members and 16MiB report ceilings.
 
-The independent content acceptance gate depends on all29 prior gates. It binds
+The independent content acceptance gate depends on all 29 prior gates. It binds
 compressed headers/trailers/DEFLATE slices and native dual-decoder evidence; it
 does not independently inflate or reacquire expanded source bytes. Real-source
 inflation is restricted to the confined UID6 Debian worker. Local portable tests
-use synthetic streams only. Current focused118tests pass with3Linuxskips; lint
+use synthetic streams only. Current focused 118 tests pass with 3 Linux skips; lint
 and whitespace pass. Three independent synthetic/dependency acceptance tests
 also pass. Native compilation, GNU comparison and real content CI remain UNRUN.
 Source declarations, roff/includes/descriptions/filters, full runtime closure,
