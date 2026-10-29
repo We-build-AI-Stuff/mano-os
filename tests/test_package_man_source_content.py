@@ -3,6 +3,7 @@ import copy
 import hashlib
 import importlib.util
 import os
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -27,6 +28,31 @@ def witness(raw, expected):
 
 
 class ManualContentTests(unittest.TestCase):
+    def test_controller_capture_bounds_streams_and_retains_partial_failure(self):
+        command = [sys.executable, '-I', '-B', '-c']
+        self.assertEqual(probe.bounded_capture(command+['print("fixture")'], timeout=3),
+                         b'fixture\n')
+        for stream in ('stdout', 'stderr'):
+            program = f'import os; os.write({1 if stream == "stdout" else 2}, b"x"*100000)'
+            with self.subTest(stream=stream), self.assertRaises(
+                    subprocess.CalledProcessError) as raised:
+                probe.bounded_capture(command+[program], timeout=3,
+                                      stdout_limit=4096, stderr_limit=4096)
+            data = raised.exception.stdout if stream == 'stdout' else raised.exception.stderr
+            self.assertEqual(data, b'x'*4096)
+        with self.assertRaises(subprocess.CalledProcessError) as raised:
+            probe.bounded_capture(command+['print("partial",flush=True);raise SystemExit(7)'],
+                                  timeout=3)
+        self.assertEqual(raised.exception.returncode, 7)
+        self.assertEqual(raised.exception.stdout, b'partial\n')
+
+    def test_controller_capture_deadline_survives_closed_or_inherited_pipes(self):
+        command = [sys.executable, '-I', '-B', '-c']
+        for program in ('import os,time;os.close(1);os.close(2);time.sleep(10)',
+                        'import os,time;pid=os.fork();time.sleep(10) if pid == 0 else None'):
+            with self.subTest(program=program), self.assertRaises(subprocess.TimeoutExpired):
+                probe.bounded_capture(command+[program], timeout=.3)
+
     def test_synthetic_pipeline_binds_input_and_both_outputs_without_semantic_authority(self):
         raw = member(b'fixture')
         values = dict(files={'man1/example.1.gz': base64.b64encode(raw).decode()})

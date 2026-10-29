@@ -243,7 +243,7 @@ def main():
                   gzip_executable_sha256=sha(gzip_binary),
                   zlib_module=dict(kind=kind, path=module_path, sha256=sha(module)))
     encoded = json.dumps(result, sort_keys=True, allow_nan=False).encode()
-    if len(encoded) > MAX_REPORT_BYTES:
+    if len(encoded)+1 > MAX_REPORT_BYTES:
         raise ValueError('Source content final report budget')
     sys.stdout.buffer.write(encoded+b'\n')
 

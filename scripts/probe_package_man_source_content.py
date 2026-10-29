@@ -1,6 +1,9 @@
 """Fixed disposable CI content worker; native inflaters never run in Root."""
 import hashlib
 import json
+import os
+import selectors
+import signal
 import subprocess
 import sys
 import time
@@ -13,6 +16,55 @@ from mano_runtime.package_man_source_content import validate_report
 
 FILES = {'staged-man-content-reader.py', 'staged-man-content-gzip.py',
          'staged-man-content-capture.txt'}
+
+
+def bounded_capture(command, *, timeout, stdout_limit=16*1024**2+4097,
+                    stderr_limit=65536):
+    """Bound retained bytes while reading, including a child holding pipes open."""
+    child = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, start_new_session=True, cwd='/',
+        env={'PATH': '/usr/sbin:/usr/bin:/bin', 'LANG': 'C.UTF-8'})
+    output = {'stdout': bytearray(), 'stderr': bytearray()}
+    limits = {'stdout': stdout_limit, 'stderr': stderr_limit}
+    deadline = time.monotonic() + timeout
+    failed = True
+    try:
+        with selectors.DefaultSelector() as selector:
+            for label, stream in (('stdout', child.stdout), ('stderr', child.stderr)):
+                os.set_blocking(stream.fileno(), False)
+                selector.register(stream, selectors.EVENT_READ, label)
+            while selector.get_map() or child.poll() is None:
+                if time.monotonic() >= deadline:
+                    raise subprocess.TimeoutExpired(command, timeout,
+                        output=bytes(output['stdout']), stderr=bytes(output['stderr']))
+                for key, _ in selector.select(.05):
+                    label = key.data
+                    remaining = limits[label] - len(output[label])
+                    try:
+                        data = os.read(key.fd, min(65536, remaining+1))
+                    except (BlockingIOError, InterruptedError):
+                        continue
+                    if not data:
+                        selector.unregister(key.fileobj)
+                        continue
+                    output[label].extend(data[:remaining])
+                    if len(data) > remaining:
+                        raise subprocess.CalledProcessError(-1, command,
+                            output=bytes(output['stdout']), stderr=bytes(output['stderr']))
+        if child.returncode:
+            raise subprocess.CalledProcessError(child.returncode, command,
+                output=bytes(output['stdout']), stderr=bytes(output['stderr']))
+        failed = False
+        return bytes(output['stdout'])
+    finally:
+        if failed or child.poll() is None:
+            try:
+                os.killpg(child.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        child.stdout.close()
+        child.stderr.close()
+        child.wait(timeout=2)
 
 
 def content_sandbox(base, masks, empty, config_digest):
@@ -77,13 +129,17 @@ def capture_content(base, baseline, masks, empty, config_digest, run):
     control = base / 'man-cache-control-file'
     before = fixture_identity(control)
     try:
-        raw = run(content_unit() + content_sandbox(base, masks, empty, config_digest), timeout=200)
+        raw = bounded_capture(content_unit() +
+                              content_sandbox(base, masks, empty, config_digest), timeout=200)
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
         for label in ('stdout', 'stderr'):
             value = getattr(error, label) or b''
             if type(value) is bytes:
                 with (evidence / ('staged-man-content-failed-'+label+'.txt')).open('xb') as stream:
                     stream.write(value[:32*1024**2 if label == 'stdout' else 65536])
+        # The launcher process group is separate from the service domain. Stop
+        # the fixed service too; its KillMode covers native descendants.
+        run(['/usr/bin/systemctl', 'stop', 'mano-man-content-ci.service'], timeout=10)
         raise
     artifacts['staged-man-content-capture.txt'] = raw
     with (evidence / 'staged-man-content-capture.txt').open('xb') as stream:

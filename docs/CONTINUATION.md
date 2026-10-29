@@ -32,6 +32,19 @@ pr134-man-source-bytes-{security-acceptance,continuation}.log and artifact
 metadata/ZIP. Prior native26 head3729ef2/run40700950648 is historical evidence.
 All older detailed continuation files are archived under task outputs and Git.
 
+## Local follow-up: streaming controller output bounds
+
+Local content collection now enforces stdout/stderr limits while reading with
+nonblocking pipes, rather than collecting unlimited bytes before checking size.
+The deadline includes an exited launcher whose descendant keeps a pipe open,
+and a launcher that closes both pipes but remains alive. Failure kills the
+launcher process group, retains bounded partial diagnostics and stops the fixed
+systemd service to cover its separate process domain. The final worker report
+budget includes its trailing newline. Portable self-created process fixtures
+cover stdout/stderr overflow, normal nonzero exit, closed pipes and inherited
+pipes. Sixteen focused tests pass with two Linux-only skips; lint/diff pass.
+These additional changes are not in live run 40884679399 and need fresh CI.
+
 ## First content CI: quality failure retained, VM still running
 
 Revision 37159961d71ebf5dc5fadc0fe95cab56fdc6b5e9, run 40884679399:
