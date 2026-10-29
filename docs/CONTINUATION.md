@@ -45,7 +45,7 @@ cover stdout/stderr overflow, normal nonzero exit, closed pipes and inherited
 pipes. Sixteen focused tests pass with two Linux-only skips; lint/diff pass.
 These additional changes are not in live run 40884679399 and need fresh CI.
 
-## First content CI: quality failure retained, VM still running
+## First content CI: failed overall, successful VM report retained
 
 Revision 37159961d71ebf5dc5fadc0fe95cab56fdc6b5e9, run 40884679399:
 quality job 123485106826 compiled the native guard with strict warnings and ran
@@ -56,8 +56,18 @@ truncated output or byte disagreement. Correct the synthetic crosscheck to
 record this incompatibility and verify the content worker rejects it; do not
 accept status 2 or silently strip padding. The Linux correction remains unrun.
 Full quality log is retained in task outputs/pr134-3715996-quality-completed-job.log.
-Security job 123485106169 is still live at this note; preserve its final outcome
-and failed-run artifacts before pushing a correction. No acceptance or merge.
+Security job 123485106169 passed; quality and merge-gate failed. Observer 34188
+terminated with failed-run custody and no acceptance attempted. Artifact
+12902529879 is 37,786,282 bytes, SHA256
+52d75c7cf9b1d110f973886ea295764e6cfeade4d7582b83b97d3d4f68da2768.
+Its raw report records 3,198 files/members, 35,024,800 expanded bytes and both
+decoders equal. Profile v3/source-content, Landlock ABI 6, UID 6/GID 12, empty
+groups, zero capabilities, NNP and inherited controls are reported. Builtin
+zlib binds /usr/bin/python3.13. Domain drain/control preservation are reported;
+61 staged artifacts total 122,392,075 uncompressed bytes. This is diagnostic
+inspection of a failed run, not independent acceptance. Full closure,
+generated-state validity and publication authority remain false. The correction
+and streaming limits require a fresh exact-head run. No merge.
 
 ## Local follow-up: guarded gzip content, native validation pending
 
