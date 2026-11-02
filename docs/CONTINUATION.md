@@ -30,6 +30,36 @@ Reference resolution, full include graphs, alias/name/description/filter semanti
 generated-state validity and publication remain false. All original requirements
 remain active.
 
+## Local compression-table preparation, not part of native33
+
+An unused pure-byte ELF64/x86-64 decoder is prepared in
+`package_man_compression_table.py`. It never loads a library or executes its
+program strings. It requires one defined global `comp_list` object, file-backed
+segment/section agreement, bounded symbol/relocation tables, direct relative
+pointer relocations, read-only strings, unique bounded extensions and a final
+null sentinel. Five synthetic test groups cover malformed headers/ranges/symbols,
+relocation changes, extra writes into the table, missing sentinels, duplicate
+extensions and resource ceilings. This is not wired into native capture or gates.
+
+A 1,469,060-byte public Debian package was read as data to obtain only
+`libman-2.13.1.so`. Its 282,912 bytes exactly match the accepted native32 baseline
+SHA256 e1119194250c85d02f1c7328b332ee93a7cfe7212e1903b7bb146aa5229d60da.
+No archive paths were extracted and no native library code or manual gzip was
+executed/inflated. The package signature is not claimed; the extracted library
+is bound by the independently accepted baseline file hash. The decoder finds
+configured extensions gz,z,Z,bz2,xz,lzma,lz,zst,zstd in that library's static data.
+Runtime symbol selection, helper search paths and execution authority stay false.
+Task outputs contain the reference-byte proof and static-table inventory/prototype.
+The next custody step can retain this fixed baseline library as one binary
+artifact (the 64th staged artifact), without changing the gzip content protocol or
+adding native worker permissions. Keep the global file/byte limits enforced.
+
+Retained index/link metadata shows exactly 14 primary contexts whose captured
+source has a leading relative request, all in the root index; no locale fallback
+is needed for those observed contexts. The fifteenth relative request belongs to
+unchanged, unindexed man7/man.7.gz and references absent man7/groff_man.7. These
+are data inventories, not complete runtime/source-graph or publication proof.
+
 ## Accepted native32: bounded decoded-source custody
 
 The content worker now has explicit `man-source-gzip-content-v2` output and writes
