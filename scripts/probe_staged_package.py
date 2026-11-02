@@ -895,6 +895,27 @@ def main():
             leading_requests[field] = sha(program)
         with (Path('/opt/mano-lab/evidence') / leading_requests['artifact']).open('xb') as stream:
             stream.write(leading_data)
+        from mano_runtime import package_man_compression_table as compression_config
+        lookup_library = candidate_read(baseline, compression_config.LIBRARY_PATH,
+                                        compression_config.MAX_LIBRARY_BYTES)
+        frozen_library = Path('/opt/mano-lab/evidence') / compression_config.ARTIFACT
+        with frozen_library.open('xb') as stream:
+            stream.write(lookup_library)
+        frozen_library.chmod(0o444)
+        regeneration_artifacts[compression_config.ARTIFACT] = lookup_library
+        frozen_info = frozen_library.lstat()
+        if (not stat.S_ISREG(frozen_info.st_mode) or frozen_info.st_uid != 0
+                or stat.S_IMODE(frozen_info.st_mode) != 0o444 or frozen_info.st_nlink != 1
+                or frozen_info.st_size != len(lookup_library)
+                or frozen_library.read_bytes() != lookup_library):
+            raise ValueError('Exact Root-owned frozen lookup library required before decoding')
+        compression_table = compression_config.bind(lookup_library, baseline_tree, candidate_tree)
+        compression_table['capture_custody'] = dict(source_layer='read-only-baseline',
+            fixed_library_path=compression_config.LIBRARY_PATH, source_content_hash_matched=True,
+            frozen_uid=0, frozen_mode=0o444, frozen_nlink=1, frozen_before_decode=True,
+            maximum_bytes=compression_config.MAX_LIBRARY_BYTES)
+        compression_table['decoder_program_sha256'] = sha((Path('/opt/mano-lab/src/mano_runtime') /
+            'package_man_compression_table.py').read_bytes())
         for role, observed in (('baseline', baseline_tree), ('candidate', candidate_tree)):
             current = tree_observation(role)
             if (current['manifest_sha256'] != observed['manifest_sha256']
@@ -1034,6 +1055,7 @@ def main():
                 man_source_content=source_content,
                 man_input_coverage=input_coverage,
                 man_leading_requests=leading_requests,
+                man_compression_table=compression_table,
                 man_cache_regeneration=dict(inputs=regeneration_inputs,
                     worker=regeneration_worker, raw=regeneration_bytes,
                     comparison=regeneration_comparison,

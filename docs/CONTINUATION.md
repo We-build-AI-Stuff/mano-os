@@ -5,6 +5,27 @@ optional. Specification: docs/spec-v2.1.md, SHA256
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 Do not redefine completion around a prototype, CI slice or the checks below.
 
+## Pending native34: bound static compression configuration
+
+The staging probe now retains the fixed baseline libman library as opaque bytes,
+freezes a Root-owned 0444 single-link copy, checks the stored copy before decoding,
+and binds its content/metadata to both retained trees. Fixed selector and parent
+ownership, permissions, searchability and unchanged candidate library metadata are
+required. The pure static decoder never loads the ELF file or executes its stored
+program strings. One artifact is added (expected 64), within the unchanged
+64-artifact/200 MB budget. Gzip content protocol v2, native permissions and resource
+limits stay unchanged.
+
+A separate ELF reader recomputes the complete configuration and metadata binding.
+The new `--man-compression-table` gate depends on all previous 33 gates and checks
+fixed-file custody plus the decoder's exact tested Git hash. Seven producer test
+groups and four independent test groups cover byte/range/relocation corruption,
+changed files/selectors/parents, false configuration and custody claims. Both
+readers agree on synthetic fixtures and the exact library bytes matching accepted
+native33 baseline metadata. Native34 CI and fresh artifact/UI acceptance remain
+pending. Runtime loader selection, helper search paths, target resolution, full
+source semantics, generated-state validity and publication stay false.
+
 ## Accepted native33: initial source-request evidence
 
 A pure-data transformation now validates retained binary framing, complete ordered

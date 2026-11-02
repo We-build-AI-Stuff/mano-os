@@ -1,9 +1,12 @@
 """Hand-built ELF data fixtures only; no native executable/library loading."""
 import base64
+import copy
 import hashlib
 import struct
 import unittest
 from unittest.mock import patch
+
+from test_package_man_sources import candidate, rehash
 
 from mano_runtime import package_man_compression_table as tables
 
@@ -43,7 +46,58 @@ def fixture(extensions=(b'gz', b'xz')):
     return bytes(raw)
 
 
+def trees(raw):
+    tree, primary = candidate()
+    directory = dict(tree['entries']['usr'])
+    tree['entries']['usr/lib'] = dict(directory)
+    tree['entries']['usr/lib/man-db'] = dict(directory)
+    tree['entries'][tables.LIBRARY_PATH] = dict(tree['entries'][primary],
+        hardlink_anchor=tables.LIBRARY_PATH, bytes=len(raw), sha256=hashlib.sha256(raw).hexdigest())
+    tree['entries'][tables.SELECTOR_PATH] = dict(kind='symlink', uid=0, gid=0, mode=0o777,
+        mtime_ns=0, ctime_ns=0, nlink=1, xattrs={}, target='libman-2.13.1.so')
+    rehash(tree)
+    return tree, copy.deepcopy(tree)
+
+
 class CompressionTableTests(unittest.TestCase):
+    def test_fixed_baseline_file_and_selector_bind_without_opening_or_execution(self):
+        raw = fixture()
+        baseline, after = trees(raw)
+        result = tables.bind(raw, baseline, after)
+        self.assertEqual(result['configuration'], tables.decode(raw))
+        self.assertTrue(result['candidate_library_metadata_unchanged'])
+        self.assertTrue(result['library_content_hash_verified'])
+        self.assertEqual(result['artifact_sha256'], hashlib.sha256(raw).hexdigest())
+        self.assertEqual(result['baseline_sha256'], baseline['manifest_sha256'])
+        self.assertFalse(result['decoder_filesystem_paths_opened'])
+        self.assertFalse(result['runtime_loader_symbol_resolution_verified'])
+        self.assertFalse(result['publication_authorized'])
+
+    def test_changed_file_selector_parent_metadata_or_content_refuses(self):
+        raw = fixture()
+        for path, field, bad in ((tables.LIBRARY_PATH, 'mode', 0o666),
+                                (tables.LIBRARY_PATH, 'sha256', '0'*64),
+                                (tables.LIBRARY_PATH, 'mode', 0o600),
+                                (tables.LIBRARY_PATH, 'ctime_ns', 99),
+                                (tables.SELECTOR_PATH, 'target', '../outside.so'),
+                                (tables.SELECTOR_PATH, 'uid', 6),
+                                ('usr/lib/man-db', 'uid', 6),
+                                ('usr/lib/man-db', 'mode', 0o777),
+                                ('usr/lib/man-db', 'mode', 0o750)):
+            baseline, after = trees(raw)
+            after['entries'][path][field] = bad
+            rehash(after)
+            with self.subTest(path=path, field=field), self.assertRaises(ValueError):
+                tables.bind(raw, baseline, after)
+        baseline, after = trees(raw)
+        with self.assertRaises(ValueError):
+            tables.bind(raw[:-1], baseline, after)
+        for tree in (baseline, after):
+            tree['entries'][tables.SELECTOR_PATH]['target'] = 'not-libman.so'
+            rehash(tree)
+        with self.assertRaises(ValueError):
+            tables.bind(raw, baseline, after)
+
     def test_configured_order_and_inert_program_bytes_are_bound_to_library(self):
         raw = fixture()
         result = tables.decode(raw)

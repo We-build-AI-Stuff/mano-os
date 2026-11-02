@@ -7,6 +7,7 @@ This decoder proves no loader symbol resolution or decompressor search authority
 """
 import base64
 import hashlib
+import json
 import re
 import struct
 
@@ -15,6 +16,10 @@ MAX_SECTIONS = 256
 MAX_SYMBOLS = 16384
 MAX_RELOCATIONS = 16384
 PROFILE = 'man-db-elf64-compression-table-v1'
+LIBRARY_PATH = 'usr/lib/man-db/libman-2.13.1.so'
+SELECTOR_PATH = 'usr/lib/man-db/libman.so'
+ARTIFACT = 'staged-man-lookup-library.bin'
+BIND_PROFILE = 'man-bound-compression-table-v1'
 
 
 def decode(raw):
@@ -168,3 +173,59 @@ def decode(raw):
         program_search_paths_verified=False, program_execution_authorized=False,
         source_reference_resolution_verified=False, full_source_semantics_verified=False,
         generated_state_validated=False, changes_authorized=False, publication_authorized=False)
+
+
+def bind(raw, baseline, candidate):
+    """Bind inert configuration to fixed, unchanged observed library metadata.
+
+    The caller must retain bytes from the immutable baseline before decoding.
+    This function validates observations and bytes; it never opens their paths.
+    """
+    from mano_runtime.package_tree import delta
+
+    delta(baseline, baseline)
+    delta(candidate, candidate)
+    if type(raw) is not bytes or not 64 <= len(raw) <= MAX_LIBRARY_BYTES:
+        raise ValueError('Bounded baseline library bytes required')
+
+    def metadata(row):
+        return hashlib.sha256(json.dumps(row, sort_keys=True, separators=(',', ':'),
+            allow_nan=False).encode()).hexdigest()
+
+    directories = {}
+    for role, tree in (('baseline', baseline), ('candidate', candidate)):
+        bound = {}
+        for path in ('usr', 'usr/lib', 'usr/lib/man-db'):
+            row = tree['entries'].get(path, {})
+            if (row.get('kind') != 'directory' or row.get('uid') != 0
+                    or row.get('mode', 0) & 0o022 or row.get('xattrs') != {}
+                    or not (row.get('mode', 0) & (0o010 if row.get('gid') == 12 else 0o001))):
+                raise ValueError('Root-owned nonwritable searchable library parents required')
+            bound[path] = metadata(row)
+        directories[role] = bound
+    left, right = baseline['entries'], candidate['entries']
+    library, selector = left.get(LIBRARY_PATH, {}), left.get(SELECTOR_PATH, {})
+    if (library != right.get(LIBRARY_PATH) or library.get('kind') != 'file'
+            or library.get('uid') != 0 or library.get('mode', 0) & 0o7022
+            or not (library.get('mode', 0) & (0o040 if library.get('gid') == 12 else 0o004))
+            or library.get('nlink') != 1 or library.get('xattrs') != {}
+            or library.get('bytes') != len(raw)
+            or library.get('sha256') != hashlib.sha256(raw).hexdigest()
+            or selector != right.get(SELECTOR_PATH) or selector.get('kind') != 'symlink'
+            or selector.get('uid') != 0 or selector.get('nlink') != 1
+            or selector.get('xattrs') != {}
+            or selector.get('target') != 'libman-2.13.1.so'):
+        raise ValueError('Exact unchanged fixed library, selector and baseline content required')
+    configuration = decode(raw)
+    return dict(profile=BIND_PROFILE, artifact=ARTIFACT, artifact_bytes=len(raw),
+        artifact_sha256=hashlib.sha256(raw).hexdigest(), library_path=LIBRARY_PATH,
+        selector_path=SELECTOR_PATH, library_metadata_sha256=metadata(library),
+        selector_metadata_sha256=metadata(selector), directory_metadata_sha256=directories,
+        baseline_sha256=baseline['manifest_sha256'], candidate_sha256=candidate['manifest_sha256'],
+        runtime_source_layer='baseline', candidate_library_metadata_unchanged=True,
+        library_content_hash_verified=True, configuration=configuration,
+        decoder_filesystem_paths_opened=False, library_loaded_or_executed=False,
+        runtime_loader_symbol_resolution_verified=False, program_search_paths_verified=False,
+        program_execution_authorized=False, source_reference_resolution_verified=False,
+        full_source_semantics_verified=False, generated_state_validated=False,
+        changes_authorized=False, publication_authorized=False)
