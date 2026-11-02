@@ -81,11 +81,34 @@ because fixture evidence is absent. These new fixtures have only mocked local
 coverage until the next exact-head disposable Debian run. They do not establish
 whole source-namespace, native caller, hardlink, source semantics or publication
 authority; all those claims remain false.
-Six producer/controller test groups and three independent fixture test groups
+Seven producer/controller test groups and three independent fixture test groups
 cover packet dispatch, unchanged sandbox grants, report bounds, unsafe controller
 contexts, crossed identities/errors/order and false authority. The combined
-focused portable suite passes 82 tests with one Linux-only skip on Mac. Lint and
+focused portable suite passes 83 tests with one Linux-only skip on Mac. Lint and
 diff checks pass; this is local preparation, not native35 acceptance.
+
+The first native35 run 41490850832 at head953c550 failed its new fixture
+comparison; quality passed 1,016 tests / one skip, while security and merge-gate
+failed. Collector12760 retained failed artifact13164948787,36,636,440 bytes,
+SHA256 f979c81c09c587feffe40cf1e0af513c1e8fce29e57fd8b66312cfa93d28104a,
+then exited one without acceptance. Do not restart it or treat that run as green.
+The bounded raw UID6 witness was preserved before validation and recovered from
+CI stderr. Its 12,123-byte SHA256 is
+4b83ba736f55a30488b85b897ec5e0fe255555bf70423f45729e81c8a2d3b929.
+
+The fixture mapper incorrectly removed the leading slash from its normalized
+absolute symlink. The correction keeps `/usr/share/man/...` absolute. The failed
+capture also exposed different Darwin/Linux ELOOP and ENAMETOOLONG numbers in
+portable verification. The fixed wire contract uses explicit Linux x86-64 values
+40 and36; mocked host errors are translated by name and the independent reader
+uses its own Linux mapping. Native Linux wire values remain unchanged.
+The retained regression fixture drops unstable device/inode IDs and covers all
+40 queries / nine selections. Replaying 62 outcomes against declared fixture
+metadata now has zero mismatches in producer and independent reader. This is a
+regression replay, not reconstructed before/after inode custody or native35
+acceptance; a fresh exact-head Debian run remains required. Failure/replay
+receipts are in task outputs/pr134-953c550-reference-fixture-mismatch-diagnosis.json
+and pr134-reference-fixture-correction-replay.json.
 
 ## Conditional lookup preparation
 

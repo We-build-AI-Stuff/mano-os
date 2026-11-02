@@ -4,7 +4,6 @@ No additional artifact or native filesystem grant. Witnesses are bounded data
 for embedding in the existing Root report, not generated-state authority.
 """
 import base64
-import errno
 import hashlib
 import json
 import os
@@ -87,7 +86,7 @@ def model_tree(observed, baseline):
         elif row['kind'] == 'symlink':
             target = info['target']
             if target.startswith(worker.REFERENCE_ROOT+'/'):
-                target = ROOT+target[len(worker.REFERENCE_ROOT):]
+                target = '/'+ROOT+target[len(worker.REFERENCE_ROOT):]
             row['target'] = target
         entries[path] = row
     return dict(schema_version='1.0', entries=entries, excluded_subtrees=['.snapshots'],
@@ -115,7 +114,7 @@ def compare(value, observed, tree):
         if modeled['state'] == 'unavailable':
             expected = {'state': 'unavailable'}
             if not access_only:
-                expected['errno'] = getattr(errno, modeled['reason'])
+                expected['errno'] = worker.REFERENCE_ERRNO[modeled['reason']]
         else:
             name = modeled['terminal_path'][len(ROOT):].removeprefix('/')
             row = observed[name]

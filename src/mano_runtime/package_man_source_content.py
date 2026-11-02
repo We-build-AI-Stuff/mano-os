@@ -32,6 +32,9 @@ CONTENT_PROFILE = 'man-source-gzip-content-v2'
 # it never opens the retained compressed/expanded source captures.
 REFERENCE_REQUEST = b'{"profile":"man-fixed-reference-fixtures-v1"}\n'
 REFERENCE_ROOT = '/var/cache/man/reference-fixtures'
+# Stable Linux x86-64 wire values, independent of the host running mock tests.
+REFERENCE_ERRNO = {'ENOENT': 2, 'ENOTDIR': 20, 'EACCES': 13, 'ELOOP': 40,
+                   'ENAMETOOLONG': 36}
 REFERENCE_DIRECTORIES = {
     '': (0, 0, 0o755), 'man1': (0, 0, 0o755), 'man2': (0, 0, 0o755),
     'man2/deep': (0, 0, 0o755), 'blocked': (0, 0, 0o700),
@@ -66,10 +69,10 @@ def reference_fixture_results():
         try:
             info = os.stat(path, follow_symlinks=follow)
         except OSError as error:
-            if error.errno not in (errno.ENOENT, errno.ENOTDIR, errno.EACCES,
-                                   errno.ELOOP, errno.ENAMETOOLONG):
+            name = errno.errorcode.get(error.errno)
+            if name not in REFERENCE_ERRNO:
                 raise
-            return dict(state='unavailable', errno=error.errno)
+            return dict(state='unavailable', errno=REFERENCE_ERRNO[name])
         kind = ('directory' if stat.S_ISDIR(info.st_mode) else
                 'symlink' if stat.S_ISLNK(info.st_mode) else
                 'file' if stat.S_ISREG(info.st_mode) else None)

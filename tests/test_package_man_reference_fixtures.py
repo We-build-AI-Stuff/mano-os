@@ -78,6 +78,12 @@ class ReferenceFixtureCustodyTests(unittest.TestCase):
 
     def test_fixed_mocked_witnesses_bind_all_cases_without_native_claim(self):
         native, observed, model = self.fixtures()
+        self.assertEqual(model['entries'][ROOT+'/absolute-link']['target'],
+                         '/usr/share/man/man2/deep')
+        errors = {(row['path'], row['follow_final']): row['outcome'].get('errno')
+                  for row in native['queries']}
+        self.assertEqual(errors[('cycle.1', True)], 40)
+        self.assertEqual(errors[('a'*256, False)], 36)
         report = probe.compare(native, observed, model)
         self.assertEqual(report['stat_lstat_queries'], 40)
         self.assertEqual(report['selection_queries'], 9)
@@ -153,6 +159,39 @@ class ReferenceFixtureCustodyTests(unittest.TestCase):
         with patch('sys.platform', 'linux'), patch('os.geteuid', return_value=1000), \
                 self.assertRaises(PermissionError):
             probe.capture_reference_fixtures(BASE, {}, [], BASE/'empty', '0'*64, None)
+
+    def test_retained_linux_observations_reject_relative_absolute_link_and_host_errno_drift(self):
+        record = json.loads((SCRIPTS.parent/'tests/fixtures/'
+            'man-reference-linux-x86-64-errors.json').read_text())
+        self.assertFalse(record['native35_accepted'])
+        _, _, tree = self.fixtures()
+        namespace = Namespace(tree, tree)
+        linux_errors = {'ENOENT': 2, 'ENOTDIR': 20, 'EACCES': 13, 'ELOOP': 40,
+                        'ENAMETOOLONG': 36}
+
+        def compare(actual, modeled, plain=False):
+            if modeled['state'] == 'unavailable':
+                expected = dict(state='unavailable')
+                if not plain:
+                    expected['errno'] = linux_errors[modeled['reason']]
+            else:
+                self.assertEqual(modeled['state'], 'exists')
+                row = namespace._entries[modeled['terminal_path']]
+                expected = dict(state='exists', **{key: row[key] for key in
+                                ('kind', 'uid', 'gid', 'mode')})
+            self.assertEqual(actual, expected)
+
+        for row in record['queries']:
+            compare(row['outcome'], namespace.stat(ROOT+'/'+row['path'],
+                    follow_final=row['follow_final']))
+        for row in record['selections']:
+            result = namespace.select(ROOT, ROOT+'/man1/original.1',
+                row['operand'].encode(), ['gz', 'xz'])
+            self.assertEqual(len(row['attempts']), len(result['attempts']))
+            for actual, expected in zip(row['attempts'], result['attempts'], strict=True):
+                self.assertEqual(actual['path'], worker.REFERENCE_ROOT+expected['path'][len(ROOT):])
+                self.assertEqual(actual['extension'], expected['extension'])
+                compare(actual['outcome'], expected['outcome'], plain=not expected['extension'])
 
 
 if __name__ == '__main__':
