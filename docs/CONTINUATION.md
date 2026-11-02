@@ -86,6 +86,16 @@ before integrating a stronger artifact contract. The
 64-artifact cap must stay; enrich/version existing evidence rather than add a
 65th file. All original requirements remain active.
 
+`test_package_man_reference_linux.py` adds self-created filesystem fixtures for
+disposable unprivileged Linux CI only. It compares 34 stat/lstat traversals and
+nine first-existing selection cases to actual kernel results and inode identity:
+symlink-before-parent, absolute links mapped into the fixture, loops, dangling
+links, missing paths, ENAMETOOLONG, trailing slashes, search-denied directories,
+unreadable files, literal operands, compression order and nonregular poisoning.
+Ownership is mapped to modeled UID6/GID12; this does not prove actual source-domain
+credentials/mounts, native man-db behavior or hardlink semantics. The test is
+correctly skipped on Mac; fresh exact-head CI must establish its Linux outcome.
+
 ## Accepted native33: initial source-request evidence
 
 A pure-data transformation now validates retained binary framing, complete ordered
