@@ -5,7 +5,7 @@ optional. Specification: docs/spec-v2.1.md, SHA256
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 Do not redefine completion around a prototype, CI slice or the checks below.
 
-## Pending native33: initial source-request evidence
+## Accepted native33: initial source-request evidence
 
 A pure-data transformation now validates retained binary framing, complete ordered
 names, compressed/expanded hashes, native decoder witnesses and capture/manifest
@@ -25,7 +25,27 @@ Five new repository tests and three independent gate tests pass synthetically;
 157 focused checks passed with three Linux-specific skips. On actual retained
 native32 plaintext, the new producer equals the previous independent inventory:
 3,202 files, 3,187 without leading requests, 15 relative requests, zero unsupported.
-This is portable evidence over accepted data, with no native33 CI proof yet.
+Native33 is accepted at head cd25b88d0a4de63146d8e875e7e26c40bc5bca93, base
+65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Run 41390687327 passed all three jobs:
+quality 125101182897 (977 tests, one platform skip), security 125101182965 and
+merge-gate 125107900877. Artifact 13117613609 is 47,760,553 bytes, SHA256
+ad3b7124777cddc3352b694f2fa97f3c98a03e8a1ca2e3401453aa903c754ed0.
+Tested merge e7041f2755e9d29a63c9ea4c42c7380f45337c10 has exact base/head
+parents and 25 matching relevant sources. Collector 96203 exited zero after all
+33 staging gates plus the prior 54-hash/45-flag/PAM/Stop/recovery/package/ELF
+acceptance. It is terminal; do not restart. Six fresh UI originals and all eight
+crops were actually viewed; the 15-PNG receipt confirms full 900/120 values and
+matching pending/effective numeric regions. Physical input provenance is null.
+Full proof: task outputs/pr134-cd25b88-native33-proof.json. The initial-request
+artifact is 3,584,161 bytes, SHA256
+2f0977a675399b3f9940897681d286602bf53dc593e34b00571033373f4737f4.
+There are 63 staging artifacts / 141,256,353 uncompressed bytes. The retained
+library hash also matches the local reference bytes used by the unused decoder
+below. All 3,202 per-file leading records match the historical native32 inventory.
+Exactly 14 indexed relative contexts occur in the root index; the fifteenth
+relative source is unindexed and unchanged from baseline. Its root/original-dir
+candidates are absent in both snapshots. These remain lookup observations, with
+full runtime equivalence and target authority unproven.
 Reference resolution, full include graphs, alias/name/description/filter semantics,
 generated-state validity and publication remain false. All original requirements
 remain active.
