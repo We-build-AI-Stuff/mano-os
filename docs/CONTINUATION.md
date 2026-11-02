@@ -1,6 +1,6 @@
 # mano-OS continuation — full goal remains active
 
-Updated 2026-10-29. Original v2.1 phases 0–7 are ACTIVE/incomplete; Phase 8 is
+Updated 2026-11-02. Original v2.1 phases 0–7 are ACTIVE/incomplete; Phase 8 is
 optional. Specification: docs/spec-v2.1.md, SHA256
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 Do not redefine completion around a prototype, CI slice or the checks below.
@@ -49,8 +49,13 @@ before the original page directory, and stops at the first successful stat even
 for a directory. It distinguishes proven absence/access failures from unknown
 scope, ACLs, protected-symlink policy and resource limits. It opens no host paths.
 The known overlay uses candidate manuals and baseline ancestors/alternatives.
-This is a conditional metadata model, not native namespace equivalence, initial
-hardlink canonicalization or a recursive source-graph proof.
+The recursive driver additionally models initial lstat-based hardlink selection,
+keeps the original directory through later requests, and enforces ten source
+inspections. It assumes all three link flags and independently bound plaintext
+classifications. Directory read permission is required before choosing a hardlink
+alias; file read permission is required before inspecting content. Unsupported
+initial nonregular hardlinks, security attributes and missing content stay unknown.
+This is a conditional metadata model, not native namespace or caller equivalence.
 
 Sixteen synthetic tests cover precedence, fallback, locale context, nested original
 context, symlink/parent ordering, cycles, dangling links, nonregular poisoning,
@@ -60,9 +65,24 @@ retained library, trees and text selects captured regular targets for all 14
 indexed relative contexts; those targets have no further leading requests. The
 unchanged unindexed missing reference remains unresolved. Results are in task
 outputs/pr134-native34-conditional-reference-lookup-experiment.json. No native
-lookup or complete graph authority has been gained. The next steps require an
-independent reader, native equivalence fixtures, initial hardlink handling and a
-bounded recursive driver before integrating a stronger artifact contract. The
+lookup or complete graph authority has been gained. Nine additional synthetic
+chain tests cover retained original-directory context, nine versus ten hops,
+cycles, hardlinks, initial symlink behavior, read permissions, missing/nonregular
+content and false evidence. All 56 focused lookup/chain/classifier/configuration/
+source-link tests pass locally; this is not current-head CI acceptance.
+
+A reproducible pure-byte experiment in task outputs/experiment_man_reference_chain.py
+checks the accepted native34 ZIP hash and recomputes every retained leading-request
+classification from frozen expanded bytes without inflation. The conditional driver
+reaches a terminal source in all 4,515 distinct observed primary-page contexts,
+using each retained index's locale context. Fourteen need relative-reference lookup;
+no actual initial hardlink selection is exercised. Full result digest and nontrivial
+chains are in outputs/pr134-native34-conditional-source-chain-experiment.json.
+Native caller flags/stat behavior, kernel namespace equivalence, source semantics,
+generated-state validity and publication remain unverified/false.
+
+The next steps require an independent reader and native equivalence fixtures
+before integrating a stronger artifact contract. The
 64-artifact cap must stay; enrich/version existing evidence rather than add a
 65th file. All original requirements remain active.
 
@@ -477,7 +497,7 @@ paid-provider/key/auth experiments. No new merge is authorized by this document.
 Root/Linux/VM probes ONLY disposable Debian CI. Ordinary unprivileged portable
 Python/file/data analysis is allowed Mac. Never run native DB readers on staged
 bytes there. Keep VM images/models off Mac; no silent user-data deletion.
-Disk last 39 GiB free/81%; warn <20 GiB or >90%, stop large downloads <10 GiB.
+Disk last 26 GiB free/87%; warn <20 GiB or >90%, stop large downloads <10 GiB.
 Preserve unrelated duplicate files (do not stage/delete):
 - docs/architecture/0109-privileged-package-stop-domain 2.md
 - packaging/systemd/mano-package 2.slice

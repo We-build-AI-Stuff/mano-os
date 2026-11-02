@@ -1,11 +1,13 @@
-"""Conditional one-hop source lookup over retained metadata, never host paths.
+"""Conditional source lookup over retained metadata, never host paths.
 
 This models ordinary Linux traversal/DAC for UID6/GID12 and a supplied compression
 order. Unknown mounts, ACLs, scope and resource limits stop selection rather than
 being mistaken for absence. It is not a native namespace or complete graph proof.
-Initial hardlink canonicalization and recursive request handling are separate.
+Recursive handling assumes initial lstat metadata and all three link flags;
+native caller behavior and namespace equivalence require separate evidence.
 """
 import base64
+import hashlib
 import json
 import re
 from collections import deque
@@ -43,7 +45,7 @@ class Namespace:
         return (path in {'.', 'usr', 'usr/share', 'etc', 'etc/alternatives', ROOT}
                 or path.startswith(ROOT+'/') or path.startswith('etc/alternatives/'))
 
-    def stat(self, path):
+    def stat(self, path, *, follow_final=True):
         """Stat a namespace-root-relative name, not a host/cwd-relative name."""
         if type(path) is not str or not path or '\0' in path:
             raise ValueError('Nonempty NUL-free modeled pathname required')
@@ -91,7 +93,7 @@ class Namespace:
             entry = self._entries.get(name)
             if entry is None:
                 return result('unavailable', 'ENOENT')
-            if entry['kind'] == 'symlink':
+            if entry['kind'] == 'symlink' and (follow_final or pending or require_directory):
                 if row['mode'] & 0o1002 == 0o1002 and entry['uid'] not in {6, row['uid']}:
                     return result('unknown', 'protected-symlink-policy-unbound')
                 if len(links) == MAX_LINKS:
@@ -164,3 +166,132 @@ class Namespace:
                         metadata_sha256=outcome['terminal_metadata_sha256'])
                     return finish('selected', 'first-modeled-successful-candidate')
         return finish('unresolved', 'no-modeled-successful-candidate')
+
+    def resolve_source(self, mantree, original, inputs, extensions):
+        """Conditional initial-link handling and bounded leading-request chain.
+
+        inputs contains externally bound compressed hashes and verified leading
+        classifications. This method cannot establish their decompression or
+        native provenance, and never promotes its result into execution authority.
+        """
+        if type(inputs) is not dict or not 1 <= len(inputs) <= 8192:
+            raise ValueError('Bounded supplied source classification map required')
+        # Validate context/order using the same API without resolving any operand.
+        self.select(mantree, original, b'/context-validation-only', extensions)
+        report = dict(profile='man-conditional-ultimate-source-v1',
+            baseline_sha256=self.baseline_sha, candidate_sha256=self.candidate_sha,
+            mantree=mantree, original=original, configured_extensions=list(extensions),
+            inspections=[], lookups=[], repeated_source_paths=[], initial_hardlink_selection=None,
+            conditional_on_bound_source_classifications=True, conditional_linux_metadata_model=True,
+            conditional_on_initial_lstat_and_all_link_flags=True,
+            filesystem_paths_opened=False, native_lookup_equivalence_verified=False,
+            source_target_resolution_verified=False, complete_source_graph_verified=False,
+            generated_state_validated=False, changes_authorized=False, publication_authorized=False)
+
+        def finish(state, reason):
+            report.update(resolution_state=state, reason=reason)
+            if len(json.dumps(report, sort_keys=True).encode()) > MAX_REPORT_BYTES:
+                raise ValueError('Ultimate-source evidence budget')
+            return report
+
+        initial = self.stat(original, follow_final=False)
+        report['initial_lstat'] = initial
+        if initial['state'] != 'exists':
+            return finish('unknown' if initial['state'] == 'unknown' else 'unresolved',
+                          initial['reason'])
+        raw_path = initial['terminal_path']
+        raw_row = self._entries[raw_path]
+        followed = self.stat(original) if initial['kind'] == 'symlink' else initial
+        report['initial_followed_stat'] = followed
+        if followed['state'] != 'exists':
+            return finish('unknown' if followed['state'] == 'unknown' else 'unresolved',
+                          followed['reason'])
+        current = followed['terminal_path']
+        if raw_row['nlink'] > 1:
+            if initial['kind'] != 'file':
+                return finish('unknown', 'initial-nonregular-hardlink-identity-unmodeled')
+            parent = current.rsplit('/', 1)[0]
+            directory = self._entries[parent]
+            shift = 6 if directory['uid'] == 6 else 3 if directory['gid'] == 12 else 0
+            if directory['xattrs'] or not (directory['mode'] >> shift) & 4:
+                return finish('unknown', 'initial-hardlink-directory-read-unverified')
+            aliases = [path for path, row in self._entries.items()
+                if row['kind'] == 'file'
+                and row.get('hardlink_anchor') == raw_row['hardlink_anchor']
+                and path.rsplit('/', 1)[0] == parent]
+            if not aliases or len(aliases) > 4096:
+                return finish('unknown', 'initial-hardlink-directory-evidence-budget')
+            current = min(aliases, key=lambda path: path.rsplit('/', 1)[1].encode())
+            report['initial_hardlink_selection'] = dict(selected=current,
+                directory=parent, same_directory_aliases=sorted(aliases),
+                hardlink_anchor=raw_row['hardlink_anchor'])
+        seen = set()
+        for iteration in range(10):
+            row = self._entries.get(current, {})
+            if row.get('kind') != 'file':
+                return finish('unknown', 'no-bound-regular-source-content')
+            shift = 6 if row['uid'] == 6 else 3 if row['gid'] == 12 else 0
+            if row['xattrs'] or not (row['mode'] >> shift) & 4:
+                return finish('unknown', 'source-read-permission-unverified')
+            supplied = inputs.get(current)
+            if supplied is None:
+                return finish('unknown', 'source-classification-not-captured')
+            if type(supplied) is not dict:
+                raise ValueError('Supplied source evidence must be an object')
+            encoded = json.dumps(supplied, sort_keys=True, allow_nan=False).encode()
+            if len(encoded) > 32768:
+                raise ValueError('Bounded supplied source classification required')
+            supplied = json.loads(encoded)
+            if (type(supplied) is not dict or set(supplied) != {'compressed_sha256', 'request'}
+                    or supplied['compressed_sha256'] != row['sha256']):
+                raise ValueError('Source classification must bind observed compressed bytes')
+            request = supplied['request']
+            if (type(request) is not dict
+                    or request.get('profile') != 'man-db-2.13-leading-source-request-v1'
+                    or type(request.get('input_bytes')) is not int
+                    or not 0 <= request['input_bytes'] <= 8*1024**2
+                    or type(request.get('input_sha256')) is not str
+                    or re.fullmatch('[a-f0-9]{64}', request['input_sha256']) is None
+                    or type(request.get('operand_base64')) is not str):
+                raise ValueError('Versioned bound leading-source classification required')
+            operand = base64.b64decode(request['operand_base64'], validate=True)
+            if base64.b64encode(operand).decode() != request['operand_base64']:
+                raise ValueError('Canonical inert source operand required')
+            kind = request.get('request_kind')
+            if (type(kind) is not str or kind not in {'no-leading-so-request', 'relative-reference',
+                    'empty-relative-reference',
+                    'absolute-reference-not-followed-by-ultimate-source'}
+                    or len(operand) > 4096 or b'\0' in operand
+                    or (kind in {'no-leading-so-request', 'empty-relative-reference'} and operand)
+                    or (kind == 'relative-reference' and (not operand or operand.startswith(b'/')))
+                    or (kind == 'absolute-reference-not-followed-by-ultimate-source'
+                        and not operand.startswith(b'/'))):
+                raise ValueError('Exact leading-request kind and operand required')
+            for flag in ('filesystem_paths_opened', 'roff_interpreted',
+                         'ultimate_source_target_resolved', 'transitive_source_graph_verified',
+                         'virtual_alias_declarations_verified', 'descriptions_verified',
+                         'compression_filters_verified', 'generated_state_validated',
+                         'changes_authorized', 'publication_authorized'):
+                if request.get(flag) is not False:
+                    raise ValueError('Supplied classification cannot grant additional authority')
+            if current in seen:
+                report['repeated_source_paths'].append(current)
+            seen.add(current)
+            report['inspections'].append(dict(iteration=iteration, path=current,
+                source_metadata_sha256=metadata_hash(row),
+                classification_sha256=hashlib.sha256(encoded).hexdigest(),
+                expanded_sha256=request['input_sha256'], request_kind=kind))
+            if kind in {'no-leading-so-request',
+                        'absolute-reference-not-followed-by-ultimate-source'}:
+                report['terminal'] = dict(path=current, source_metadata_sha256=metadata_hash(row),
+                    compressed_sha256=row['sha256'], expanded_sha256=request['input_sha256'])
+                return finish('terminal', 'no-further-relative-leading-request')
+            selected = self.select(mantree, original, operand, extensions)
+            report['lookups'].append(selected)
+            if selected['selection_state'] != 'selected':
+                state = 'unknown' if selected['selection_state'] == 'unknown' else 'unresolved'
+                return finish(state, selected['reason'])
+            if selected['selected']['kind'] != 'file':
+                return finish('unknown', 'selected-nonregular-source-not-captured')
+            current = selected['selected']['path']
+        return finish('unresolved', 'native-ten-inspection-limit')
