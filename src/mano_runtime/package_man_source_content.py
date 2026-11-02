@@ -6,6 +6,7 @@ Expanded bytes are compared against GNU gzip and retained as bounded inert data;
 reports bind hashes and framing, not source semantics or publication.
 """
 import base64
+import errno
 import hashlib
 import json
 import os
@@ -25,6 +26,93 @@ EXPANDED_MAGIC = b'MANO-MAN-EXPANDED\x00\x01'
 MAX_BUNDLE_BYTES = 72 * 1024**2
 MAX_PATH_BYTES = 4 * 1024**2
 CONTENT_PROFILE = 'man-source-gzip-content-v2'
+
+# Only Root can mount this exact request in place of the normal manifest. A
+# separate fresh invocation probes synthetic files after content-domain drain;
+# it never opens the retained compressed/expanded source captures.
+REFERENCE_REQUEST = b'{"profile":"man-fixed-reference-fixtures-v1"}\n'
+REFERENCE_ROOT = '/var/cache/man/reference-fixtures'
+REFERENCE_DIRECTORIES = {
+    '': (0, 0, 0o755), 'man1': (0, 0, 0o755), 'man2': (0, 0, 0o755),
+    'man2/deep': (0, 0, 0o755), 'blocked': (0, 0, 0o700),
+    'group-search': (0, 12, 0o710), 'other-search': (0, 0, 0o701),
+    'poison.1.gz': (0, 0, 0o755), 'no-search': (0, 0, 0o600),
+}
+REFERENCE_FILES = (
+    'man1/original.1', 'plain.1', 'plain.1.gz', 'target.1.gz', 'target.1.xz',
+    'man1/local.1.gz', 'goal.1', 'man2/goal.1', 'blocked/hidden.1',
+    'group-search/goal.1', 'other-search/goal.1', 'unreadable.1',
+    'cycle.1.gz', 'dangling.1.gz', 'poison.1.xz', 'literal "$(inert)".1',
+)
+REFERENCE_LINKS = {
+    'bridge': 'man2/deep', 'file-link': 'plain.1', 'cycle.1': 'cycle.1',
+    'dangling.1': 'missing', 'absolute-link': REFERENCE_ROOT+'/man2/deep',
+    'link-a': 'link-b', 'link-b': 'goal.1', 'directory-slash': 'man2/deep/',
+}
+REFERENCE_PATHS = (
+    'plain.1', 'unreadable.1', 'missing', 'plain.1/', 'plain.1/.',
+    'file-link/../goal.1', 'bridge/../goal.1', 'absolute-link/../goal.1',
+    'link-a', 'cycle.1', 'dangling.1', 'no-search/', 'no-search/.',
+    'blocked/hidden.1', 'group-search/goal.1', 'other-search/goal.1',
+    'man2/deep/..', 'literal "$(inert)".1', 'directory-slash', 'a'*256,
+)
+REFERENCE_OPERANDS = ('target.1', 'plain.1', 'dangling.1', 'cycle.1', 'poison.1',
+                      'local.1', 'bridge/../goal.1', 'unreadable.1', 'absent')
+
+
+def reference_fixture_results():
+    """Fixed kernel witnesses only; no man-db library or source parsing here."""
+    def witness(path, follow):
+        try:
+            info = os.stat(path, follow_symlinks=follow)
+        except OSError as error:
+            if error.errno not in (errno.ENOENT, errno.ENOTDIR, errno.EACCES,
+                                   errno.ELOOP, errno.ENAMETOOLONG):
+                raise
+            return dict(state='unavailable', errno=error.errno)
+        kind = ('directory' if stat.S_ISDIR(info.st_mode) else
+                'symlink' if stat.S_ISLNK(info.st_mode) else
+                'file' if stat.S_ISREG(info.st_mode) else None)
+        if kind is None:
+            raise ValueError('Fixed regular/directory/symlink fixture required')
+        return dict(state='exists', device=info.st_dev, inode=info.st_ino, kind=kind,
+                    uid=info.st_uid, gid=info.st_gid, mode=stat.S_IMODE(info.st_mode))
+
+    queries = []
+    for path in REFERENCE_PATHS:
+        for follow in (True, False):
+            queries.append(dict(path=path, follow_final=follow,
+                outcome=witness(REFERENCE_ROOT+'/'+path, follow)))
+    selections = []
+    for operand in REFERENCE_OPERANDS:
+        attempts, selected = [], None
+        for context, prefix in (('manual-tree', REFERENCE_ROOT),
+                                ('original-directory', REFERENCE_ROOT+'/man1')):
+            for extension in ('', 'gz', 'xz'):
+                path = prefix+'/'+operand+('.'+extension if extension else '')
+                # Match the existence primitive used by the uncompressed branch.
+                if not extension:
+                    accessible = os.access(path, os.F_OK)
+                    outcome = witness(path, True) if accessible else dict(state='unavailable')
+                    attempts.append(dict(context=context, extension=extension, path=path,
+                                         access_f_ok=accessible, outcome=outcome))
+                else:
+                    outcome = witness(path, True)
+                    attempts.append(dict(context=context, extension=extension, path=path,
+                                         outcome=outcome))
+                if outcome['state'] == 'exists':
+                    selected = outcome
+                    break
+            if selected is not None:
+                break
+        selections.append(dict(operand=operand, attempts=attempts, selected=selected))
+    return dict(profile='man-fixed-reference-fixtures-v1', fixture_root=REFERENCE_ROOT,
+        queries=queries, selections=selections, configured_extensions=['gz', 'xz'],
+        uid=os.getuid(), gid=os.getgid(), groups=os.getgroups(),
+        source_inputs_opened=False, source_content_interpreted=False,
+        native_man_db_library_executed=False, native_man_db_caller_semantics_verified=False,
+        complete_source_graph_verified=False, generated_state_validated=False,
+        changes_authorized=False, publication_authorized=False)
 
 
 class ExpandedInputs:
@@ -343,11 +431,17 @@ def main():
     if (sys.platform != 'linux' or os.getresuid() != (6, 6, 6)
             or os.getresgid() != (12, 12, 12) or os.getgroups() != [] or len(sys.argv) != 1):
         raise PermissionError('Fixed unprivileged Linux source content worker required')
+    packet = read_fixed('/run/man-source-paths.json', 4*1024**2, mode=0o444)
+    if packet == REFERENCE_REQUEST:
+        encoded = json.dumps(reference_fixture_results(), sort_keys=True, allow_nan=False).encode()
+        if len(encoded)+1 > 256*1024:
+            raise ValueError('Fixed reference fixture witness budget')
+        sys.stdout.buffer.write(encoded+b'\n')
+        return
     sys.path.insert(0, '/run/man-source-support')
     import gzip_frame as codec
     from source_bytes import validate_capture
 
-    packet = read_fixed('/run/man-source-paths.json', 4*1024**2, mode=0o444)
     captured = read_fixed('/run/man-source-capture.txt', MAX_CAPTURE_BYTES)
     first, separator, body = captured.partition(b'\n')
     if not separator or len(first) > 4096 or json.loads(first).get('role') != 'source-bytes':

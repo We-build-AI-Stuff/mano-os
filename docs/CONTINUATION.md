@@ -40,7 +40,54 @@ library matches the earlier reference's SHA256
 Its nine configured suffixes are independently bound to the native capture. Runtime loader selection, helper search paths, target resolution, full
 source semantics, generated-state validity and publication stay false.
 
-## Local conditional lookup preparation, unwired
+## Latest repeated native34 acceptance: conditional lookup preparation
+
+Head 6e4c47bcc97dc173c5307e54d16e1136b18d4800 is accepted for the existing
+34 gates at base 65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Run 41484827812
+passed quality 125413460826 (1,010 tests / one skip), security 125413460191
+and merge-gate 125427392007. Artifact 13162264557 is 47,894,166 bytes, SHA256
+58ab23cfc356cdd6be9eaee2b1f3492b8b6eaf3a0d02e3ca847f30e2ef32deb5.
+Tested merge 12fe1b506de96ce151e1e258be6510b9154ed3c3 has exact base/head
+parents and 30 relevant matching sources. Collector 29400 exited zero after
+ALL34 and the prior 54-hash/45-flag/PAM/Stop/recovery/package/ELF chain.
+All six fresh UI originals and eight crops were viewed; the 15-PNG receipt
+confirms full 900/120 values. Physical provenance remains null. There are 64
+staging artifacts / 141,546,110 uncompressed bytes. Proof and receipt are in
+task outputs/pr134-6e4c47b-native34-proof.json and
+outputs/acceptance-pr134-reference-lookup/inspection.json. All five review
+threads were freshly read and remain resolved. This does not complete PR134's
+remaining privileged package policy or the full original version.
+
+## Native fixture gate35 preparation
+
+The next preparation adds an exact, Root-owned read-only request for a fresh
+source-content process after the real content domain drains. It probes only fixed
+synthetic cache paths: 40 stat/lstat queries and nine selection cases. It opens no
+actual source captures, parses no compressed data and executes no man-db library.
+Native C grants and guard profile remain unchanged; only the fixed request mount
+source changes, with a shorter 30-second service deadline. Root creates fixtures
+and checks exact node types/owners/modes/bytes/targets/child sets plus inode/device/
+timestamp identity before and after domain drain.
+
+The bounded raw capture, fixture inventory and normalized metadata tree are
+embedded in the existing Root report. No 65th file is added. A full 1 MiB reserve
+for this evidence is charged against the unchanged 200 MB aggregate envelope.
+Bounded raw capture is preserved in existing CI stderr before parsing or failure
+cleanup. An independent reader imports no producer modules, checks the fixed
+inventory and witness identities/errors, and replays traversal independently.
+`--man-reference-fixtures` requires all 34 prior gates. Actual accepted native34
+evidence remains accepted by its old contract and is rejected by the new gate
+because fixture evidence is absent. These new fixtures have only mocked local
+coverage until the next exact-head disposable Debian run. They do not establish
+whole source-namespace, native caller, hardlink, source semantics or publication
+authority; all those claims remain false.
+Six producer/controller test groups and three independent fixture test groups
+cover packet dispatch, unchanged sandbox grants, report bounds, unsafe controller
+contexts, crossed identities/errors/order and false authority. The combined
+focused portable suite passes 82 tests with one Linux-only skip on Mac. Lint and
+diff checks pass; this is local preparation, not native35 acceptance.
+
+## Conditional lookup preparation
 
 `package_man_reference_lookup.py` models one-hop selection over frozen retained
 metadata for UID6/GID12, using a supplied compression order. It follows symlinks
@@ -68,8 +115,9 @@ outputs/pr134-native34-conditional-reference-lookup-experiment.json. No native
 lookup or complete graph authority has been gained. Nine additional synthetic
 chain tests cover retained original-directory context, nine versus ten hops,
 cycles, hardlinks, initial symlink behavior, read permissions, missing/nonregular
-content and false evidence. All 56 focused lookup/chain/classifier/configuration/
-source-link tests pass locally; this is not current-head CI acceptance.
+content and false evidence. The 56 focused lookup/chain/classifier/configuration/
+source-link tests pass locally; their committed code is included in the accepted
+1,010-test quality run.
 
 A reproducible pure-byte experiment in task outputs/experiment_man_reference_chain.py
 checks the accepted native34 ZIP hash and recomputes every retained leading-request
@@ -81,8 +129,9 @@ chains are in outputs/pr134-native34-conditional-source-chain-experiment.json.
 Native caller flags/stat behavior, kernel namespace equivalence, source semantics,
 generated-state validity and publication remain unverified/false.
 
-The next steps require an independent reader and native equivalence fixtures
-before integrating a stronger artifact contract. The
+The separate task-output reader now independently replays all 4,515 conditional
+reports, with nine synthetic test groups. Native fixtures and caller semantics
+remain required before claiming actual source resolution. The
 64-artifact cap must stay; enrich/version existing evidence rather than add a
 65th file. All original requirements remain active.
 
@@ -94,7 +143,8 @@ links, missing paths, ENAMETOOLONG, trailing slashes, search-denied directories,
 unreadable files, literal operands, compression order and nonregular poisoning.
 Ownership is mapped to modeled UID6/GID12; this does not prove actual source-domain
 credentials/mounts, native man-db behavior or hardlink semantics. The test is
-correctly skipped on Mac; fresh exact-head CI must establish its Linux outcome.
+correctly skipped on Mac and actually ran successfully in the accepted Linux
+quality job above.
 
 ## Accepted native33: initial source-request evidence
 
@@ -463,7 +513,7 @@ those failed outcomes. All old logs/artifacts are retained.
 
 ## All acceptance dependencies
 
-Native31 uses ALL31; subsequent source-custody gates must retain them:
+Native35 requires ALL35; subsequent source-custody gates must retain them:
 --payload-closure --control-metadata --file-lists --database-files
 --change-accounting --log-observation --log-decoding --log-scope
 --trigger-declarations --trigger-linkage --log-sequence --log-time-window
@@ -472,6 +522,7 @@ Native31 uses ALL31; subsequent source-custody gates must retain them:
 --process-outcomes --trigger-arguments --cache-tag-metadata
 --man-cache-bytes --gdbm-decoding --man-regeneration --man-canonical
 --man-input-policy --man-source-metadata --man-source-bytes --man-source-content --man-input-coverage
+--man-expanded-inputs --man-leading-requests --man-compression-table --man-reference-fixtures
 
 Use task outputs/run_pr134_acceptance.py from repository cwd. Each option has
 an explicit artifact set; never promote an old schema to stronger proof.
@@ -507,7 +558,7 @@ paid-provider/key/auth experiments. No new merge is authorized by this document.
 Root/Linux/VM probes ONLY disposable Debian CI. Ordinary unprivileged portable
 Python/file/data analysis is allowed Mac. Never run native DB readers on staged
 bytes there. Keep VM images/models off Mac; no silent user-data deletion.
-Disk last 26 GiB free/87%; warn <20 GiB or >90%, stop large downloads <10 GiB.
+Disk last 25 GiB free/88%; warn <20 GiB or >90%, stop large downloads <10 GiB.
 Preserve unrelated duplicate files (do not stage/delete):
 - docs/architecture/0109-privileged-package-stop-domain 2.md
 - packaging/systemd/mano-package 2.slice
