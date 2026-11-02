@@ -41,6 +41,23 @@ def fixture(bits):
     return host,row,report
 
 
+def retention_fixture(bits):
+    host,row,child=fixture(bits)
+    row['retention_controls_profile']='uid-drop-keepcaps-controls-v1'
+    row['retention_controls']=[]
+    for wide,value in ((0,0),(0,1),(1,0),(1,1)):
+        before=copy.deepcopy(row['parent'])
+        changed=copy.deepcopy(before)
+        if bits==11 and value:
+            changed['securebits']|=16
+        report=dict(profile=bits,option_word=8+(wide<<32),requested_keepcaps=value,
+            returncode=-1 if bits==43 else 0,errno=1 if bits==43 else 0,
+            before=before,after_set=changed,after_exec=copy.deepcopy(before))
+        row['retention_controls'].append(dict(returncode=0,capture_complete=True,
+            stdout=stream(json.dumps(report).encode()),stderr=stream(b'')))
+    return host,row,child
+
+
 class UidDropComparisonTests(unittest.TestCase):
     def test_dropped_child_source_is_readable_but_never_writable_or_reused(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -114,3 +131,42 @@ class UidDropComparisonTests(unittest.TestCase):
         altered['result']['stdout']=stream(json.dumps(report).encode())
         with self.assertRaises(ValueError):
             uid.validate(altered,11,host)
+
+    def test_retention_matrix_profiles_and_selector_aliases_are_separate_from_uid_drop(self):
+        for bits in (43,11):
+            host,row,child=retention_fixture(bits)
+            self.assertEqual(uid.validate(row,bits,host,require_retention=True),
+                             child if bits==11 else None)
+        host,row,_=fixture(11)
+        with self.assertRaises(ValueError):
+            uid.validate(row,11,host,require_retention=True)
+
+    def test_retention_selector_state_capability_or_exec_relabeling_is_rejected(self):
+        host,row,_=retention_fixture(11)
+        for mutate in (
+            lambda value:value.update(option_word=8),
+            lambda value:value.update(errno=1),
+            lambda value:value.update(returncode=False),
+            lambda value:value['after_set'].update(securebits=11),
+            lambda value:value['after_exec'].update(securebits=27),
+            lambda value:value['after_exec']['caps'].update(CapEff=0x2000db),
+        ):
+            altered=copy.deepcopy(row)
+            result=altered['retention_controls'][3]
+            control=json.loads(base64.b64decode(result['stdout']['base64']))
+            mutate(control)
+            result['stdout']=stream(json.dumps(control).encode())
+            with self.subTest(mutate=mutate),self.assertRaises(ValueError):
+                uid.validate(altered,11,host,require_retention=True)
+        for change in ('missing','stderr','incomplete','hash'):
+            altered=copy.deepcopy(row)
+            if change=='missing':
+                altered['retention_controls'].pop()
+            elif change=='stderr':
+                altered['retention_controls'][0]['stderr']=stream(b'warning')
+            elif change=='incomplete':
+                altered['retention_controls'][0]['capture_complete']=False
+            else:
+                altered['retention_controls'][0]['stdout']['sha256']='0'*64
+            with self.subTest(change=change),self.assertRaises(ValueError):
+                uid.validate(altered,11,host,require_retention=True)

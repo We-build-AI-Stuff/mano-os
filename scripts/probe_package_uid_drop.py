@@ -36,7 +36,31 @@ def deny_extra_capability():
 
 man=pwd.getpwnam('man')
 assert man.pw_uid>0 and man.pw_gid>0
-if sys.argv[1:]==['child']:
+environment={'PATH':'/usr/sbin:/usr/bin:/bin','LANG':'C.UTF-8','PYTHONDONTWRITEBYTECODE':'1'}
+if sys.argv[1:]==['retention-postexec']:
+    print(json.dumps(state()))
+elif len(sys.argv)==5 and sys.argv[1]=='retention':
+    expected,wide,value=map(int,sys.argv[2:])
+    assert expected in {43,11} and wide in {0,1} and value in {0,1}
+    assert os.uname().machine=='x86_64'
+    before=state()
+    assert before['uid']==before['gid']==[0]*3 and before['securebits']==expected
+    assert before['nnp']==1 and set(before['caps'].values())=={0xdb}
+    option=8+(wide<<32)  # PR_SET_KEEPCAPS, including the kernel's int selector alias.
+    lib.syscall.restype=ctypes.c_long
+    ctypes.set_errno(0)
+    result=lib.syscall(ctypes.c_long(157),ctypes.c_ulong(option),ctypes.c_ulong(value),
+        ctypes.c_ulong(0),ctypes.c_ulong(0),ctypes.c_ulong(0))
+    error=ctypes.get_errno()
+    after=state()
+    post=run_observed(['/usr/bin/python3','-P','/run/probe.py','retention-postexec'],
+        environment,2)
+    assert post['capture_complete'] and post['returncode']==0
+    assert not base64.b64decode(post['stderr']['base64'])
+    postexec=json.loads(base64.b64decode(post['stdout']['base64']))
+    print(json.dumps(dict(profile=expected,option_word=option,requested_keepcaps=value,
+        returncode=result,errno=error,before=before,after_set=after,after_exec=postexec)))
+elif sys.argv[1:]==['child']:
     before=state()
     assert before['uid']==[man.pw_uid]*3 and before['gid']==[man.pw_gid]*3
     assert before['groups']==sorted(set(os.getgrouplist('man',man.pw_gid)))
@@ -66,12 +90,18 @@ else:
     assert set(before['caps'].values())=={0xdb} and os.getpid()==2
     denied=deny_extra_capability()
     assert before==state()
+    controls=[]
+    for wide,value in ((0,0),(0,1),(1,0),(1,1)):
+        controls.append(run_observed(['/usr/bin/python3','-P','/run/probe.py','retention',
+            str(expected),str(wide),str(value)],environment,4))
+        assert before==state()
     result=run_observed(['/usr/bin/setpriv','--reuid','man','--regid','man','--init-groups',
         '--','/usr/bin/python3','-P','/run/probe.py','child'],
-        {'PATH':'/usr/sbin:/usr/bin:/bin','LANG':'C.UTF-8','PYTHONDONTWRITEBYTECODE':'1'},5)
+        environment,5)
     print(json.dumps(dict(profile=expected,parent=before,man_uid=man.pw_uid,man_gid=man.pw_gid,
         expected_groups=sorted(set(os.getgrouplist('man',man.pw_gid))),
-        extra_capability_errno=denied,result=result)))
+        extra_capability_errno=denied,result=result,
+        retention_controls_profile='uid-drop-keepcaps-controls-v1',retention_controls=controls)))
 '''
 
 
@@ -94,7 +124,47 @@ def state_shape(value):
         raise ValueError('Exact integer kernel state fields required')
 
 
-def validate(row, profile, host):
+def validate_retention_controls(row, profile):
+    if (row.get('retention_controls_profile')!='uid-drop-keepcaps-controls-v1'
+            or type(row.get('retention_controls')) is not list
+            or len(row['retention_controls'])!=4):
+        raise ValueError('Complete fixed capability-retention controls required')
+    for result,(wide,requested) in zip(row['retention_controls'],
+            ((0,0),(0,1),(1,0),(1,1)),strict=True):
+        if (type(result['returncode']) is not int or result['returncode']!=0
+                or result['capture_complete'] is not True):
+            raise ValueError('Complete normal retention control process required')
+        streams={}
+        for label in ('stdout','stderr'):
+            field=result[label]
+            if type(field['base64']) is not str or len(field['base64'])>87384:
+                raise ValueError('Bounded retention control diagnostics required')
+            raw=base64.b64decode(field['base64'],validate=True)
+            if (len(raw)>65536 or type(field['bytes']) is not int or field['bytes']!=len(raw)
+                    or field['sha256']!=hashlib.sha256(raw).hexdigest()):
+                raise ValueError('Exact retention control diagnostic bytes/hash required')
+            streams[label]=raw
+        if streams['stderr']:
+            raise ValueError('Retention controls must not hide stderr')
+        control=json.loads(streams['stdout'])
+        if set(control)!={'profile','option_word','requested_keepcaps','returncode','errno',
+                          'before','after_set','after_exec'}:
+            raise ValueError('Exact retention control fields required')
+        values=dict(profile=profile,option_word=8+(wide<<32),requested_keepcaps=requested,
+                    returncode=-1 if profile==43 else 0,errno=1 if profile==43 else 0)
+        if any(type(control[key]) is not int or control[key]!=value
+               for key,value in values.items()):
+            raise ValueError('Fixed x86-64 native/wide selector and retention result required')
+        for key in ('before','after_set','after_exec'):
+            state_shape(control[key])
+        expected=json.loads(json.dumps(row['parent']))
+        expected['securebits']=profile | (16 if profile==11 and requested==1 else 0)
+        if (control['before']!=row['parent'] or control['after_set']!=expected
+                or control['after_exec']!=row['parent']):
+            raise ValueError('Retained flag must be isolated and reset by exec without cap gain')
+
+
+def validate(row, profile, host, *, require_retention=False):
     state_shape(row['parent'])
     if row['domain_drained'] is not True:
         raise ValueError('Comparison domain must drain')
@@ -107,6 +177,8 @@ def validate(row, profile, host):
             or set(parent['namespaces'])!=set(host)
             or any(parent['namespaces'][k]==host[k] for k in host)):
         raise ValueError('Fixed parent UID/capability/private namespace state required')
+    if require_retention or 'retention_controls_profile' in row or 'retention_controls' in row:
+        validate_retention_controls(row,profile)
     result=row['result']
     if result['capture_complete'] is not True:
         raise ValueError('Complete bounded comparison output required')
@@ -189,7 +261,7 @@ def compare(base, capture_source, host, sandbox, run):
         target=Path('/opt/mano-lab/evidence')/('staged-uid-drop-'+label+'.json')
         with target.open('x') as stream:
             json.dump(row,stream,sort_keys=True)
-        validate(row,bits,host)
+        validate(row,bits,host,require_retention=True)
     return data,dict(schema_version='1.0',program_sha256=hashlib.sha256(data).hexdigest(),
         host_namespaces=host,profiles=rows,production_policy_changed=False,
         package_callback_success_verified=False,trigger_authority_verified=False,

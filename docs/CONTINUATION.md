@@ -1,6 +1,6 @@
 # mano-OS continuation — full goal remains active
 
-Updated 2026-11-02. Original v2.1 phases 0–7 are ACTIVE/incomplete; Phase 8 is
+Updated 2026-11-03. Original v2.1 phases 0–7 are ACTIVE/incomplete; Phase 8 is
 optional. Specification: docs/spec-v2.1.md, SHA256
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 Do not redefine completion around a prototype, CI slice or the checks below.
@@ -58,7 +58,7 @@ outputs/acceptance-pr134-reference-lookup/inspection.json. All five review
 threads were freshly read and remain resolved. This does not complete PR134's
 remaining privileged package policy or the full original version.
 
-## Native fixture gate35 preparation
+## Native fixture gate35 implementation and failed first run
 
 The next preparation adds an exact, Root-owned read-only request for a fresh
 source-content process after the real content domain drains. It probes only fixed
@@ -77,8 +77,8 @@ cleanup. An independent reader imports no producer modules, checks the fixed
 inventory and witness identities/errors, and replays traversal independently.
 `--man-reference-fixtures` requires all 34 prior gates. Actual accepted native34
 evidence remains accepted by its old contract and is rejected by the new gate
-because fixture evidence is absent. These new fixtures have only mocked local
-coverage until the next exact-head disposable Debian run. They do not establish
+because fixture evidence is absent. The first preparation had mocked local coverage; the corrected native run is
+recorded below. They do not establish
 whole source-namespace, native caller, hardlink, source semantics or publication
 authority; all those claims remain false.
 Seven producer/controller test groups and three independent fixture test groups
@@ -106,9 +106,51 @@ The retained regression fixture drops unstable device/inode IDs and covers all
 40 queries / nine selections. Replaying 62 outcomes against declared fixture
 metadata now has zero mismatches in producer and independent reader. This is a
 regression replay, not reconstructed before/after inode custody or native35
-acceptance; a fresh exact-head Debian run remains required. Failure/replay
+acceptance; it required the fresh exact-head Debian run recorded below. Failure/replay
 receipts are in task outputs/pr134-953c550-reference-fixture-mismatch-diagnosis.json
 and pr134-reference-fixture-correction-replay.json.
+
+## Accepted native35 and capability-retention gate36 preparation
+
+Corrected head c2b84469dc7ef8d74055fe3143684807440f899c is accepted for all
+35 staging gates at base 65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Run
+41495193465 passed quality 125448175410 (1,017 tests / one skip), security
+125448176015 and merge-gate 125462236024. Artifact 13167787047 is 47,893,834
+bytes, SHA256 4b70ad790c64ce82bc546ae0edbb2b09eef20acb87faaa45fea87079c519351a.
+Tested merge 9d256bd2ce468838aed34ac040e7dffce66e7e4f has exact parents and
+33 matching relevant sources. Collector 25619 exited zero after ALL35 and the
+previous 54-hash/45-flag/PAM/Stop/recovery/package/ELF chain; do not restart it.
+Six UI originals and eight crops/contact sheet were actually viewed. The
+15-PNG inspection receipt binds the complete 900/120 values and identical
+pending/effective numeric regions; physical provenance remains null.
+Proof: task outputs/pr134-c2b8446-native35-proof.json; inspection:
+outputs/acceptance-pr134-man-reference-fixtures-corrected/inspection.json.
+There are exactly 64 staged artifacts / 141,554,728 uncompressed bytes. Embedded
+fixture evidence is 35,224 bytes; reserving the full 1 MiB charges 142,603,304
+bytes against the unchanged 200 MB cap. The independent reader checked all
+40 kernel queries and nine selections with exact fixture/native inode custody.
+Whole source namespace, native man-db caller semantics, generated-state validity
+and publication remain unverified/false.
+
+The next diagnostic extends the existing UID-drop comparison, without changing
+the production guard's securebits43 policy. In each existing isolated profile43
+and experimental profile11 domain, four fresh fixed Python children request
+PR_SET_KEEPCAPS values zero/one with native and high-word selector encodings.
+They retain bounded raw before/after/after-exec state, return values and errno.
+The expected outcomes are locked43 rejection and alternative11 acceptance with
+flag reset on exec, unchanged six-capability ceiling and unchanged parent state.
+The existing real setpriv UID-drop/escalation-denial experiment still runs.
+The same program/comparison artifacts carry the data; no 65th artifact or new
+native grants, memory/task limits or deadline changes are introduced.
+
+`--keepcaps-controls` requires ALL35. A separate reader checks eight controls
+without importing the producer. New local tests reject omitted cases, wrong
+selectors, changed privilege/exec state, incomplete streams and changed hashes.
+Nineteen focused portable tests pass. Actual accepted native35 is rejected by
+this stronger gate because it lacks the new matrix; backward proof is in
+outputs/pr134-keepcaps-controls-backward-proof.json. Native36 is unproven until
+fresh exact-head Debian CI/artifact/UI acceptance. This experiment cannot approve
+a production-policy change or establish complete package runtime closure.
 
 ## Conditional lookup preparation
 
@@ -545,7 +587,7 @@ Native35 requires ALL35; subsequent source-custody gates must retain them:
 --process-outcomes --trigger-arguments --cache-tag-metadata
 --man-cache-bytes --gdbm-decoding --man-regeneration --man-canonical
 --man-input-policy --man-source-metadata --man-source-bytes --man-source-content --man-input-coverage
---man-expanded-inputs --man-leading-requests --man-compression-table --man-reference-fixtures
+--man-expanded-inputs --man-leading-requests --man-compression-table --man-reference-fixtures --keepcaps-controls
 
 Use task outputs/run_pr134_acceptance.py from repository cwd. Each option has
 an explicit artifact set; never promote an old schema to stronger proof.
@@ -581,7 +623,7 @@ paid-provider/key/auth experiments. No new merge is authorized by this document.
 Root/Linux/VM probes ONLY disposable Debian CI. Ordinary unprivileged portable
 Python/file/data analysis is allowed Mac. Never run native DB readers on staged
 bytes there. Keep VM images/models off Mac; no silent user-data deletion.
-Disk last 25 GiB free/88%; warn <20 GiB or >90%, stop large downloads <10 GiB.
+Disk last 27 GiB free/87%; warn <20 GiB or >90%, stop large downloads <10 GiB.
 Preserve unrelated duplicate files (do not stage/delete):
 - docs/architecture/0109-privileged-package-stop-domain 2.md
 - packaging/systemd/mano-package 2.slice
