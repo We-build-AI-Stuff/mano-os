@@ -5,7 +5,7 @@ optional. Specification: docs/spec-v2.1.md, SHA256
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 Do not redefine completion around a prototype, CI slice or the checks below.
 
-## Pending native32: bounded decoded-source custody
+## Accepted native32: bounded decoded-source custody
 
 The content worker now has explicit `man-source-gzip-content-v2` output and writes
 one fixed exclusive nofollow/CLOEXEC 0600 binary under its private cache. Canonical
@@ -32,11 +32,45 @@ tests cover corruption, truncation, count/length inflation, false hash relabelin
 cross-binding, partial writes and reads, and missing records. Synthetic GNU/native
 witnesses are fabricated fixtures and prove no Linux controls.
 
-Native32 CI and real artifact acceptance have NOT yet passed. Native31 below is
-still the latest accepted evidence. Full source semantics/runtime closure and
-publication remain false; all original version requirements remain outstanding.
+Native32 is now accepted at head 0359534610ab64603d780540e009fb4542c32de5, base
+65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Run 40907659099 passed all three jobs:
+quality 123566730299 (972 tests, one platform skip), security 123566730904 and
+merge-gate 123581536444. Artifact 12912654941 is 47,445,957 bytes, SHA256
+2cd89ec03c99994a528ffd7b0648f8ef582c027a47cd4f0c77efa8fd8d7ca2b7.
+Tested merge dd651fad860dfd7f745d38e6b029ef233a794db9 has exact parents and
+23 matching relevant source files. All 32 independent staging gates and prior
+54-hash/45-flag/PAM/Stop/recovery/package/ELF checks passed. Collector 78300 is
+no longer present; its final record confirms independent acceptance exit zero.
+Do not restart it. Six fresh UI originals and all eight crops were actually
+viewed; the 15-PNG receipt is in task outputs/acceptance-pr134-man-expanded-inputs.
+Full 900/120 values are visible and pending/effective numeric regions match.
+Physical input provenance remains null.
 
-## Latest accepted native31: complete observed regular manual-file coverage
+The binary retains 35,074,232 expanded bytes across 3,202 files; its size is
+35,386,688 bytes and SHA256
+881631fc0754bdff1dcaca2c64ca66f89b706f8300d9201428c38981f8818a55.
+Independent acceptance reacquires the actual text without repeating inflation.
+There are 62 staging artifacts / 137,661,623 uncompressed bytes. The actual
+content worker completed under unchanged 256 MiB/32-task/190-second limits;
+peak memory was not measured. Guard, source identity, domain drain, control,
+runtime/input hashes and frozen output checks passed. Full proof is in task
+outputs/pr134-0359534-native32-proof.json; completed job logs are preserved.
+
+A follow-up pure-data inventory inspected the retained text with two separate
+leading-request algorithms: all 3,202 agreed, no unsupported cases, 3,187 had
+no leading .so request and 15 had relative requests. This opens no source paths,
+repeats no staged gzip inflation and proves no target resolution, full include
+graph, alias declarations, descriptions, filters or generated-state authority.
+Per-file evidence is in task outputs/pr134-native32-leading-request-inspection.json.
+The next step is to bind these initial requests into the retained evidence, then
+resolve references against exact observed metadata and deployed compression
+precedence. Never treat this initial-request classifier as a full roff parser.
+
+Full source semantics/runtime closure and publication remain false. Accounting
+remains 107/125 with 18 rejected effects; no merge or activation. All original
+version requirements remain outstanding. Native31 below is historical evidence.
+
+## Historical native31: complete observed regular manual-file coverage
 
 PR #134, branch feat/approved-package-apply; repository We-build-AI-Stuff/mano-os.
 Accepted head 33460b89ac766ee1829f0bd69bb476aec58ee1be, current base
@@ -74,21 +108,14 @@ semantics, complete readable namespace/runtime closure, generated-state validity
 or publication authority is granted. Accounting remains 107/125 with 18 rejected
 effects. Do not whitelist intentional negatives. No merge or activation.
 
-## Local next primitive and independent-source custody
+## Initial source-request inspection boundary
 
-Local leading-source inspection is an unused pure-byte helper with five synthetic
-tests, prepared after the accepted head. It opens no paths and grants no graph or
-publication authority. Exact-version man-db source/docs were reviewed as reference
-data; the research note lives in task outputs/man-db-2.13.1-source-semantics-review.md.
-The helper is not wired into the worker and has no native execution proof.
-
-Next, retain bounded decoded bytes as an explicit new version of the confined
-content worker. This allows independent source-text inspection without actual
-staged gzip inflation on Root/Mac. Preserve the old discard-only contract for old
-evidence, fixed UID/controls, strict artifact framing/byte/resource limits, private
-output custody and domain drain before collection. This change is not implemented
-or authorized for publication merely by this plan. All semantic and production
-requirements above remain active.
+The leading-source helper remains unwired into the native capture/probe. It has
+five synthetic tests and now agrees with a separate byte-only implementation on
+all native32 retained sources. It opens no paths and grants no graph/publication
+authority. Exact-version reference notes are in task outputs/
+man-db-2.13.1-source-semantics-review.md. Native32 custody is implemented and
+accepted above; source-reference resolution and full NAME/filter semantics remain.
 
 ## Accepted streaming controller output bounds
 
