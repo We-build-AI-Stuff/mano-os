@@ -2,6 +2,7 @@
 import copy
 import errno
 import hashlib
+import importlib.util
 import io
 import json
 import stat
@@ -10,15 +11,19 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from test_package_man_reference_lookup import trees
+from test_staged_package_probe import SCRIPTS
 
 from mano_runtime import package_man_source_content as worker
 from mano_runtime.package_man_reference_lookup import ROOT, Namespace
 
+SPEC = importlib.util.spec_from_file_location('reference_fixture_probe',
+    SCRIPTS/'probe_package_man_reference_fixtures.py')
+probe = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(probe)
+
 
 class ReferenceFixtureCustodyTests(unittest.TestCase):
     def fixtures(self):
-        from probe_package_man_reference_fixtures import model_tree
-
         observed = {}
         for index, name in enumerate(sorted(set(worker.REFERENCE_DIRECTORIES)
                 | set(worker.REFERENCE_FILES) | set(worker.REFERENCE_LINKS))):
@@ -39,7 +44,7 @@ class ReferenceFixtureCustodyTests(unittest.TestCase):
         baseline, _ = trees()
         baseline['entries']['var'] = dict(baseline['entries']['.'])
         baseline['entries']['var/cache'] = dict(baseline['entries']['.'])
-        model = model_tree(observed, baseline)
+        model = probe.model_tree(observed, baseline)
         namespace = Namespace(model, model)
 
         def fake_stat(path, *, follow_symlinks=True):
@@ -72,10 +77,8 @@ class ReferenceFixtureCustodyTests(unittest.TestCase):
         return native, observed, model
 
     def test_fixed_mocked_witnesses_bind_all_cases_without_native_claim(self):
-        from probe_package_man_reference_fixtures import compare
-
         native, observed, model = self.fixtures()
-        report = compare(native, observed, model)
+        report = probe.compare(native, observed, model)
         self.assertEqual(report['stat_lstat_queries'], 40)
         self.assertEqual(report['selection_queries'], 9)
         self.assertTrue(report['declared_kernel_fixture_matches_metadata_model'])
@@ -83,8 +86,6 @@ class ReferenceFixtureCustodyTests(unittest.TestCase):
         self.assertFalse(report['native_man_db_caller_semantics_verified'])
 
     def test_crossed_inode_permissions_errors_order_and_false_authority_refuse(self):
-        from probe_package_man_reference_fixtures import compare
-
         native, observed, model = self.fixtures()
         missing = next(i for i, row in enumerate(native['queries'])
                        if row['outcome']['state'] == 'unavailable')
@@ -104,7 +105,7 @@ class ReferenceFixtureCustodyTests(unittest.TestCase):
             changed = copy.deepcopy(native)
             mutate(changed)
             with self.subTest(mutate=mutate), self.assertRaises(ValueError):
-                compare(changed, observed, model)
+                probe.compare(changed, observed, model)
 
     def test_exact_request_dispatch_never_reads_source_capture(self):
         output = io.BytesIO()
@@ -135,24 +136,23 @@ class ReferenceFixtureCustodyTests(unittest.TestCase):
                 worker.main()
 
     def test_fixture_command_changes_only_readonly_request_and_shorter_deadline(self):
-        from probe_package_man_reference_fixtures import BASE, fixture_command
         from probe_package_man_source_content import content_sandbox, content_unit
 
+        BASE = probe.BASE
         original = content_unit()+content_sandbox(BASE, [], BASE/'empty', '0'*64)
         expected = list(original)
         expected[expected.index(str(BASE/'man-source-paths.json'))] = str(
             BASE/'man-reference-fixture-request.json')
         expected[expected.index('--property=RuntimeMaxSec=190')] = '--property=RuntimeMaxSec=30'
-        self.assertEqual(fixture_command(BASE, [], BASE/'empty', '0'*64), expected)
+        self.assertEqual(probe.fixture_command(BASE, [], BASE/'empty', '0'*64), expected)
 
     def test_controller_refuses_mac_and_nonroot_before_any_fixture_access(self):
-        from probe_package_man_reference_fixtures import BASE, capture_reference_fixtures
-
+        BASE = probe.BASE
         with patch('sys.platform', 'darwin'), self.assertRaises(PermissionError):
-            capture_reference_fixtures(BASE, {}, [], BASE/'empty', '0'*64, None)
+            probe.capture_reference_fixtures(BASE, {}, [], BASE/'empty', '0'*64, None)
         with patch('sys.platform', 'linux'), patch('os.geteuid', return_value=1000), \
                 self.assertRaises(PermissionError):
-            capture_reference_fixtures(BASE, {}, [], BASE/'empty', '0'*64, None)
+            probe.capture_reference_fixtures(BASE, {}, [], BASE/'empty', '0'*64, None)
 
 
 if __name__ == '__main__':
