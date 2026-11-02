@@ -883,6 +883,18 @@ def main():
         from mano_runtime.package_man_input_coverage import bind as bind_input_coverage
         input_coverage = bind_input_coverage((BASE / 'man-source-paths.json').read_bytes(),
                                             candidate_tree, source_bytes, source_content)
+        from mano_runtime.package_man_leading_requests import derive as derive_leading_requests
+        leading_requests, leading_data = derive_leading_requests(
+            source_artifacts['staged-man-source-manifest.json'],
+            content_artifacts['staged-man-expanded-inputs.bin'],
+            content_artifacts['staged-man-content-capture.txt'])
+        regeneration_artifacts[leading_requests['artifact']] = leading_data
+        for field, name in (('program_sha256', 'package_man_leading_requests.py'),
+                            ('classifier_sha256', 'package_man_leading_source.py')):
+            program = (Path('/opt/mano-lab/src/mano_runtime') / name).read_bytes()
+            leading_requests[field] = sha(program)
+        with (Path('/opt/mano-lab/evidence') / leading_requests['artifact']).open('xb') as stream:
+            stream.write(leading_data)
         for role, observed in (('baseline', baseline_tree), ('candidate', candidate_tree)):
             current = tree_observation(role)
             if (current['manifest_sha256'] != observed['manifest_sha256']
@@ -1021,6 +1033,7 @@ def main():
                 man_source_bytes=source_bytes,
                 man_source_content=source_content,
                 man_input_coverage=input_coverage,
+                man_leading_requests=leading_requests,
                 man_cache_regeneration=dict(inputs=regeneration_inputs,
                     worker=regeneration_worker, raw=regeneration_bytes,
                     comparison=regeneration_comparison,

@@ -5,6 +5,31 @@ optional. Specification: docs/spec-v2.1.md, SHA256
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 Do not redefine completion around a prototype, CI slice or the checks below.
 
+## Pending native33: initial source-request evidence
+
+A pure-data transformation now validates retained binary framing, complete ordered
+names, compressed/expanded hashes, native decoder witnesses and capture/manifest
+bindings before classifying every initial request. It opens no operand paths and
+performs no inflation. The CI staging probe retains a bounded canonical
+`staged-man-leading-requests.json` artifact with per-file byte evidence and source
+program/classifier hashes. This adds one artifact (expected 63); the unchanged
+64-artifact/200 MB global limit still applies. No native worker permission or
+resource limit changes are needed.
+
+The independent gate uses a separate byte classifier and the existing independent
+binary reader, recomputes every per-file record and exact canonical artifact, and
+checks Root summary/provenance hashes. `--man-leading-requests` depends on all
+32 earlier gates. Malformed text, crossed input/capture bindings, byte mutations,
+false length/hash relabeling, incomplete maps and invented authority are rejected.
+Five new repository tests and three independent gate tests pass synthetically;
+157 focused checks passed with three Linux-specific skips. On actual retained
+native32 plaintext, the new producer equals the previous independent inventory:
+3,202 files, 3,187 without leading requests, 15 relative requests, zero unsupported.
+This is portable evidence over accepted data, with no native33 CI proof yet.
+Reference resolution, full include graphs, alias/name/description/filter semantics,
+generated-state validity and publication remain false. All original requirements
+remain active.
+
 ## Accepted native32: bounded decoded-source custody
 
 The content worker now has explicit `man-source-gzip-content-v2` output and writes
