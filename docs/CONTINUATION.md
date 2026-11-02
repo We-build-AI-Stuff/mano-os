@@ -5,7 +5,7 @@ optional. Specification: docs/spec-v2.1.md, SHA256
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 Do not redefine completion around a prototype, CI slice or the checks below.
 
-## Pending native34: bound static compression configuration
+## Accepted native34: bound static compression configuration
 
 The staging probe now retains the fixed baseline libman library as opaque bytes,
 freezes a Root-owned 0444 single-link copy, checks the stored copy before decoding,
@@ -22,9 +22,49 @@ fixed-file custody plus the decoder's exact tested Git hash. Seven producer test
 groups and four independent test groups cover byte/range/relocation corruption,
 changed files/selectors/parents, false configuration and custody claims. Both
 readers agree on synthetic fixtures and the exact library bytes matching accepted
-native33 baseline metadata. Native34 CI and fresh artifact/UI acceptance remain
-pending. Runtime loader selection, helper search paths, target resolution, full
+native33 baseline metadata. Native34 is accepted at head 01259c9fff6312201527e10353aa861084bc9534, base
+65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Run 41394879221 passed all three jobs:
+quality 125113940407 (984 tests, one platform skip), security 125113940731 and
+merge-gate 125120820408. Artifact 13119498820 is 47,855,661 bytes, SHA256
+ ae29d77ac3c2755e34a68e6066c90954a2503adde9612c7d92cafc5ba8d28d2c.
+Tested merge 62546e1ab5c9719df4295ed8f6f1c6437a467da5 has exact base/head
+parents and 26 matching relevant sources. Collector 67531 exited zero after all
+34 staging gates plus the earlier 54-hash/45-flag/PAM/Stop/recovery/package/ELF
+chain. It is terminal; do not restart. Six fresh UI originals and eight crops
+were actually viewed; the 15-PNG receipt confirms full 900/120 values and matching
+pending/effective numeric regions. Physical input provenance remains null.
+Full proof: task outputs/pr134-01259c9-native34-proof.json. There are exactly
+64 staging artifacts / 141,542,331 uncompressed bytes. The captured 282,912-byte
+library matches the earlier reference's SHA256
+ e1119194250c85d02f1c7328b332ee93a7cfe7212e1903b7bb146aa5229d60da.
+Its nine configured suffixes are independently bound to the native capture. Runtime loader selection, helper search paths, target resolution, full
 source semantics, generated-state validity and publication stay false.
+
+## Local conditional lookup preparation, unwired
+
+`package_man_reference_lookup.py` models one-hop selection over frozen retained
+metadata for UID6/GID12, using a supplied compression order. It follows symlinks
+before processing `..`, applies directory search permissions, tries the root
+before the original page directory, and stops at the first successful stat even
+for a directory. It distinguishes proven absence/access failures from unknown
+scope, ACLs, protected-symlink policy and resource limits. It opens no host paths.
+The known overlay uses candidate manuals and baseline ancestors/alternatives.
+This is a conditional metadata model, not native namespace equivalence, initial
+hardlink canonicalization or a recursive source-graph proof.
+
+Sixteen synthetic tests cover precedence, fallback, locale context, nested original
+context, symlink/parent ordering, cycles, dangling links, nonregular poisoning,
+DAC classes, directory/trailing-slash rules, unknown attributes/scope, literal
+operands and immutable snapshots. A data-only experiment over native34's actual
+retained library, trees and text selects captured regular targets for all 14
+indexed relative contexts; those targets have no further leading requests. The
+unchanged unindexed missing reference remains unresolved. Results are in task
+outputs/pr134-native34-conditional-reference-lookup-experiment.json. No native
+lookup or complete graph authority has been gained. The next steps require an
+independent reader, native equivalence fixtures, initial hardlink handling and a
+bounded recursive driver before integrating a stronger artifact contract. The
+64-artifact cap must stay; enrich/version existing evidence rather than add a
+65th file. All original requirements remain active.
 
 ## Accepted native33: initial source-request evidence
 
