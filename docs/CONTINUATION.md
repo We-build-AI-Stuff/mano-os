@@ -148,9 +148,46 @@ without importing the producer. New local tests reject omitted cases, wrong
 selectors, changed privilege/exec state, incomplete streams and changed hashes.
 Nineteen focused portable tests pass. Actual accepted native35 is rejected by
 this stronger gate because it lacks the new matrix; backward proof is in
-outputs/pr134-keepcaps-controls-backward-proof.json. Native36 is unproven until
-fresh exact-head Debian CI/artifact/UI acceptance. This experiment cannot approve
+outputs/pr134-keepcaps-controls-backward-proof.json. Native36 was initially unproven; the fresh exact-head result follows below. This experiment cannot approve
 a production-policy change or establish complete package runtime closure.
+
+## Accepted native36: fixed capability-retention controls
+
+Head e6e60be8959c0ddfebfadadae74c66e50a3aa3b2 is accepted for all36 staging
+gates at base65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Run41506066130 passed
+quality125485572316 (1,019 tests / one skip), security125485572002 and
+merge-gate125498315540. Artifact13171857585 is47,911,606 bytes, SHA256
+81dd4a04313cfac385cadb0d8dff817cdbc018b897c6f34a28a367cce6ab9352.
+Tested merge78b7153602c1317d7254412ba7fde266a9fd8b4a has exact base/head
+parents and34 matching relevant sources. Collector56203 exited zero after ALL36
+and the previous54-hash/45-flag/PAM/Stop/recovery/package/ELF chain; never restart.
+Six fresh originals and all eight crops in the contact sheet were actually viewed.
+The15-PNG receipt confirms complete900/120 and equal pending/effective numeric
+pixels. Physical provenance remains null. Proof and receipt:
+outputs/pr134-e6e60be-native36-proof.json;
+outputs/acceptance-pr134-keepcaps-controls/inspection.json.
+Exactly64 staging artifacts total141,572,126 uncompressed bytes; reserving the
+full fixture1MiB charges142,620,702 bytes within the unchanged200MB cap.
+
+All eight native controls were independently checked: locked43 rejected both
+requested values; experimental11 accepted both selector encodings and reset the
+KEEP flag on exec without capability gain. The existing real setpriv dropped
+child and escalation-denial tests also passed. Production policy is unchanged43;
+production guard compatibility and complete runtime closure remain unverified.
+This is no authority to equate the two policies or publish/activate the candidate.
+
+## Pending strict kernel-witness integer check
+
+The Root controller previously accepted JSON decimal values equal to the expected
+five capability masks and securebits (for example 219.0 equals integer219 in
+Python). A local retained-head control reproduced acceptance of all six decimal
+fields. The pending fix requires exact integer types before value comparison;
+production securebits43 and all capability values remain unchanged. A regression
+uses ordinary mocked child output, with no native or package execution on Mac,
+and requires rejection of each decimal field while preserving the valid frame
+and partial-stderr case. All26 package-apply/UID-drop tests pass; changed-source lint and diff checks pass. Receipt: outputs/pr134-boundary-integer-contract-regression.json.
+This change is not included in accepted e6e60be evidence. Its next head needs
+fresh exact-head CI/artifact/UI acceptance; do not promote older acceptance.
 
 ## Conditional lookup preparation
 

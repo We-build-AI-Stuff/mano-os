@@ -152,8 +152,8 @@ class ApplyAuthorityTests(unittest.TestCase):
 
 
 class RootApplyAdmissionTests(unittest.TestCase):
-    def test_partial_stderr_cannot_hide_a_valid_stdout_control_frame(self):
-        # Ordinary unprivileged Python only: no namespace, native guard or package effect.
+    @staticmethod
+    def boundary_witness():
         witness = dict.fromkeys(('network_socket_denied', 'protected_code_readonly',
             'cgroup_control_readonly', 'host_shadow_hidden', 'approval_ipc_hidden',
             'protected_ancestors_mounted', 'no_new_privileges', 'seccomp_active',
@@ -168,6 +168,10 @@ class RootApplyAdmissionTests(unittest.TestCase):
                                                'CapBnd', 'CapAmb'), 0xdb)
         witness['securebits'] = 43
         witness['run_device'] = 1
+        return witness
+
+    def run_boundary_child(self, witness):
+        # Ordinary unprivileged Python only: no namespace, native guard or package effect.
         program = ('import sys,time;sys.stdin.buffer.read();'
                    'sys.stderr.write("progress without newline");sys.stderr.flush();'
                    'time.sleep(.1);print(' + repr('MANO_PACKAGE_BOUNDARY=' +
@@ -179,8 +183,24 @@ class RootApplyAdmissionTests(unittest.TestCase):
                 patch.object(root, 'runtime_device', return_value=0), \
                 patch.object(root.os, 'readlink', return_value='host-namespace'):
             digest, actual = root.run_child({}, [], {}, None)
+        return digest, actual
+
+    def test_partial_stderr_cannot_hide_a_valid_stdout_control_frame(self):
+        witness = self.boundary_witness()
+        digest, actual = self.run_boundary_child(witness)
         self.assertEqual(actual, witness)
         self.assertRegex(digest, '^[a-f0-9]{64}$')
+
+    def test_decimal_kernel_capabilities_and_securebits_cannot_pass_integer_contract(self):
+        for key in ('CapEff', 'CapPrm', 'CapInh', 'CapBnd', 'CapAmb', 'securebits'):
+            witness = self.boundary_witness()
+            if key == 'securebits':
+                witness[key] = float(witness[key])
+            else:
+                witness['capabilities'][key] = float(witness['capabilities'][key])
+            with self.subTest(field=key), self.assertRaisesRegex(
+                    ValueError, 'boundary witness is incomplete'):
+                self.run_boundary_child(witness)
 
     def test_launcher_diagnostics_never_echo_paths_or_untrusted_output(self):
         self.assertEqual(root.launcher_failure(
