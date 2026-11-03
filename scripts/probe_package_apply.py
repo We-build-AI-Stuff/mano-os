@@ -228,10 +228,18 @@ finally:with_client.close()
     assert selected["archive_sha256"] in receipt["acquisition"]["downloaded_sha256"]
     assert all(
         receipt["boundary"][key] is True for key in receipt["boundary"]
-        if key not in {"namespaces", "capabilities", "securebits", "run_device"}
+        if key not in {"namespaces", "capabilities", "securebits", "run_device",
+                       "uid_delegation", "uid_delegation_elapsed_ns"}
     )
     assert set(receipt["boundary"]["capabilities"].values()) == {0xdb}
-    assert receipt["boundary"]["securebits"] == 43
+    assert receipt["boundary"]["securebits"] == 11
+    from mano_runtime import package_identity
+    uid, gid, groups = package_identity.account()
+    package_identity.validate(receipt["boundary"]['uid_delegation'], uid=uid, gid=gid,
+                              groups=groups, namespaces=receipt["boundary"]['namespaces'])
+    assert receipt["boundary"]['complete_uid_delegation'] is True
+    assert type(receipt["boundary"]['uid_delegation_elapsed_ns']) is int
+    assert 0 < receipt["boundary"]['uid_delegation_elapsed_ns'] <= 8_000_000_000
     installed = subprocess.check_output(
         ["/usr/bin/dpkg-query", "-W", "-f=${db:Status-Status}:${Version}", "cowsay"], text=True
     )

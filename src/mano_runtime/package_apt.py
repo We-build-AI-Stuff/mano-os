@@ -21,6 +21,7 @@ from mano_broker.package_catalog import load
 from mano_broker.package_solver import canonical, forecast, prepare_apt_root
 from mano_protocol.actions import unique_object
 from mano_protocol.stop_state import STATE_FILE, snapshot
+from mano_runtime import package_identity
 from mano_runtime.package_attempts import guard
 from mano_runtime.package_ipc import verify as verify_ipc
 from mano_runtime.package_path_policy import verify_label
@@ -109,7 +110,7 @@ def boundary():
     securebits = ctypes.CDLL(None, use_errno=True).prctl(27, 0, 0, 0, 0)  # PR_GET_SECUREBITS
     BOUNDARY_CHECK = 'capabilities'
     BOUNDARY_KERNEL.update(capabilities, securebits=securebits)
-    if any(value != 0xdb for value in capabilities.values()) or securebits != 43:
+    if any(value != 0xdb for value in capabilities.values()) or securebits != 11:
         raise PermissionError('Package capability state is not exactly bounded and locked')
     BOUNDARY_CHECK = 'thread-creation'
     ready = threading.Event()
@@ -195,7 +196,13 @@ def boundary():
     for index, path in enumerate(paths):
         BOUNDARY_KERNEL['python_path_index'] = index
         verify_readonly(path)
-    return dict(network_socket_denied=True, protected_code_readonly=True,
+    BOUNDARY_CHECK = 'complete-uid-delegation'
+    started = time.monotonic_ns()
+    delegation = package_identity.preflight()
+    elapsed = time.monotonic_ns() - started
+    return dict(complete_uid_delegation=True, uid_delegation=delegation,
+                uid_delegation_elapsed_ns=elapsed,
+                network_socket_denied=True, protected_code_readonly=True,
                 **ipc,
                 cgroup_control_readonly=True, host_shadow_hidden=True, approval_ipc_hidden=True,
                 protected_ancestors_mounted=True, no_new_privileges=True, seccomp_active=True,

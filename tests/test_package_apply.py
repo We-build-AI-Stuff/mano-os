@@ -6,6 +6,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import test_package_identity as identity_fixtures
+
 from mano_broker.approvals import Approvals
 from mano_broker.package_apply import ApplyWorker, execution_deadline, validate
 from mano_broker.profiles import READ_ONLY, WORKSPACE
@@ -161,12 +163,14 @@ class RootApplyAdmissionTests(unittest.TestCase):
             'ordinary_thread_creation', 'trusted_service_configuration_readonly',
             'existing_python_paths_readonly', 'package_path_policy_enforced',
             'host_named_ipc_denied', 'anonymous_stream_socketpair_works',
-            'inherited_socket_fds_absent'), True)
+            'inherited_socket_fds_absent', 'complete_uid_delegation'), True)
         witness['namespaces'] = {kind: kind + ':[123]' for kind in
                                 ('mnt', 'net', 'ipc', 'pid', 'cgroup')}
         witness['capabilities'] = dict.fromkeys(('CapEff', 'CapPrm', 'CapInh',
                                                'CapBnd', 'CapAmb'), 0xdb)
-        witness['securebits'] = 43
+        witness['securebits'] = 11
+        witness['uid_delegation'], _ = identity_fixtures.fixture()
+        witness['uid_delegation_elapsed_ns'] = 100_000_000
         witness['run_device'] = 1
         return witness
 
@@ -181,6 +185,7 @@ class RootApplyAdmissionTests(unittest.TestCase):
                 patch.object(root.package_logs, 'capture',
                     return_value=contextlib.nullcontext(lambda channel, data: None)), \
                 patch.object(root, 'runtime_device', return_value=0), \
+                patch.object(root.package_identity, 'account', return_value=(6, 12, [12])), \
                 patch.object(root.os, 'readlink', return_value='host-namespace'):
             digest, actual = root.run_child({}, [], {}, None)
         return digest, actual
@@ -201,6 +206,37 @@ class RootApplyAdmissionTests(unittest.TestCase):
             with self.subTest(field=key), self.assertRaisesRegex(
                     ValueError, 'boundary witness is incomplete'):
                 self.run_boundary_child(witness)
+
+    def test_nested_delegation_and_bounded_latency_are_required(self):
+        changes = (
+            lambda w: w.update(securebits=43),
+            lambda w: w.pop('uid_delegation'),
+            lambda w: w.update(complete_uid_delegation=False),
+            lambda w: w.update(uid_delegation_elapsed_ns=True),
+            lambda w: w.update(uid_delegation_elapsed_ns=8_000_000_001),
+            lambda w: w['uid_delegation']['before']['uid'].__setitem__(2, 0),
+            lambda w: w['uid_delegation']['before']['caps'].update(CapPrm=219),
+            lambda w: w['uid_delegation']['before']['uid'].__setitem__(slice(None), [7]*3),
+            lambda w: w['uid_delegation']['after']['namespaces'].update(mnt='mnt:[456]'),
+            lambda w: w['uid_delegation']['denials'].update(root_restore_errno=0),
+        )
+        for index, change in enumerate(changes):
+            witness = self.boundary_witness()
+            change(witness)
+            with self.subTest(case=index), self.assertRaises((ValueError, KeyError)):
+                self.run_boundary_child(witness)
+
+    def test_worker_boundary_refusal_precedes_plan_read_and_package_commit(self):
+        from mano_runtime import package_apt
+        with patch.object(package_apt, 'guard'), \
+                patch.object(package_apt.sys, 'argv', ['worker', '--commit']), \
+                patch.object(package_apt, 'boundary', side_effect=PermissionError('delegation')), \
+                patch.object(package_apt, 'expected') as expected, \
+                patch.object(package_apt, 'commit') as commit:
+            with self.assertRaises(PermissionError):
+                package_apt.main()
+            expected.assert_not_called()
+            commit.assert_not_called()
 
     def test_launcher_diagnostics_never_echo_paths_or_untrusted_output(self):
         self.assertEqual(root.launcher_failure(

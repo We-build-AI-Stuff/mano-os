@@ -20,7 +20,14 @@ from mano_protocol.actions import ActionRequest, canonical, identifier, unique_o
 from mano_protocol.packages import result_digest
 from mano_protocol.stop_state import snapshot
 from mano_protocol.transport import receive
-from mano_runtime import package_archives, package_attempts, package_catalog, package_logs, recovery
+from mano_runtime import (
+    package_archives,
+    package_attempts,
+    package_catalog,
+    package_identity,
+    package_logs,
+    recovery,
+)
 from mano_runtime.package_path_policy import PROFILE as PATH_PROFILE
 from mano_runtime.package_python import OPTIONAL as PYTHON_OPTIONAL
 from mano_runtime.package_python import REQUIRED as PYTHON_REQUIRED
@@ -358,6 +365,7 @@ def _run_child(plan, archives, body, broker_fd, emit):
                                 'mount-ancestry', 'runtime-infrastructure', 'credential-mask',
                                 'runtime-tmpfs', 'approval-ipc', 'thread-creation',
                                 'service-configuration', 'existing-python-paths',
+                                'complete-uid-delegation',
                                 'package-path-policy'}:
                             diagnostic['check'] = detail['check']
                             state = detail.get('kernel_state')
@@ -387,14 +395,18 @@ def _run_child(plan, archives, body, broker_fd, emit):
                   'runtime_infrastructure_readonly', 'ordinary_thread_creation',
                   'trusted_service_configuration_readonly', 'existing_python_paths_readonly',
                   'package_path_policy_enforced', 'host_named_ipc_denied',
-                  'anonymous_stream_socketpair_works', 'inherited_socket_fds_absent'}
+                  'anonymous_stream_socketpair_works', 'inherited_socket_fds_absent',
+                  'complete_uid_delegation'}
         caps = {'CapEff', 'CapPrm', 'CapInh', 'CapBnd', 'CapAmb'}
-        if (set(witness) != fields | {'namespaces', 'capabilities', 'securebits', 'run_device'}
+        if (set(witness) != fields | {'namespaces', 'capabilities', 'securebits', 'run_device',
+                                              'uid_delegation', 'uid_delegation_elapsed_ns'}
                 or any(witness[key] is not True for key in fields)
                 or set(witness['capabilities']) != caps
                 or any(type(value) is not int or value != 0xdb
                        for value in witness['capabilities'].values())
-                or type(witness['securebits']) is not int or witness['securebits'] != 43
+                or type(witness['securebits']) is not int or witness['securebits'] != 11
+                or type(witness['uid_delegation_elapsed_ns']) is not int
+                or not 0 < witness['uid_delegation_elapsed_ns'] <= 8_000_000_000
                 or type(witness['run_device']) is not int
                 or not 0 <= witness['run_device'] < 2**64
                 or witness['run_device'] == runtime_device()
@@ -402,6 +414,9 @@ def _run_child(plan, archives, body, broker_fd, emit):
                 or any(value == os.readlink('/proc/self/ns/' + kind)
                        for kind, value in witness['namespaces'].items())):
             raise ValueError('Package boundary witness is incomplete or not private')
+        uid, gid, groups = package_identity.account()
+        package_identity.validate(witness['uid_delegation'], uid=uid, gid=gid, groups=groups,
+                                  namespaces=witness['namespaces'])
         return hashlib.sha256(output).hexdigest(), witness
     finally:
         if child.poll() is None:

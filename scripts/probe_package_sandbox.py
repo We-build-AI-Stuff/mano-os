@@ -69,10 +69,18 @@ def run():
     frames = value['stdout'].splitlines()
     assert len(frames) == 1 and frames[0].startswith('MANO_PACKAGE_BOUNDARY='), value
     boundary = json.loads(frames[0].split('=', 1)[1])
-    flags = set(boundary) - {'namespaces', 'capabilities', 'securebits', 'run_device'}
+    flags = set(boundary) - {'namespaces', 'capabilities', 'securebits', 'run_device',
+                             'uid_delegation', 'uid_delegation_elapsed_ns'}
     assert all(boundary[key] is True for key in flags), value
     assert set(boundary['capabilities']) == {'CapEff', 'CapPrm', 'CapInh', 'CapBnd', 'CapAmb'}
-    assert set(boundary['capabilities'].values()) == {0xdb} and boundary['securebits'] == 43
+    assert set(boundary['capabilities'].values()) == {0xdb} and boundary['securebits'] == 11
+    from mano_runtime import package_identity
+    uid, gid, groups = package_identity.account()
+    package_identity.validate(boundary['uid_delegation'], uid=uid, gid=gid, groups=groups,
+                              namespaces=boundary['namespaces'])
+    assert boundary['complete_uid_delegation'] is True
+    assert type(boundary['uid_delegation_elapsed_ns']) is int
+    assert 0 < boundary['uid_delegation_elapsed_ns'] <= 8_000_000_000
     assert boundary['run_device'] != value['controller_run_device'], value
     lines = value['stderr'].splitlines()
     assert len(lines) == 1 and lines[0].startswith('MANO_PACKAGE_ERROR='), value

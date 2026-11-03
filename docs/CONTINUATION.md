@@ -5,6 +5,31 @@ optional. Specification: docs/spec-v2.1.md, SHA256
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 Do not redefine completion around a prototype, CI slice or the checks below.
 
+## Latest accepted native 38 and pending production identity integration
+
+Head 388222738e93795e3ac916af0ab20edde6b5b7ca / base 65fdfc02e3dbb18f791a92374a24690ae4e1ba87:
+run 41574997328 passed quality 125716321564 (1,038 tests / one skip),
+security 125716321870 and merge 125723439601. Artifact 13204530619 is 47,795,266
+bytes, SHA256 434d977d23f95263b3eace3beceb8ee9492aa3d0ccad39c3543a752bef0bd4ff.
+Tested merge 23ed1d029439ddee5292d8006b90e6ef39365398 has exact parents and 47
+matching sources. Collector 30022 is terminal success; all 38 independent staging
+gates and the prior 54-hash/45-flag chain pass. Six originals and eight crops were
+actually viewed; receipt outputs/acceptance-pr134-man-native-caller/inspection.json,
+proof outputs/pr134-3882227-native 38-proof.json. Full 900/120 values visible;
+physical provenance null. Controlled mandb consideration is invocation evidence,
+not ultimate-source/NAME/filter/generated-state correctness or publication.
+
+LOCAL pending next change: ADR 0118/package_identity.py integrates fixed setpriv
+complete UID delegation before APT effects, a bounded nested kernel witness, trusted
+Root-side NSS identity validation and recorded latency. Guard candidate 11 removes
+only KEEP_CAPS_LOCKED; all six-capability, NNP/seccomp/AppArmor/namespace/Stop limits
+remain. This changes retention semantics, not bit-for-bit policy equivalence.
+Accepted native 38 still used production 43. Local integration is NOT native tested;
+requires atomic source/receipt updates, all 38 retained gates plus explicit new
+identity gate, fresh exact-head CI/artifacts/UI before any merge. Preserve original
+43/11 experiments and43 conflict failures. No full privileged closure or release claim.
+
+
 ## Accepted native34: bound static compression configuration
 
 The staging probe now retains the fixed baseline libman library as opaque bytes,
@@ -154,7 +179,7 @@ a production-policy change or establish complete package runtime closure.
 ## Accepted native36: fixed capability-retention controls
 
 Head e6e60be8959c0ddfebfadadae74c66e50a3aa3b2 is accepted for all36 staging
-gates at base65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Run41506066130 passed
+gates at base 65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Run41506066130 passed
 quality125485572316 (1,019 tests / one skip), security125485572002 and
 merge-gate125498315540. Artifact13171857585 is47,911,606 bytes, SHA256
 81dd4a04313cfac385cadb0d8dff817cdbc018b897c6f34a28a367cce6ab9352.
@@ -192,7 +217,7 @@ fresh exact-head CI/artifact/UI acceptance; do not promote older acceptance.
 ## Accepted native36: strict integer kernel witness
 
 Head52094824cd829d8d74ae2308daa6b856741eb7dc is accepted for ALL36 at unchanged
-base65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Run41566372194 passed quality
+base 65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Run41566372194 passed quality
 125688811272 (1,020 tests / one skip), security125688811626 and
 merge-gate125696561475. Artifact13200860153 is47,855,018 bytes, SHA256
 0f26ae06e0c2c4fdc61ba9a816c6fd33c580e0efb1b0e3ed13b2b32c238933b3.
@@ -253,7 +278,7 @@ that preparation and its Root report are not included in this corrective head.
 ## Accepted native37: complete transition matrix and helper protection
 
 Corrected head0e34f312618e5e95e5597e9fd3abed758b798aa7 is accepted for ALL37 at
-base65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Run41571884425 passed quality
+base 65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Run41571884425 passed quality
 125706425318 (1,025 tests / one skip), security125706425485 and
 merge-gate125714102436. Artifact13203340350 is47,837,115 bytes, SHA256
 2a942f3cf8fcd2b219563e518c2f77b84caa53bcdf1d6a66ed54a0fcd77c82d1.
@@ -281,7 +306,7 @@ work below or complete PR134/full version. Earlier108986d remains failed custody
 
 ## Pending pre-exec transition controls (gate37)
 
-The next diagnostic preserves production43 and the existing eight KEEP controls,
+The next diagnostic preserves production 43 and the existing eight KEEP controls,
 real setpriv drop and previous36 gates. It adds five fixed fresh subprocesses:
 complete UID drop and saved-Root-ID cases under both43/11, plus retained-permitted
 capabilities under11. Each records before/prepared/drop/enable/restore/exec states,
@@ -870,7 +895,7 @@ paid-provider/key/auth experiments. No new merge is authorized by this document.
 Root/Linux/VM probes ONLY disposable Debian CI. Ordinary unprivileged portable
 Python/file/data analysis is allowed Mac. Never run native DB readers on staged
 bytes there. Keep VM images/models off Mac; no silent user-data deletion.
-Disk last 27 GiB free/87%; warn <20 GiB or >90%, stop large downloads <10 GiB.
+Disk last 24 GiB free/88%; warn <20 GiB or >90%, stop large downloads <10 GiB.
 Preserve unrelated duplicate files (do not stage/delete):
 - docs/architecture/0109-privileged-package-stop-domain 2.md
 - packaging/systemd/mano-package 2.slice

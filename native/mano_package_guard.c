@@ -51,9 +51,11 @@ int main(int argc, char **argv) {
     }
     /* UID 0 must not regain setup privileges on a later exec. Keep normal
        setuid fixups (locked off for NO_SETUID_FIXUP), and preserve only the
-       explicit six capabilities through ambient inheritance into fixed Python. */
+       explicit six capabilities through ambient inheritance into fixed Python.
+       KEEP_CAPS stays mutable for complete setpriv delegation; the immutable
+       worker verifies that delegation before effects (ADR 0118). */
     unsigned int secure = SECBIT_NOROOT | SECBIT_NOROOT_LOCKED |
-        SECBIT_KEEP_CAPS_LOCKED | SECBIT_NO_SETUID_FIXUP_LOCKED;
+        SECBIT_NO_SETUID_FIXUP_LOCKED;
     if (prctl(PR_SET_SECUREBITS, secure, 0, 0, 0)) fail("package securebits lock");
     uint64_t bounding = 0;
     for (unsigned int cap = 0; cap < 64; ++cap) {
