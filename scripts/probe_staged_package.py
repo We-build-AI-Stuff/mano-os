@@ -916,9 +916,19 @@ def main():
             maximum_bytes=compression_config.MAX_LIBRARY_BYTES)
         compression_table['decoder_program_sha256'] = sha((Path('/opt/mano-lab/src/mano_runtime') /
             'package_man_compression_table.py').read_bytes())
-        from probe_package_man_reference_fixtures import capture_reference_fixtures
+        from probe_package_man_reference_fixtures import (
+            MAX_EMBEDDED_BYTES,
+            capture_reference_fixtures,
+        )
         reference_fixtures = capture_reference_fixtures(BASE, baseline_tree, state_masks,
             empty, regeneration_inputs['config_sha256'], run)
+        from probe_package_man_native_caller import capture_reference_caller
+        reference_caller = capture_reference_caller(BASE, baseline_tree, state_masks,
+            empty, regeneration_inputs['config_sha256'], run)
+        embedded_reference_bytes = len(json.dumps(dict(man_reference_fixtures=reference_fixtures,
+            man_reference_caller=reference_caller), sort_keys=True, allow_nan=False).encode())
+        if embedded_reference_bytes > MAX_EMBEDDED_BYTES:
+            raise ValueError('Joint embedded reference diagnostic budget exceeded')
         for role, observed in (('baseline', baseline_tree), ('candidate', candidate_tree)):
             current = tree_observation(role)
             if (current['manifest_sha256'] != observed['manifest_sha256']
@@ -1022,7 +1032,6 @@ def main():
             observations[record['name']], sort_keys=True, allow_nan=False).encode()
     # Reserve the entire bounded embedded witness in the existing aggregate
     # envelope; it is part of this Root report rather than a 65th artifact.
-    from probe_package_man_reference_fixtures import MAX_EMBEDDED_BYTES
     if (len(artifacts) > 64
             or sum(len(data) for data in artifacts.values())+MAX_EMBEDDED_BYTES > 200_000_000):
         raise ValueError('Staged artifact count and total uncompressed byte budgets required')
@@ -1064,6 +1073,8 @@ def main():
                 man_leading_requests=leading_requests,
                 man_compression_table=compression_table,
                 man_reference_fixtures=reference_fixtures,
+                man_reference_caller=reference_caller,
+                embedded_reference_diagnostic_bytes=embedded_reference_bytes,
                 embedded_reference_fixture_maximum_bytes=MAX_EMBEDDED_BYTES,
                 man_cache_regeneration=dict(inputs=regeneration_inputs,
                     worker=regeneration_worker, raw=regeneration_bytes,

@@ -31,6 +31,8 @@ CONTENT_PROFILE = 'man-source-gzip-content-v2'
 # separate fresh invocation probes synthetic files after content-domain drain;
 # it never opens the retained compressed/expanded source captures.
 REFERENCE_REQUEST = b'{"profile":"man-fixed-reference-fixtures-v1"}\n'
+CALLER_REQUEST = b'{"profile":"man-native-reference-caller-v1"}\n'
+CALLER_COMMAND = ('/usr/bin/mandb', '--test', '--debug', '/usr/share/man')
 REFERENCE_ROOT = '/var/cache/man/reference-fixtures'
 # Stable Linux x86-64 wire values, independent of the host running mock tests.
 REFERENCE_ERRNO = {'ENOENT': 2, 'ENOTDIR': 20, 'EACCES': 13, 'ELOOP': 40,
@@ -312,6 +314,85 @@ def read_fixed(path, maximum, *, mode=None):
     return raw
 
 
+def caller_identity():
+    if (sys.platform != 'linux' or os.getresuid() != (6, 6, 6)
+            or os.getresgid() != (12, 12, 12) or os.getgroups() != []):
+        raise PermissionError('Fixed unprivileged Linux native-caller identity required')
+    return dict(uid=6, gid=12, groups=[])
+
+
+def capture_native_caller(*, timeout=20):
+    """Observe one fixed native command; no caller-controlled paths or argv.
+
+    Root must bind the controlled corpus and fresh cache before mounting the
+    exact request. The native guard retains all existing restrictions. This raw
+    capture alone cannot validate source semantics or generated cache content.
+    """
+    identity = caller_identity()
+    if type(timeout) not in {int, float} or not 0 < timeout <= 20:
+        raise ValueError('Bounded fixed caller deadline required')
+    binary = read_fixed('/usr/bin/mandb', 1024**2)
+    config = read_fixed('/etc/manpath.config', 65536)
+    environment = {'PATH': '/usr/bin:/bin', 'LANG': 'C', 'LC_ALL': 'C',
+                   'TZ': 'UTC0', 'HOME': '/nonexistent'}
+    process = subprocess.Popen(list(CALLER_COMMAND), stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=environment, cwd='/',
+        close_fds=True, start_new_session=True)
+    streams = {'stdout': bytearray(), 'stderr': bytearray()}
+    limits = {'stdout': 128*1024, 'stderr': 256*1024}
+    deadline = time.monotonic() + timeout
+    failure = None
+    try:
+        with selectors.DefaultSelector() as selector:
+            for label, stream in (('stdout', process.stdout), ('stderr', process.stderr)):
+                os.set_blocking(stream.fileno(), False)
+                selector.register(stream, selectors.EVENT_READ, label)
+            while selector.get_map() or process.poll() is None:
+                if time.monotonic() >= deadline:
+                    failure = 'deadline'
+                    break
+                for key, _ in selector.select(.02):
+                    label = key.data
+                    remaining = limits[label] - len(streams[label])
+                    try:
+                        data = os.read(key.fd, min(65536, remaining+1))
+                    except (BlockingIOError, InterruptedError):
+                        continue
+                    if not data:
+                        selector.unregister(key.fileobj)
+                        continue
+                    streams[label].extend(data[:remaining])
+                    if len(data) > remaining:
+                        failure = label+'-budget'
+                        break
+                if failure:
+                    break
+    finally:
+        if failure or process.poll() is None:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        process.stdout.close()
+        process.stderr.close()
+        process.wait(timeout=2)
+    if (read_fixed('/usr/bin/mandb', 1024**2) != binary
+            or read_fixed('/etc/manpath.config', 65536) != config):
+        raise ValueError('Fixed native command or configuration changed during capture')
+    def encoded(raw):
+        return dict(base64=base64.b64encode(raw).decode(), bytes=len(raw), sha256=sha(raw))
+    return dict(profile='man-native-reference-caller-capture-v1', **identity,
+        command=list(CALLER_COMMAND), environment=environment,
+        returncode=process.returncode, capture_complete=failure is None,
+        capture_failure=failure, stdout=encoded(streams['stdout']),
+        stderr=encoded(streams['stderr']),
+        mandb_executable_sha256=sha(binary), manpath_configuration_sha256=sha(config),
+        fixed_command_and_configuration_unchanged=True,
+        native_man_db_caller_semantics_verified=False,
+        full_source_semantics_verified=False, generated_state_validated=False,
+        changes_authorized=False, publication_authorized=False)
+
+
 def process_files(value, codec, *, expanded_sink=None):
     files, total, members = {}, 0, 0
     serialized_bytes = 2
@@ -439,6 +520,12 @@ def main():
         encoded = json.dumps(reference_fixture_results(), sort_keys=True, allow_nan=False).encode()
         if len(encoded)+1 > 256*1024:
             raise ValueError('Fixed reference fixture witness budget')
+        sys.stdout.buffer.write(encoded+b'\n')
+        return
+    if packet == CALLER_REQUEST:
+        encoded = json.dumps(capture_native_caller(), sort_keys=True, allow_nan=False).encode()
+        if len(encoded)+1 > 600*1024:
+            raise ValueError('Fixed native caller capture report budget')
         sys.stdout.buffer.write(encoded+b'\n')
         return
     sys.path.insert(0, '/run/man-source-support')

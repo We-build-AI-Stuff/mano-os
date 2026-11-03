@@ -250,6 +250,35 @@ closure. Diagnosis: outputs/pr134-108986d-native37-failure-diagnosis.json.
 The correction will be pushed separately from the local manual-caller preparation;
 that preparation and its Root report are not included in this corrective head.
 
+## Accepted native37: complete transition matrix and helper protection
+
+Corrected head0e34f312618e5e95e5597e9fd3abed758b798aa7 is accepted for ALL37 at
+base65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Run41571884425 passed quality
+125706425318 (1,025 tests / one skip), security125706425485 and
+merge-gate125714102436. Artifact13203340350 is47,837,115 bytes, SHA256
+2a942f3cf8fcd2b219563e518c2f77b84caa53bcdf1d6a66ed54a0fcd77c82d1.
+Tested mergeca124fb3f541dd3ad0cb21e155c45ac94616d88a has exact parents and43
+matching relevant sources. Collector68621 TERMINAL EXIT0 after ALL37 plus the
+previous54-hash/45-flag/PAM/Stop/recovery/package/ELF chain; never restart it.
+All six fresh originals and eight crops/contact sheet were actually viewed. The
+15-PNG receipt confirms complete900/120 values and matching pending/effective
+numbers. Physical input provenance remains null. Proof and receipt:
+outputs/pr134-0e34f31-native37-proof.json;
+outputs/acceptance-pr134-preexec-transitions-corrected/inspection.json.
+Exactly64 artifacts total141,591,016 uncompressed bytes; the full1MiB fixture
+reserve charges142,639,592 bytes within the unchanged200MB limit.
+
+All five transition cases now have native evidence. Complete drops in both
+profiles have zero E/P/Amb and fail capability/Root restoration. Saved-Root IDs
+retain ambient and exec capabilities within219 in both profiles. Profile11's
+retained-permitted case can enable only the existing bits before exec, then has
+zero E/P/Amb after exec. Extra SYSADMIN and securebits-reset denial remain.
+The eighteen helper-name denials (including setpriv) and23-root static inventory
+passed as part of this full acceptance. Productionsecurebits43 remains unchanged;
+policy equivalence, hostile-child isolation, production guard compatibility and
+complete runtime closure remain unverified. This does not accept the new caller
+work below or complete PR134/full version. Earlier108986d remains failed custody.
+
 ## Pending pre-exec transition controls (gate37)
 
 The next diagnostic preserves production43 and the existing eight KEEP controls,
@@ -328,9 +357,9 @@ read-only at the existing /usr/share/man mount, bind a fresh private cache at th
 existing /var/cache/man mount, and substitute only the exact request. Preserve
 native grants/configuration, Root before/after inode/byte inventory, raw diagnostics
 before rejection and the unchanged64-artifact/200MB budget. Joint embedded fixture
-and caller evidence must remain within the already charged1MiB reserve. The corpus/controller/Root report are now wired locally as described below; the
-independent acceptance gate remains unwired. Do not push while108986d evidence is
-pending or before the new independent gate is ready.
+and caller evidence must remain within the already charged1MiB reserve. The
+corpus/controller/Root report and independent gate are now wired locally. Corrected0e34f31 ALL37 and freshUI evidence is accepted above. The new caller
+head now needs fresh ALL38/native diagnostics/UI acceptance.
 
 The8,544-byte literal corpus fixture has37 regular files, one hardlink and one
 symlink across13 primary cases. Its exact SHA256 is
@@ -351,13 +380,24 @@ The existing staged Root report gains man_reference_caller and a measured shared
 embedded byte count. The entire two-field fixture/caller mapping must fit the
 already charged1MiB reserve; no65th artifact or200MB ceiling increase. Five new
 pure controller groups plus eight capture groups pass. The combined content/
-expanded-input/reference-fixture/caller regression suite passes35 tests with one
+expanded-input/reference-fixture/caller/independent suite passes40 tests with one
 Linux-only skip on Mac. Lint/diff checks pass. All local native tests substitute
 ordinary Python or fabricated reports; actual caller outcomes remain unproven.
-Next implement the independent gate requiring all37, verifying corpus/source/Git
-binding, complete before/after inventory, raw streams/header, fixed mount delta,
-shared budget and13 case observations. This head needs46 relevant source matches
-(existing42 plus controller, corpus fixture and two new test files).
+The independent gate38 now requires all37 and verifies corpus/source/Git hashes,
+complete42-node inventory with41 distinct inode identities (only the declared
+hardlink pair may alias), raw streams/header, exact full launch arguments and
+native limits, config/binary binding, shared1MiB budget and13 consideration tokens.
+The launch command is retained in the Root report. Fresh-cache initial UID/GID,
+mode, empty child set and before/after inode identity are recorded and checked.
+The independent reader imports no producer modules. Five fabricated test groups
+reject inode/child-set/type/capability-grant/command/corpus/capture/semantic-claim
+changes, including rehashed attacks, and refuse oversized/mistyped shared budgets
+before baseline or Git reads. All3 CLI parsers add default-false --man-native-caller
+/--staged-man-native-caller requiring --preexec-transitions. Earlier accepted36
+really rejects the absent caller report; no native37 was fabricated to prove
+backward compatibility. Receipt: outputs/pr134-man-native-caller-backward-proof.json.
+This future head needs47 source matches (corrective43 plus controller, corpus
+fixture and two new test files). Native gate38/caller conformance is unproven.
 
 ## Conditional lookup preparation
 
