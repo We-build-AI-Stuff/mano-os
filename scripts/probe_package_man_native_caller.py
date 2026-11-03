@@ -18,6 +18,7 @@ from probe_package_man_regeneration import validate_native_guard
 from probe_package_man_source_bytes import fixture_identity
 from probe_package_man_source_content import bounded_capture, content_sandbox, content_unit
 
+from mano_runtime import package_man_reference_trace as reference_trace
 from mano_runtime import package_man_source_content as worker
 
 CORPUS_SHA256 = '8f56a13ded65f857120fda94270e5bddb3226cd915976a7748acdf925f095269'
@@ -233,8 +234,15 @@ def capture_reference_caller(base, baseline, masks, empty, config_digest, run):
     if (after != before or fixture_identity(packet) != packet_before
             or fixture_identity(control) != control_before):
         raise ValueError('Caller corpus/request/control changed during observation')
-    native, _observed = validate_capture(raw, spec, baseline, config_digest)
+    native, observed = validate_capture(raw, spec, baseline, config_digest)
+    models = reference_trace.model_packet(declaration, before, baseline)
+    comparison = reference_trace.compare(
+        base64.b64decode(observed['stderr']['base64'], validate=True), models['models'],
+        corpus_sha256=hashlib.sha256(declaration).hexdigest())
+    resolution = dict(model_packet=models, comparison=comparison,
+        model_program_sha256=hashlib.sha256(Path(reference_trace.__file__).read_bytes()).hexdigest())
     return dict(profile='man-native-reference-caller-custody-v1', guard=native,
+        fixed_reference_resolution=resolution,
         launch_command=command,
         capture_base64=base64.b64encode(raw).decode(), capture_bytes=len(raw),
         capture_sha256=hashlib.sha256(raw).hexdigest(), corpus_declaration=spec,

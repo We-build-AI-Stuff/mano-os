@@ -925,6 +925,18 @@ def main():
         from probe_package_man_native_caller import capture_reference_caller
         reference_caller = capture_reference_caller(BASE, baseline_tree, state_masks,
             empty, regeneration_inputs['config_sha256'], run)
+        from mano_runtime import package_man_source_graph as source_graph
+        primary_graph, _primary_graph_bytes = source_graph.derive(
+            canonical_artifacts['staged-man-canonical-sources.json'], leading_data,
+            baseline_tree, candidate_tree,
+            compression_table['configuration']['configured_extensions'])
+        primary_graph['program_sha256'] = sha((Path('/opt/mano-lab/src/mano_runtime') /
+            'package_man_source_graph.py').read_bytes())
+        primary_graph_bytes = len(json.dumps(primary_graph, sort_keys=True,
+                                             allow_nan=False).encode())
+        if primary_graph_bytes > source_graph.MAX_REPORT_BYTES:
+            raise ValueError('Embedded primary source graph budget exceeded')
+        del _primary_graph_bytes
         embedded_reference_bytes = len(json.dumps(dict(man_reference_fixtures=reference_fixtures,
             man_reference_caller=reference_caller), sort_keys=True, allow_nan=False).encode())
         if embedded_reference_bytes > MAX_EMBEDDED_BYTES:
@@ -1033,7 +1045,8 @@ def main():
     # Reserve the entire bounded embedded witness in the existing aggregate
     # envelope; it is part of this Root report rather than a 65th artifact.
     if (len(artifacts) > 64
-            or sum(len(data) for data in artifacts.values())+MAX_EMBEDDED_BYTES > 200_000_000):
+            or sum(len(data) for data in artifacts.values())+MAX_EMBEDDED_BYTES
+            +source_graph.MAX_REPORT_BYTES > 200_000_000):
         raise ValueError('Staged artifact count and total uncompressed byte budgets required')
     for name, data in artifacts.items():
         if (name in retained_trace or name in retained_commands or name in man_cache_artifacts
@@ -1074,6 +1087,9 @@ def main():
                 man_compression_table=compression_table,
                 man_reference_fixtures=reference_fixtures,
                 man_reference_caller=reference_caller,
+                man_primary_source_graph=primary_graph,
+                embedded_primary_source_graph_bytes=primary_graph_bytes,
+                embedded_primary_source_graph_maximum_bytes=source_graph.MAX_REPORT_BYTES,
                 embedded_reference_diagnostic_bytes=embedded_reference_bytes,
                 embedded_reference_fixture_maximum_bytes=MAX_EMBEDDED_BYTES,
                 man_cache_regeneration=dict(inputs=regeneration_inputs,
