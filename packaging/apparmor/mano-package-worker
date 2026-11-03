@@ -31,7 +31,7 @@ profile mano-package-worker flags=(mediate_deleted) {
 
   # Fixed privileged helpers used for catalog, recovery and runtime lifecycle.
   # Protect command names; this is not their transitive ELF/loader closure.
-  deny /{usr/,}bin/{btrfs,bwrap,dpkg-deb,dpkg-query,findmnt,gpgv*,mount,passwd,snapper,systemctl,systemd-sysusers,systemd-tmpfiles,umount} wkl,
+  deny /{usr/,}bin/{btrfs,bwrap,dpkg-deb,dpkg-query,findmnt,gpgv*,mount,passwd,setpriv,snapper,systemctl,systemd-sysusers,systemd-tmpfiles,umount} wkl,
   deny /{usr/,}sbin/{runuser,usermod} wkl,
   deny /usr/lib/apt/ w,
   deny /usr/lib/apt/** wkl,

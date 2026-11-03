@@ -7,7 +7,7 @@ from pathlib import Path
 
 PROFILE = 'mano-package-worker'
 SOURCE = Path('/etc/apparmor.d/mano-package-worker')
-POLICY_SHA256 = 'cc0aa58e44abf1f9124d129135d7ecd3de700fe7d4573ce161e3741bc3e525d0'
+POLICY_SHA256 = 'b827e2961daf7d0ce158d8fa935c75d1a7aecb6a7073dfc33a020f8b924d7bea'
 MAX_POLICY = 8192
 
 

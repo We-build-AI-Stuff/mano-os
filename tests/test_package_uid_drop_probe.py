@@ -58,6 +58,40 @@ def retention_fixture(bits):
     return host,row,child
 
 
+def transition_fixture(bits):
+    host,row,child=retention_fixture(bits)
+    row['transition_controls_profile']='uid-drop-preexec-transitions-v1'
+    row['transition_controls']=[]
+    for case in ('all-drop','saved-root')+(('retain-permitted',) if bits==11 else ()):
+        prepared=copy.deepcopy(row['parent'])
+        prepared['securebits']=27 if case=='retain-permitted' else bits
+        dropped=copy.deepcopy(prepared)
+        dropped.update(uid=[6,6,0 if case=='saved-root' else 6],gid=[12]*3,groups=[])
+        dropped['caps']=dict(CapEff=0,CapPrm=0 if case=='all-drop' else 219,
+                            CapInh=219,CapBnd=219,CapAmb=0)
+        enabled=copy.deepcopy(dropped)
+        if case=='retain-permitted':
+            enabled['caps']['CapEff']=219
+        restored=copy.deepcopy(enabled)
+        if case!='all-drop':
+            restored['uid']=[0,0,0]
+            restored['caps']['CapEff']=219
+        post=copy.deepcopy(restored)
+        post['securebits']=bits
+        post['caps']['CapPrm']=post['caps']['CapEff']=0
+        control=dict(profile=bits,case=case,before=copy.deepcopy(row['parent']),
+            prepared=prepared,after_drop=dropped,after_enable=enabled,
+            after_restore=restored,after_exec=post,
+            enable_returncode={'all-drop':-1,'saved-root':None,'retain-permitted':0}[case],
+            enable_errno={'all-drop':1,'saved-root':None,'retain-permitted':0}[case],
+            restore_returncode=-1 if case=='all-drop' else 0,
+            restore_errno=1 if case=='all-drop' else 0,
+            extra_capability_errno=1,securebits_reset_errno=1)
+        row['transition_controls'].append(dict(returncode=0,capture_complete=True,
+            stdout=stream(json.dumps(control).encode()),stderr=stream(b'')))
+    return host,row,child
+
+
 class UidDropComparisonTests(unittest.TestCase):
     def test_dropped_child_source_is_readable_but_never_writable_or_reused(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -170,3 +204,56 @@ class UidDropComparisonTests(unittest.TestCase):
                 altered['retention_controls'][0]['stdout']['sha256']='0'*64
             with self.subTest(change=change),self.assertRaises(ValueError):
                 uid.validate(altered,11,host,require_retention=True)
+
+    def test_preexec_controls_distinguish_saved_root_from_complete_drop(self):
+        for bits in (43,11):
+            host,row,child=transition_fixture(bits)
+            self.assertEqual(uid.validate(row,bits,host,require_retention=True,
+                require_transitions=True),child if bits==11 else None)
+        host,row,_=retention_fixture(11)
+        with self.assertRaises(ValueError):
+            uid.validate(row,11,host,require_transitions=True)
+
+    def test_preexec_controls_reject_restoration_ceiling_and_exec_claims(self):
+        host,row,_=transition_fixture(11)
+        for case_index,field,value in (
+            (0,'restore_returncode',0),(0,'enable_errno',0),
+            (1,'restore_errno',1),(2,'enable_returncode',False),
+        ):
+            altered=copy.deepcopy(row)
+            result=altered['transition_controls'][case_index]
+            observed=json.loads(base64.b64decode(result['stdout']['base64']))
+            observed[field]=value
+            result['stdout']=stream(json.dumps(observed).encode())
+            with self.subTest(field=field),self.assertRaises(ValueError):
+                uid.validate(altered,11,host,require_transitions=True)
+        for phase,key,value in (('after_drop','CapPrm',0),
+                                ('after_enable','CapEff',0x2000db),
+                                ('after_exec','CapPrm',219),
+                                ('after_exec','CapBnd',219.0)):
+            altered=copy.deepcopy(row)
+            result=altered['transition_controls'][2]
+            observed=json.loads(base64.b64decode(result['stdout']['base64']))
+            observed[phase]['caps'][key]=value
+            result['stdout']=stream(json.dumps(observed).encode())
+            with self.subTest(phase=phase,key=key),self.assertRaises(ValueError):
+                uid.validate(altered,11,host,require_transitions=True)
+
+    def test_transition_controls_reject_incomplete_streams_and_noninteger_identity(self):
+        host,row,_=transition_fixture(43)
+        for change in ('missing','incomplete','stderr','hash','uid-float','gid-bool'):
+            altered=copy.deepcopy(row)
+            if change=='missing':
+                altered['transition_controls'].pop()
+            elif change=='incomplete':
+                altered['transition_controls'][0]['capture_complete']=False
+            elif change=='stderr':
+                altered['transition_controls'][0]['stderr']=stream(b'not empty')
+            elif change=='hash':
+                altered['transition_controls'][0]['stdout']['sha256']='0'*64
+            elif change=='uid-float':
+                altered['man_uid']=6.0
+            else:
+                altered['man_gid']=True
+            with self.subTest(change=change),self.assertRaises(ValueError):
+                uid.validate(altered,43,host,require_transitions=True)

@@ -17,7 +17,7 @@ BASE = Path('/run/mano-lab-policy-names')
 HELPERS = (
     '/usr/bin/btrfs', '/usr/bin/bwrap', '/usr/bin/dpkg-deb', '/usr/bin/dpkg-query',
     '/usr/bin/findmnt', '/usr/bin/gpgv', '/usr/bin/mount', '/usr/bin/passwd',
-    '/usr/bin/snapper', '/usr/bin/systemctl', '/usr/bin/systemd-sysusers',
+    '/usr/bin/setpriv', '/usr/bin/snapper', '/usr/bin/systemctl', '/usr/bin/systemd-sysusers',
     '/usr/bin/systemd-tmpfiles', '/usr/bin/umount', '/usr/sbin/runuser',
     '/usr/sbin/usermod', '/usr/sbin/apparmor_parser', '/usr/lib/apt/apt-helper',
 )

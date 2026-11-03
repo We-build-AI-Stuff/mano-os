@@ -189,6 +189,81 @@ and partial-stderr case. All26 package-apply/UID-drop tests pass; changed-source
 This change is not included in accepted e6e60be evidence. Its next head needs
 fresh exact-head CI/artifact/UI acceptance; do not promote older acceptance.
 
+## Accepted native36: strict integer kernel witness
+
+Head52094824cd829d8d74ae2308daa6b856741eb7dc is accepted for ALL36 at unchanged
+base65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Run41566372194 passed quality
+125688811272 (1,020 tests / one skip), security125688811626 and
+merge-gate125696561475. Artifact13200860153 is47,855,018 bytes, SHA256
+0f26ae06e0c2c4fdc61ba9a816c6fd33c580e0efb1b0e3ed13b2b32c238933b3.
+Tested merge647e571dc110aae4f0e8748b86451d27814e0b9e has exact parents and36
+matching relevant sources. Collector43978 terminated exit1 after the independent
+reader incorrectly rejected LF wrapping in GitHub's base64 API envelope. The
+artifact itself was fully downloaded and hash verified; native CI did not fail.
+Removing only LF envelope wrapping before strict decode corrected the verifier.
+Same-artifact ALL36 verification resumed in session9353 and exited zero, with
+54-hash/45-flag/PAM/Stop/recovery/package/ELF checks intact; CI was not rerun.
+Both terminal sessions and the original failure receipt are preserved.
+
+All six fresh originals and eight crops/contact sheet were actually viewed. The
+15-PNG receipt confirms full900/120 values and equal pending/effective numbers;
+physical input provenance remains null. Proof:
+outputs/pr134-5209482-native36-proof.json; inspection:
+outputs/acceptance-pr134-boundary-integers/inspection.json.
+Exactly64 staged artifacts total141,570,096 uncompressed bytes; full1MiB fixture
+reserve charges142,618,672 bytes within200MB. New transition cases and setpriv
+name protection below are not covered by this accepted head.
+
+## Pending pre-exec transition controls (gate37)
+
+The next diagnostic preserves production43 and the existing eight KEEP controls,
+real setpriv drop and previous36 gates. It adds five fixed fresh subprocesses:
+complete UID drop and saved-Root-ID cases under both43/11, plus retained-permitted
+capabilities under11. Each records before/prepared/drop/enable/restore/exec states,
+return values and errno; extra capability acquisition and securebits reset must
+remain denied. The parent must remain unchanged after each subprocess. These are
+explicit hostile-transition observations within one already-authorized package
+task, not a claim that either profile isolates hostile members of that task.
+
+The expected matrix distinguishes full UID drop (cannot regain permitted bits or
+Root) from deliberately retained saved IDs or existing permitted bits (can regain
+already-authorized powers before exec). Post-exec E/P/Amb must be zero throughout,
+with unchanged six-bit bounding/inheritable ceiling and NNP/private namespaces.
+No new native grants, deadlines, memory/task limits or artifacts are introduced;
+program/comparison data remain in the existing64-artifact/200MB envelope.
+
+Ten producer test groups and two independent groups pass synthetic evidence;
+all33 focused producer/independent/package-apply tests pass. A separate reader checks exact integer
+states, case completeness, stream bytes/hashes, exact positive UID/GID types,
+incomplete capture/error-output rejection, scope and denial results.
+Gate37 requires all36. Accepted native36 still passes its own contract and is
+rejected by37 for an absent transition matrix; receipt:
+outputs/pr134-preexec-transitions-backward-proof.json. Native37 remains unproven.
+The prior5209482 artifact and freshUI acceptance is complete above. The next
+head must receive fresh ALL37/updated-helper/native-policy evidence.
+
+## Pending fixed setpriv helper protection
+
+The filesystem policy listed libcap-ng ABI names but omitted the fixed setpriv
+command name. The pending policy adds setpriv to the existing /{usr/,}bin name
+rule (write/link/lock denial), updates the trusted policy SHA256 to
+b827e2961daf7d0ce158d8fa935c75d1a7aecb6a7073dfc33a020f8b924d7bea,
+and adds /usr/bin/setpriv to the private-inode real-policy denial fixture.
+That same helper tuple expands the static ELF root inventory from22 to23 roots;
+libcap-ng name protection already existed. Capability policy43 remains unchanged.
+This stricter file-name rule is not complete ELF/plugin/search-path immutability
+or protected-update compatibility. Native enforcement of the added name remains
+unproven until the next disposable Debian run; no host helper was modified.
+
+Independent name-denial and ELF readers now bind the helper tuple from the exact
+Git head, preserving old17-helper contracts and requiring all18 names/new23 roots
+for the new head. The actual accepted native36 artifact passes the old contract
+and rejects the stronger contract; receipt:
+outputs/pr134-setpriv-helper-backward-proof.json. Eighteen existing policy/ELF
+unit groups pass; policy hash binding and changed-source lint/diff checks pass.
+Include policy, helper fixture, inventory source and policy/ELF tests in the next
+tested-merge source comparison (six additional relevant paths).
+
 ## Conditional lookup preparation
 
 `package_man_reference_lookup.py` models one-hop selection over frozen retained

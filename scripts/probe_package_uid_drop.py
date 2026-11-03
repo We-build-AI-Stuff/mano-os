@@ -60,6 +60,49 @@ elif len(sys.argv)==5 and sys.argv[1]=='retention':
     postexec=json.loads(base64.b64decode(post['stdout']['base64']))
     print(json.dumps(dict(profile=expected,option_word=option,requested_keepcaps=value,
         returncode=result,errno=error,before=before,after_set=after,after_exec=postexec)))
+elif len(sys.argv)==4 and sys.argv[1]=='transition':
+    expected=int(sys.argv[2]);case=sys.argv[3]
+    assert expected in {43,11} and case in {'all-drop','saved-root','retain-permitted'}
+    assert case!='retain-permitted' or expected==11
+    before=state()
+    assert before['uid']==before['gid']==[0]*3 and before['securebits']==expected
+    assert before['nnp']==1 and set(before['caps'].values())=={0xdb}
+    if case=='retain-permitted':
+        assert lib.prctl(8,1,0,0,0)==0
+    prepared=state()
+    os.setgroups([])
+    os.setresgid(man.pw_gid,man.pw_gid,man.pw_gid)
+    os.setresuid(man.pw_uid,man.pw_uid,0 if case=='saved-root' else man.pw_uid)
+    dropped=state()
+    enable_result=enable_error=None
+    if case!='saved-root':
+        head=Head(0x20080522,0);data=(Data*2)()
+        data[0].effective=data[0].permitted=data[0].inheritable=0xdb
+        ctypes.set_errno(0)
+        enable_result=lib.capset(ctypes.byref(head),ctypes.byref(data))
+        enable_error=ctypes.get_errno()
+    enabled=state()
+    try:
+        os.setresuid(0,0,0)
+    except OSError as error:
+        restore_result,restore_error=-1,error.errno
+    else:
+        restore_result,restore_error=0,0
+    restored=state()
+    extra=deny_extra_capability()
+    ctypes.set_errno(0)
+    assert lib.prctl(28,0,0,0,0)==-1 and ctypes.get_errno()==errno.EPERM
+    assert restored==state()
+    post=run_observed(['/usr/bin/python3','-P','/run/probe.py','retention-postexec'],
+        environment,2)
+    assert post['capture_complete'] and post['returncode']==0
+    assert not base64.b64decode(post['stderr']['base64'])
+    postexec=json.loads(base64.b64decode(post['stdout']['base64']))
+    print(json.dumps(dict(profile=expected,case=case,before=before,prepared=prepared,
+        after_drop=dropped,after_enable=enabled,after_restore=restored,after_exec=postexec,
+        enable_returncode=enable_result,enable_errno=enable_error,
+        restore_returncode=restore_result,restore_errno=restore_error,
+        extra_capability_errno=extra,securebits_reset_errno=errno.EPERM)))
 elif sys.argv[1:]==['child']:
     before=state()
     assert before['uid']==[man.pw_uid]*3 and before['gid']==[man.pw_gid]*3
@@ -95,13 +138,20 @@ else:
         controls.append(run_observed(['/usr/bin/python3','-P','/run/probe.py','retention',
             str(expected),str(wide),str(value)],environment,4))
         assert before==state()
+    transitions=[]
+    for case in ('all-drop','saved-root')+(('retain-permitted',) if expected==11 else ()):
+        transitions.append(run_observed(['/usr/bin/python3','-P','/run/probe.py','transition',
+            str(expected),case],environment,4))
+        assert before==state()
     result=run_observed(['/usr/bin/setpriv','--reuid','man','--regid','man','--init-groups',
         '--','/usr/bin/python3','-P','/run/probe.py','child'],
         environment,5)
     print(json.dumps(dict(profile=expected,parent=before,man_uid=man.pw_uid,man_gid=man.pw_gid,
         expected_groups=sorted(set(os.getgrouplist('man',man.pw_gid))),
         extra_capability_errno=denied,result=result,
-        retention_controls_profile='uid-drop-keepcaps-controls-v1',retention_controls=controls)))
+        retention_controls_profile='uid-drop-keepcaps-controls-v1',retention_controls=controls,
+        transition_controls_profile='uid-drop-preexec-transitions-v1',
+        transition_controls=transitions)))
 '''
 
 
@@ -164,7 +214,66 @@ def validate_retention_controls(row, profile):
             raise ValueError('Retained flag must be isolated and reset by exec without cap gain')
 
 
-def validate(row, profile, host, *, require_retention=False):
+def validate_transition_controls(row, profile):
+    if any(type(row[key]) is not int or row[key]<=0 for key in ('man_uid','man_gid')):
+        raise ValueError('Exact positive delegated identity integers required')
+    cases=('all-drop','saved-root')+(('retain-permitted',) if profile==11 else ())
+    if (row.get('transition_controls_profile')!='uid-drop-preexec-transitions-v1'
+            or type(row.get('transition_controls')) is not list
+            or len(row['transition_controls'])!=len(cases)):
+        raise ValueError('Complete fixed pre-exec transition controls required')
+    for result,case in zip(row['transition_controls'],cases,strict=True):
+        if (type(result['returncode']) is not int or result['returncode']!=0
+                or result['capture_complete'] is not True):
+            raise ValueError('Complete normal transition control process required')
+        streams={}
+        for label in ('stdout','stderr'):
+            field=result[label]
+            if type(field['base64']) is not str or len(field['base64'])>87384:
+                raise ValueError('Bounded transition control stream required')
+            raw=base64.b64decode(field['base64'],validate=True)
+            if (len(raw)>65536 or type(field['bytes']) is not int or field['bytes']!=len(raw)
+                    or field['sha256']!=hashlib.sha256(raw).hexdigest()):
+                raise ValueError('Exact transition control stream bytes/hash required')
+            streams[label]=raw
+        if streams['stderr']:
+            raise ValueError('Transition controls must not hide stderr')
+        control=json.loads(streams['stdout'])
+        def clone(value):
+            return json.loads(json.dumps(value))
+        parent=row['parent']
+        prepared=clone(parent)
+        if case=='retain-permitted':
+            prepared['securebits']|=16
+        dropped=clone(prepared)
+        dropped.update(uid=[row['man_uid'],row['man_uid'],
+                           0 if case=='saved-root' else row['man_uid']],
+                       gid=[row['man_gid']]*3,groups=[])
+        dropped['caps'].update(CapEff=0,CapAmb=0,CapPrm=0 if case=='all-drop' else 0xdb)
+        enabled=clone(dropped)
+        if case=='retain-permitted':
+            enabled['caps']['CapEff']=0xdb
+        restored=clone(enabled)
+        if case!='all-drop':
+            restored['uid']=[0]*3
+            restored['caps']['CapEff']=0xdb
+        post=clone(restored)
+        post['securebits']=profile
+        post['caps'].update(CapEff=0,CapPrm=0,CapAmb=0)
+        expected=dict(profile=profile,case=case,before=parent,prepared=prepared,
+            after_drop=dropped,after_enable=enabled,after_restore=restored,after_exec=post,
+            enable_returncode=None if case=='saved-root' else (-1 if case=='all-drop' else 0),
+            enable_errno=None if case=='saved-root' else (1 if case=='all-drop' else 0),
+            restore_returncode=-1 if case=='all-drop' else 0,
+            restore_errno=1 if case=='all-drop' else 0,
+            extra_capability_errno=1,securebits_reset_errno=1)
+        # Canonical JSON distinguishes integers, floats and booleans recursively.
+        if json.dumps(control,sort_keys=True,allow_nan=False)!=json.dumps(
+                expected,sort_keys=True,allow_nan=False):
+            raise ValueError('Exact pre-exec saved-ID/retained-capability state required')
+
+
+def validate(row, profile, host, *, require_retention=False, require_transitions=False):
     state_shape(row['parent'])
     if row['domain_drained'] is not True:
         raise ValueError('Comparison domain must drain')
@@ -179,6 +288,8 @@ def validate(row, profile, host, *, require_retention=False):
         raise ValueError('Fixed parent UID/capability/private namespace state required')
     if require_retention or 'retention_controls_profile' in row or 'retention_controls' in row:
         validate_retention_controls(row,profile)
+    if require_transitions or 'transition_controls_profile' in row or 'transition_controls' in row:
+        validate_transition_controls(row,profile)
     result=row['result']
     if result['capture_complete'] is not True:
         raise ValueError('Complete bounded comparison output required')
@@ -261,7 +372,7 @@ def compare(base, capture_source, host, sandbox, run):
         target=Path('/opt/mano-lab/evidence')/('staged-uid-drop-'+label+'.json')
         with target.open('x') as stream:
             json.dump(row,stream,sort_keys=True)
-        validate(row,bits,host,require_retention=True)
+        validate(row,bits,host,require_retention=True,require_transitions=True)
     return data,dict(schema_version='1.0',program_sha256=hashlib.sha256(data).hexdigest(),
         host_namespaces=host,profiles=rows,production_policy_changed=False,
         package_callback_success_verified=False,trigger_authority_verified=False,
