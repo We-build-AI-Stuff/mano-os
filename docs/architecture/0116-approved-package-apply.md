@@ -21,7 +21,10 @@ bounded controller set, disables and locks UID-0 privilege restoration, drops al
 setup capabilities from the bounding set, and explicitly sets permitted, effective,
 inheritable and ambient sets to the six dpkg capabilities before fixed Python.
 The Python boundary witness independently reads all five kernel capability sets
-and securebits after exec. Each set must equal 0xdb and securebits must equal43.
+and securebits after exec. Each set must equal 0xdb and securebits must equal 11 (ADR 0118).
+KEEP_CAPS remains mutable for fixed complete-UID delegation; the preflight
+verifies capability loss and failed restoration before APT effects. Native 39
+accepted this change; the six-bit ceiling does not isolate hostile task members.
 Unexpected initial privileges or failed transitions refuse execution. The
 controller explicitly preserves SETUID through ambient inheritance so its fixed
 exec chain retains the required identity capability; the native guard clears
@@ -485,3 +488,25 @@ would contradict the displayed bounded authority and kernel/runtime limits. A
 commit interrupted by any enforced bound remains unknown, is never automatically
 replayed, and requires explicit operator reconciliation/recovery. This change
 does not promise that every Debian transaction can finish within 60 seconds.
+
+## Pending baseline runtime mount evidence
+
+The next local measurement adds raw kernel mountinfo and open-FD mount IDs for
+the fixed manual-generation worker's ten code/configuration targets. It runs
+only after complete UID/GID drop and all-five-capability-set/NNP checks, before
+any native manual input processing, in both control and restricted workers.
+The source is embedded in the isolated worker; it does not import candidate or
+task modules. A refused complete witness is printed to bounded private failure
+diagnostics before generation is allowed to proceed. The Root controller and
+independent reader verify the raw view, exact summary and tested helper hash.
+No command, mount grant, capability, namespace or resource ceiling is added.
+
+Readonly VFS flags and the kernel FD mount ID are checked against mountinfo;
+writable code submounts and contradictory more-specific overlays refuse. Btrfs
+subvolume stat devices are retained without falsely equating them to proc's
+superblock device. The fixed view needs actual native validation, including that
+Btrfs relationship; portable fixtures and worker compilation cannot establish it.
+This proves named mount protection only. File origin, plugin/loader selection,
+full runtime closure, generated-state validity and publication remain false.
+The default-false man-runtime-view acceptance gate requires all earlier 40 gates;
+old worker schemas cannot be promoted to this new evidence contract.

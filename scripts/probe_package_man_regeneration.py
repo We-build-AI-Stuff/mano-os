@@ -49,15 +49,42 @@ print(json.dumps(dict(state=state,config_sha256=hashlib.sha256(config).hexdigest
 '''
 
 
-def program(capture_source):
+def program(capture_source, *, runtime_view_source=None):
     tree = ast.parse(capture_source)
     capture = next(node for node in tree.body
                    if isinstance(node, ast.FunctionDef) and node.name == 'run_observed')
     fd_guard = next(node for node in tree.body
                     if isinstance(node, ast.FunctionDef)
                     and node.name == 'verify_no_inherited_fds')
-    data = (HEADER + ast.get_source_segment(capture_source, fd_guard) + '\n'
-            + ast.get_source_segment(capture_source, capture) + '\n' + BODY)
+    body, view_program = BODY, ''
+    if runtime_view_source is not None:
+        if (type(runtime_view_source) is not str
+                or not 0 < len(runtime_view_source.encode()) <= 65536):
+            raise ValueError('Bounded fixed runtime-view source required')
+        view_tree = ast.parse(runtime_view_source)
+        names = [node.name for node in view_tree.body if isinstance(node, ast.FunctionDef)]
+        if any(names.count(name) != 1 for name in ('path_field', 'parse', 'verify', 'capture')):
+            raise ValueError('Complete fixed runtime-view helper functions required')
+        # This is trusted repository source, not a parser for untrusted code.
+        # Embed it so the isolated -I worker never imports task/candidate modules.
+        source_sha = hashlib.sha256(runtime_view_source.encode()).hexdigest()
+        view_program = (runtime_view_source + '\nRUNTIME_VIEW_SOURCE_SHA256 = '
+                        + repr(source_sha) + '\n')
+        marker = "config=Path('/etc/manpath.config').read_bytes()"
+        frame = 'print(json.dumps(dict(state=state,'
+        if body.count(marker) != 1 or body.count(frame) != 1:
+            raise ValueError('Fixed generation worker insertion points changed')
+        preflight = ("runtime_view=capture()\ntry:\n"
+            "    runtime_view_proof=verify(runtime_view)\n"
+            "except (ValueError, KeyError, TypeError, UnicodeError):\n"
+            "    print('MANO_MAN_RUNTIME_VIEW=' + json.dumps(runtime_view, sort_keys=True),"
+            " file=sys.stderr, flush=True)\n    raise\n")
+        body = body.replace(marker, preflight+marker)
+        body = body.replace(frame, 'print(json.dumps(dict(runtime_view=runtime_view,'
+            'runtime_view_proof=runtime_view_proof,'
+            'runtime_view_source_sha256=RUNTIME_VIEW_SOURCE_SHA256,state=state,')
+    data = (HEADER + view_program + ast.get_source_segment(capture_source, fd_guard) + '\n'
+            + ast.get_source_segment(capture_source, capture) + '\n' + body)
     compile(data, 'man-regeneration-ci-worker', 'exec')
     return data.encode()
 
@@ -110,7 +137,8 @@ def sandbox(base, state_masks, empty, config_sha256, *, mode='restricted'):
             '/usr/bin/python3', '-I', '-B', '/run/man-regeneration.py', config_sha256, mode]
 
 
-def validate(row, host, config_sha256, *, require_input_guard=False):
+def validate(row, host, config_sha256, *, require_input_guard=False,
+             runtime_view_source_sha256=None):
     state = row['state']
     for key in ('uid', 'gid', 'groups'):
         if type(state[key]) is not list or any(type(v) is not int for v in state[key]):
@@ -139,6 +167,15 @@ def validate(row, host, config_sha256, *, require_input_guard=False):
         if (len(raw) > 65536 or type(field['bytes']) is not int or field['bytes'] != len(raw)
                 or field['sha256'] != hashlib.sha256(raw).hexdigest()):
             raise ValueError('Exact regeneration diagnostic bytes/hash required')
+    if runtime_view_source_sha256 is not None:
+        from mano_runtime.package_man_runtime_view import verify
+        if (re.fullmatch('[a-f0-9]{64}', runtime_view_source_sha256) is None
+                or row.get('runtime_view_source_sha256') != runtime_view_source_sha256):
+            raise ValueError('Exact runtime-view helper source binding required')
+        expected_view = verify(row['runtime_view'])
+        if (json.dumps(row['runtime_view_proof'], sort_keys=True, allow_nan=False) !=
+                json.dumps(expected_view, sort_keys=True, allow_nan=False)):
+            raise ValueError('Exact bounded runtime-view proof required')
     if require_input_guard:
         require_guard(row)
 
@@ -214,7 +251,10 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
     if base != Path('/.snapshots/.mano-staged-package-ci'):
         raise ValueError('Fixed private CI directory required')
     digest = config_profile(config)
-    data = program(capture_source)
+    runtime_view_source = (Path('/opt/mano-lab/src/mano_runtime') /
+                           'package_man_runtime_view.py').read_text()
+    runtime_view_sha = hashlib.sha256(runtime_view_source.encode()).hexdigest()
+    data = program(capture_source, runtime_view_source=runtime_view_source)
     source = base / 'man-regeneration.py'
     with source.open('xb') as stream:
         stream.write(data)
@@ -285,7 +325,8 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
             time.sleep(.02)
         row = json.loads(raw)
         row['domain_drained'] = True
-        validate(row, host, digest, require_input_guard=mode == 'restricted')
+        validate(row, host, digest, require_input_guard=mode == 'restricted',
+                 runtime_view_source_sha256=runtime_view_sha)
         if (row['mode'] != mode or (mode == 'control' and row['input_guard'] is not None)
                 or control_identity() != original):
             raise ValueError('Fixed comparison mode and unchanged control fixture required')

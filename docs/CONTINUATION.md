@@ -5,6 +5,57 @@ optional. Specification docs/spec-v2.1.md SHA256:
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 A prototype, CI slice or the gates below cannot substitute for the full version.
 
+## Latest accepted native 40 and pending mount-view measurement
+
+Head 40edb0b91057e838375e42a5336a957e08bcbbd3 / base
+65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Run 41583761347 ALL THREE SUCCESS:
+quality 125744333053 (1,061 tests / one skip), security 125744332764,
+merge 125751171116. Artifact 13207698039 / 49,463,964 bytes / SHA256
+4997c1642afa3f379fa264688ab8d7d96bbbf8cba12281f1ca8ee9408d2ea0c7.
+Tested merge 5248b2170b4492fb09a87f45e8759bc1f7a96297 has exact parents and
+59 matching sources. Collector 28546 is TERMINAL EXIT ZERO; do not restart.
+ALL 40 independent gates plus the earlier chain pass. Six fresh UI originals
+and eight crops actually viewed; full 900/120 values visible. Proof:
+outputs/pr134-40edb0b-native40-proof.json; 15-PNG receipt:
+outputs/acceptance-pr134-reference-conformance-corrected/inspection.json.
+All 13 fixed native cases and all 4,515 primary contexts match; 248 virtual/cat
+records excluded. 64 artifacts; charged aggregate 176,213,087 bytes within the
+original 200 MB envelope, including full 32 MiB graph + 1 MiB reference reserves.
+Physical input and peak memory remain null; wider semantic/publication flags false.
+
+Earlier c2b1eea/run 41581232470 stays FAILED: quality 125736312185 failed five
+fixture reconstructions (1,061 tests / one skip), security 125736312293 passed,
+merge 125743792142 failed. Artifact 13206881174 / 49,478,962 bytes / SHA256
+39cf3db639f019a0844ed70a8f7d5d80204ea70a493c6c4fae0e73726066f834 retained;
+collector 99577 terminal exit one after custody. Its exact merge/59-source and
+13-case/4,515-context diagnostic checks do not override failed CI. The fixed
+GzipFile writer preserves exact fixture bytes across the Python-3.11 OS-header
+fast-path difference. No fixture/check was skipped or changed for passing CI.
+
+The next local change measures named runtime code/configuration mount protection
+in BOTH existing manual-regeneration workers, after dropped UID/all-zero caps/NNP
+checks and before native generation. It embeds the fixed helper source in the
+isolated worker, binds its SHA256, retains complete refused views in bounded
+private diagnostics, and revalidates at the Root controller and independent reader.
+Raw kernel mountinfo and open-FD mount IDs/statvfs must agree; writable submounts,
+stale IDs, invalid ownership/modes and contradictory overlays refuse. Btrfs
+subvolume devices are retained without falsely equating them to proc superblock
+devices; actual native validation is mandatory. No command, grant, namespace or
+resource ceiling changes. No native capture has run on Mac.
+
+The default-false --man-runtime-view gate requires all 40 prior gates, both raw
+control/restricted witnesses and exact independently reconstructed worker bytes.
+Old receipts pass their old contract and fail this new one. Local 106 focused
+tests / one Linux skip and repository-wide lint/diff pass. Native view data is
+NOT accepted yet. Named readonly protection is not source origin, full runtime
+closure, loader selection, generated-state validation or publication; all those
+broader flags remain false. This changes CI measurement, not production apply.
+Next collector: previous 59 sources + view module/test/compiler test + modified
+architecture 0116 = 63 source comparisons, ALL 41 gates and fresh actual UI.
+Independent readers/CLI updates are in task outputs; helper/worker and backward
+proofs are future-man-runtime-view-program-proof.json and
+man-runtime-view-reader-backward-proof.json. No merge authorization is implied.
+
 ## Latest accepted native 39: real production UID delegation
 
 Head 4f2efdb949fb993d14a6aad2627b0b737d36ffb8, base

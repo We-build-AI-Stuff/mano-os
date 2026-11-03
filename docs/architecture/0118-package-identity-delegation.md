@@ -1,8 +1,9 @@
 # ADR 0118: package task capability ceiling and complete UID delegation
 
-Status: local integrated candidate, not yet native validated. Accepted native 38
-used production 43; the pending guard 11 change requires fresh exact-head
-native CI. This does not complete the privileged runtime, mutation-policy, activation or release gates.
+Status: production guard-11 identity preflight accepted in native 39 at
+4f2efdb949fb993d14a6aad2627b0b737d36ffb8 / run 41578405862. All three CI
+jobs and all 39 independent gates passed, with fresh actual UI inspection.
+This does not complete privileged runtime, mutation, activation or release gates.
 
 The package task is authorized the six fixed dpkg capabilities, mask 0xdb:
 CHOWN, DAC_OVERRIDE, FOWNER, FSETID, SETUID and SETGID. The namespace, AppArmor,
@@ -19,7 +20,7 @@ a complete UID change; re-enabling uses only existing bits, and exec clears E/P/
 when ambient was cleared. Attempts to acquire SYS_ADMIN or reset securebits fail.
 The failed108986d run and the exact saved-Root regression remain preserved.
 
-Candidate decision: use fixed securebits 11, NOROOT|NOROOT_LOCKED|
+Decision: use fixed securebits 11, NOROOT|NOROOT_LOCKED|
 NO_SETUID_FIXUP_LOCKED. UID 0 exec restoration remains disabled and locked; normal
 UID fixups remain enabled and locked. KEEP_CAPS remains mutable so baseline
 setpriv can request its normal temporary retention. SETPCAP, SYS_ADMIN and
@@ -46,7 +47,8 @@ worker success text alone is insufficient. No model-selected argv or environment
 Acceptance requires fresh native compiled-guard/Python-boundary/PAM/Stop/packaged
 workflows and independent receipts, preserving all previous gates. Existing 43
 and 11 experimental controls stay; the negative 43 helper conflict must not be
-skipped. Current CI 38 remains tied to its original guard 43 commit. Local Python
+skipped. Native 38 remains tied to its original guard 43 commit; native 39 accepted
+the production guard-11 preflight as recorded below. Local Python
 fixtures are not native acceptance. Resource ceilings and approved deadlines stay
 unchanged; preflight overhead must be recorded, and peak memory remains unmeasured
 until an actual measurement exists.
@@ -54,3 +56,17 @@ until an actual measurement exists.
 Rollback restores guard 43 and matching Python/receipt contracts through a tested
 PR; the delegation check must fail closed if the expected profile is unavailable.
 No fallback, automatic retry, protected-path relaxation or replay is introduced.
+
+## Accepted production evidence
+
+Artifact 13205431852 is 47,920,131 bytes, SHA256
+3fd9ae9224c1e11b5c5ef438266b6051d4d22e43d29e924010bfdcbc1b3ab330.
+Tested merge 92cbd1e22da6e28d035a3f34dca84b3bd55d5e0c has exact base/head
+parents and 54 matching relevant sources. Quality passed 1,050 tests / one skip.
+Setup, public cowsay apply and installed-runtime sl apply each independently
+validate complete UID 6/6/6, GID 12/12/12, groups [12], E/P/Amb zero, I/B 219,
+securebits 11, NNP/seccomp, enforced AppArmor, private namespaces, unchanged child
+state and EPERM for all three restoration attempts. Their preflight times were
+154,418,281 / 104,640,441 / 104,843,326 ns. Peak memory remains unmeasured.
+The immutable worker checks its own parent state retention. The older failed
+saved-Root expectation and both 43/11 counterexamples remain preserved.
