@@ -68,7 +68,7 @@ def transition_fixture(bits):
         dropped=copy.deepcopy(prepared)
         dropped.update(uid=[6,6,0 if case=='saved-root' else 6],gid=[12]*3,groups=[])
         dropped['caps']=dict(CapEff=0,CapPrm=0 if case=='all-drop' else 219,
-                            CapInh=219,CapBnd=219,CapAmb=0)
+                            CapInh=219,CapBnd=219,CapAmb=219 if case=='saved-root' else 0)
         enabled=copy.deepcopy(dropped)
         if case=='retain-permitted':
             enabled['caps']['CapEff']=219
@@ -78,7 +78,8 @@ def transition_fixture(bits):
             restored['caps']['CapEff']=219
         post=copy.deepcopy(restored)
         post['securebits']=bits
-        post['caps']['CapPrm']=post['caps']['CapEff']=0
+        if case!='saved-root':
+            post['caps']['CapPrm']=post['caps']['CapEff']=0
         control=dict(profile=bits,case=case,before=copy.deepcopy(row['parent']),
             prepared=prepared,after_drop=dropped,after_enable=enabled,
             after_restore=restored,after_exec=post,
@@ -257,3 +258,27 @@ class UidDropComparisonTests(unittest.TestCase):
                 altered['man_gid']=True
             with self.subTest(change=change),self.assertRaises(ValueError):
                 uid.validate(altered,43,host,require_transitions=True)
+
+    def test_retained_linux_saved_root_keeps_ambient_and_exec_capabilities(self):
+        evidence=json.loads((Path(__file__).parent/'fixtures/uid-drop-linux-saved-root-v1.json'
+                             ).read_bytes())
+        self.assertFalse(evidence['native37_accepted'])
+        row=evidence['locked_row']
+        uid.validate_transition_controls(row,43)
+        observed=json.loads(base64.b64decode(row['transition_controls'][1]['stdout']['base64']))
+        self.assertEqual(observed['after_drop']['uid'],[6,6,0])
+        self.assertEqual(observed['after_drop']['caps']['CapEff'],0)
+        self.assertEqual(observed['after_drop']['caps']['CapAmb'],219)
+        self.assertEqual(set(observed['after_exec']['caps'].values()),{219})
+
+    def test_false_ambient_clear_claim_cannot_relabel_retained_linux_case(self):
+        evidence=json.loads((Path(__file__).parent/'fixtures/uid-drop-linux-saved-root-v1.json'
+                             ).read_bytes())
+        for phase in ('after_drop','after_enable','after_restore','after_exec'):
+            row=copy.deepcopy(evidence['locked_row'])
+            result=row['transition_controls'][1]
+            observed=json.loads(base64.b64decode(result['stdout']['base64']))
+            observed[phase]['caps']['CapAmb']=0
+            result['stdout']=stream(json.dumps(observed).encode())
+            with self.subTest(phase=phase),self.assertRaises(ValueError):
+                uid.validate_transition_controls(row,43)

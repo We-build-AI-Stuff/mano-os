@@ -214,6 +214,42 @@ Exactly64 staged artifacts total141,570,096 uncompressed bytes; full1MiB fixture
 reserve charges142,618,672 bytes within200MB. New transition cases and setpriv
 name protection below are not covered by this accepted head.
 
+## Failed native37 and retained Linux correction
+
+Head108986db0209febaa071540545d06275a42b8736 run41569202382 failed security
+125697904443 and merge-gate125703884976; quality125697904733 passed1,023 tests
+with one skip. Collector2767 is TERMINAL EXIT1 after retaining failed artifact
+13201845054:2,893,794 bytes, SHA256
+61401ce827d2551393f9da88b9532f999e3b7c13122135d2ca206a6abc56c133.
+Tested merge667db552803a0a3bbb581727fd788aa8d3802080 has exact base/head
+parents and42 matching relevant sources. Do not resume the terminal collector.
+
+The locked43 worker completed both cases, but the expected saved-Root matrix was
+wrong. Actual UID6/6/0 retained permitted and ambient219 despite effective0.
+After Root restoration, exec inherited E/P/Amb219. The all-drop case UID6/6/6
+had E/P/Amb0, refused capability re-enable and Root restoration, and remained zero
+after exec. Extra SYSADMIN acquisition and securebits reset stayed denied. The
+compatible11 profile was never run because validation stopped at the locked case.
+This failed run is not accepted37 and does not authorize a production-policy change.
+
+Both producer and independent expected matrices now preserve that counterexample,
+requiring the saved-Root case to retain ambient across exec within the unchanged
+six-capability ceiling. The exact locked report is retained in
+ tests/fixtures/uid-drop-linux-saved-root-v1.json (17,008 bytes), with original
+artifact/run/hash provenance and explicit native37_accepted=false. Namespace IDs
+and bounded raw streams are retained rather than regenerated. Two repository
+regressions replay it and reject a false ambient-clear claim. The independent
+reader also replays the locked case alongside explicitly fabricated compatible
+cases; this is not replacement native evidence. All54 focused tests pass; source
+and independent-reader lint/diff checks pass. Fresh exact-head ALL37 is required.
+
+The failed artifact separately contains successful18-helper name-denial and23-root
+static ELF inventories, independently rechecked at the tested revision. These are
+partial observations only; they do not turn failed CI green or complete runtime
+closure. Diagnosis: outputs/pr134-108986d-native37-failure-diagnosis.json.
+The correction will be pushed separately from the local manual-caller preparation;
+that preparation and its Root report are not included in this corrective head.
+
 ## Pending pre-exec transition controls (gate37)
 
 The next diagnostic preserves production43 and the existing eight KEEP controls,
@@ -227,8 +263,10 @@ task, not a claim that either profile isolates hostile members of that task.
 
 The expected matrix distinguishes full UID drop (cannot regain permitted bits or
 Root) from deliberately retained saved IDs or existing permitted bits (can regain
-already-authorized powers before exec). Post-exec E/P/Amb must be zero throughout,
-with unchanged six-bit bounding/inheritable ceiling and NNP/private namespaces.
+already-authorized powers before exec). Complete-drop and retained-permitted cases must have zero E/P/Amb after exec.
+The saved-Root-ID case retains ambient and exec capabilities within the six-bit
+ceiling; an effective-UID drop alone is not complete delegation. NNP/private
+namespaces and the bounding/inheritable ceiling remain unchanged.
 No new native grants, deadlines, memory/task limits or artifacts are introduced;
 program/comparison data remain in the existing64-artifact/200MB envelope.
 
@@ -263,6 +301,63 @@ outputs/pr134-setpriv-helper-backward-proof.json. Eighteen existing policy/ELF
 unit groups pass; policy hash binding and changed-source lint/diff checks pass.
 Include policy, helper fixture, inventory source and policy/ELF tests in the next
 tested-merge source comparison (six additional relevant paths).
+
+## Pending controlled native man-db caller observation
+
+The fixed source-content worker now has a separate exact Root-readonly request,
+`man-native-reference-caller-v1`, before any actual-source capture/codec imports.
+It runs only `/usr/bin/mandb --test --debug /usr/share/man`, under the existing
+native guard, with fixed environment, no stdin and no caller-supplied paths/argv.
+UID/GID must be6/12 across all IDs with empty groups; Root and Mac refuse before
+reading inputs or launching a process. It retains bounded raw stdout128KiB and
+stderr256KiB, hashes/lengths, explicit return code, deadline/budget failure state,
+and before/after fixed command/configuration hashes. Deadline20 seconds; the
+existing controller/native resource ceilings have not been changed.
+
+Nonzero exits are observations, not successful semantics. Timeout/overflow keeps
+bounded partial data and marks capture incomplete. Process groups are stopped,
+including when descendants hold pipes or the main process closes both streams.
+All source semantics/generated-state/change/publication authority remains false.
+Eight new portable test groups use explicitly substituted ordinary Python children;
+no native mandb or staged input was executed on Mac. Existing source-content,
+expanded-input and kernel-fixture tests are included in the focused regression run.
+This is pending code only, not accepted native caller conformance.
+
+Next: create the prepared13-case literal corpus in a Root-owned tree, bind it
+read-only at the existing /usr/share/man mount, bind a fresh private cache at the
+existing /var/cache/man mount, and substitute only the exact request. Preserve
+native grants/configuration, Root before/after inode/byte inventory, raw diagnostics
+before rejection and the unchanged64-artifact/200MB budget. Joint embedded fixture
+and caller evidence must remain within the already charged1MiB reserve. The corpus/controller/Root report are now wired locally as described below; the
+independent acceptance gate remains unwired. Do not push while108986d evidence is
+pending or before the new independent gate is ready.
+
+The8,544-byte literal corpus fixture has37 regular files, one hardlink and one
+symlink across13 primary cases. Its exact SHA256 is
+8f56a13ded65f857120fda94270e5bddb3226cd915976a7748acdf925f095269.
+The new controller validates this declaration before creating only fixed Root-owned
+paths in disposable CI. It records exact owners/modes/bytes/hashes/link counts,
+actual hardlink inode equality, targets, closed directory child sets, device/inode
+and timestamps, then requires the inventory unchanged after domain drain.
+Only three existing mount sources change (readonly manuals, private cache,
+readonly request); native role/grants/configuration stay fixed. Runtime deadline
+reduces190 to30 seconds, launcher40; the worker's own deadline is20 seconds.
+Raw diagnostics are printed to existing CI stderr before comparison or rejection.
+Every primary case must appear in actual mandb consideration diagnostics; that is
+caller invocation evidence, not verified ultimate-source/NAME/filter semantics.
+The controller checks baseline named mandb metadata/hash and fixed config hash.
+
+The existing staged Root report gains man_reference_caller and a measured shared
+embedded byte count. The entire two-field fixture/caller mapping must fit the
+already charged1MiB reserve; no65th artifact or200MB ceiling increase. Five new
+pure controller groups plus eight capture groups pass. The combined content/
+expanded-input/reference-fixture/caller regression suite passes35 tests with one
+Linux-only skip on Mac. Lint/diff checks pass. All local native tests substitute
+ordinary Python or fabricated reports; actual caller outcomes remain unproven.
+Next implement the independent gate requiring all37, verifying corpus/source/Git
+binding, complete before/after inventory, raw streams/header, fixed mount delta,
+shared budget and13 case observations. This head needs46 relevant source matches
+(existing42 plus controller, corpus fixture and two new test files).
 
 ## Conditional lookup preparation
 

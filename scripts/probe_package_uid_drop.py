@@ -249,7 +249,8 @@ def validate_transition_controls(row, profile):
         dropped.update(uid=[row['man_uid'],row['man_uid'],
                            0 if case=='saved-root' else row['man_uid']],
                        gid=[row['man_gid']]*3,groups=[])
-        dropped['caps'].update(CapEff=0,CapAmb=0,CapPrm=0 if case=='all-drop' else 0xdb)
+        dropped['caps'].update(CapEff=0,CapAmb=0xdb if case=='saved-root' else 0,
+                               CapPrm=0 if case=='all-drop' else 0xdb)
         enabled=clone(dropped)
         if case=='retain-permitted':
             enabled['caps']['CapEff']=0xdb
@@ -259,7 +260,8 @@ def validate_transition_controls(row, profile):
             restored['caps']['CapEff']=0xdb
         post=clone(restored)
         post['securebits']=profile
-        post['caps'].update(CapEff=0,CapPrm=0,CapAmb=0)
+        if case!='saved-root':
+            post['caps'].update(CapEff=0,CapPrm=0,CapAmb=0)
         expected=dict(profile=profile,case=case,before=parent,prepared=prepared,
             after_drop=dropped,after_enable=enabled,after_restore=restored,after_exec=post,
             enable_returncode=None if case=='saved-root' else (-1 if case=='all-drop' else 0),
