@@ -33,6 +33,29 @@ results. Actual setup/public-cowsay/installed-runtime-sl preflight latencies are
 154,418,281 / 104,640,441 / 104,843,326 ns. Parent state retention is checked by
 the immutable worker. Arbitrary maintainer effects and full closure stay unverified.
 
+## Current native-40 run and test portability correction
+
+Pushed head c2b1eea938d69e2afe7932ffb1bfa507bd2d0560 / run 41581232470:
+quality 125736312185 FAILED (1,061 tests, five failures / one skip). All five
+failures occur in fixed-corpus fixture reconstruction before traversal assertions.
+CI uses Python 3.11; its gzip.compress(mtime=0) fast path delegates the OS-header
+byte to zlib, unlike the newer canonical-255 behavior. A portable literal-only
+reproducer differs from the frozen fixture at byte 9 alone (OS metadata).
+The correction uses gzip.GzipFile with explicit empty filename, mtime 0 and
+compression level 9; its WHOLE output matches the frozen fixture exactly.
+No native input/fixture/hash, traversal check, grant or runtime code changes.
+The 11 focused trace/graph tests and lint/diff pass locally after correction.
+Diagnosis/raw quality log retained in task outputs/pr134-c2b1eea-quality-failure-diagnosis.json
+and pr134-c2b1eea-quality-failed-raw.log. Fresh CI remains mandatory.
+
+Security job 125736312293 and collector session 99577 were confirmed LIVE; the
+collector follows the SAME run and will retain failed-run artifact custody after
+terminal failure. Do not restart it. DO NOT PUSH the correction while this run is
+active: workflow concurrency cancel-in-progress=true would cancel the real lab
+and lose its completed evidence. Prepare the correction locally, wait for terminal
+custody, then push and start a fresh exact-head all-40 run. Failed quality remains
+failed even if the lab succeeds. No native-40 acceptance or merge is authorized.
+
 ## Next change: fixed native conformance and every primary source context
 
 The pending source change compares the actual confined mandb diagnostics with

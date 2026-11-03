@@ -3,6 +3,7 @@ import base64
 import copy
 import gzip
 import hashlib
+import io
 import json
 import lzma
 import unittest
@@ -50,8 +51,17 @@ def fixture():
             description = 'gzip must win' if name.endswith('.gz') else 'xz must lose to gzip'
             expanded = ('.TH "ROOTPICK" "1" "2026-01-01" "mano fixture"\n'
                         '.SH NAME\nrootpick \\- '+description+'\n').encode()
-            rebuilt = (gzip.compress(expanded, mtime=0) if name.endswith('.gz')
-                       else lzma.compress(expanded, format=lzma.FORMAT_XZ))
+            if name.endswith('.gz'):
+                # gzip.compress(mtime=0) in Python 3.11/3.12 delegates the OS
+                # header byte to zlib. The streaming writer fixes it to 255.
+                # Keep exact whole-fixture equality, including its fixed header.
+                stream = io.BytesIO()
+                with gzip.GzipFile(filename='', mode='wb', fileobj=stream,
+                                   compresslevel=9, mtime=0) as writer:
+                    writer.write(expanded)
+                rebuilt = stream.getvalue()
+            else:
+                rebuilt = lzma.compress(expanded, format=lzma.FORMAT_XZ)
             assert rebuilt == encoded
         inputs[ROOT+'/'+name] = dict(compressed_sha256=value['sha256'], request=inspect(expanded))
     for alias, target in declaration['hardlinks'].items():
