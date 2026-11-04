@@ -1583,7 +1583,7 @@ finally:client.close()
         witness = {key: workflow_state[key] for key in (
             "id", "status", "observations", "artifact_id", "verification_scope",
             "provider_disclosure")}
-        elapsed = time.monotonic() - workflow_started
+        workflow_elapsed = time.monotonic() - workflow_started
     # Export the actual broker-held result and captured logs before the replay
     # canary changes the workspace. This is a recorded demo, not a live model run.
     project = ROOT / "evidence/developer-project"
@@ -1651,7 +1651,7 @@ finally:client.close()
         definition=recorded_workflow, observations=witness["observations"],
         artifact_id=workflow_state["artifact_id"], artifact=artifact_reply["artifact"],
         approval_ids=sorted(seen_approvals),
-        native_pam_approvals=4, provider_disclosure=False, elapsed_seconds=elapsed,
+        native_pam_approvals=4, provider_disclosure=False, elapsed_seconds=workflow_elapsed,
         peak_ram_bytes=None, runtime_memory=runtime_memory.result["summary"],
         physical_input_provenance=None, live_model_success=None,
         files=files), indent=2) + "\n")
