@@ -29,13 +29,15 @@ jobs:
           cc -std=c11 -O2 -Wall -Wextra -Werror -fstack-protector-strong -D_FORTIFY_SOURCE=2 native/mano_sandbox_guard.c -lseccomp -Wl,-z,relro,-z,now -o /tmp/mano-sandbox-guard
           cc -std=c11 -O2 -Wall -Wextra -Werror -fstack-protector-strong -D_FORTIFY_SOURCE=2 native/mano_stopd.c $(pkg-config --cflags --libs libsystemd) -Wl,-z,relro,-z,now -o /tmp/mano-stopd
           cc -std=c11 -O2 -Wall -Wextra -Werror -fstack-protector-strong -D_FORTIFY_SOURCE=2 native/mano_stop.c -Wl,-z,relro,-z,now -o /tmp/mano-stop
+          cc -std=c11 -O2 -Wall -Wextra -Werror -fstack-protector-strong -D_FORTIFY_SOURCE=2 native/mano_package_guard.c -lseccomp -Wl,-z,relro,-z,now -o /tmp/mano-package-guard
+          cc -std=c11 -O2 -Wall -Wextra -Werror -fstack-protector-strong -D_FORTIFY_SOURCE=2 native/mano_man_cache_guard.c -lseccomp -Wl,-z,relro,-z,now -o /tmp/mano-man-cache-guard
           sudo install -d -m 0755 /usr/lib/mano-broker
           sudo install -m 0644 /tmp/libmano-resources.so /usr/lib/mano-broker/libmano-resources.so
       - run: ruff check .
       - run: PYTHONPATH=src python -m unittest discover -s tests -v
       - run: python -m compileall -q src scripts
       - run: git diff --check
-      - run: bash -n scripts/*.sh
+      - run: for script in scripts/*.sh; do bash -n "$script"; done
   security-lab:
     runs-on: ubuntu-24.04
     timeout-minutes: 45

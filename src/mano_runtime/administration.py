@@ -18,6 +18,7 @@ SOCKETS = (
     "mano-launcher-prepare.socket",
     "mano-launcher-control.socket",
     "mano-provider.socket",
+    "mano-package-apply.socket",
     "mano-egress.socket",
     "mano-stopd.socket",
     "mano-stopd-control.socket",
@@ -27,6 +28,7 @@ UNITS = (
     "mano-controller.timer",
     "mano-controller.service",
     "mano-provider@*.service",
+    "mano-package-apply@*.service",
     "mano-egress@*.service",
     "mano-agent-step-*.service",
     "mano-core.slice",
@@ -117,12 +119,27 @@ def configure_package():
     command("/usr/bin/systemd-sysusers", "/usr/lib/sysusers.d/mano-runtime.conf")
     validate_accounts()
     command("/usr/bin/systemd-tmpfiles", "--create", "/usr/lib/tmpfiles.d/mano-runtime.conf")
+    load_package_path_policy()
     if Path("/run/systemd/system").is_dir():
         command("/usr/bin/systemctl", "daemon-reload")
     print(
         "Runtime installed without starting services. "
         "Enroll an existing human with mano-runtime-setup."
     )
+
+
+def load_package_path_policy():
+    """Trusted installation only; the request controller gains no loader privilege."""
+    root()
+    from mano_runtime.package_path_policy import read_source
+
+    if Path('/sys/module/apparmor/parameters/enabled').read_text().strip() != 'Y':
+        raise PermissionError('Enabled AppArmor is required for package execution')
+    # Use the already verified bytes as stdin, not a pathname reopened by the
+    # privileged parser. No cached, model-selected or alternate policy input.
+    subprocess.run(['/usr/sbin/apparmor_parser', '--replace', '--skip-cache'],
+                   input=read_source(), check=True, capture_output=True, timeout=20,
+                   env={'PATH': '/usr/sbin:/usr/bin:/bin', 'LANG': 'C.UTF-8'})
 
 
 def human_account(name):

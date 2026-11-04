@@ -1,0 +1,733 @@
+{
+  "capture_sha256": "4b83ba736f55a30488b85b897ec5e0fe255555bf70423f45729e81c8a2d3b929",
+  "failed_artifact": 13164948787,
+  "failed_head": "953c550ec4163973d6e478f21e6ef33478e22bfa",
+  "failed_run": 41490850832,
+  "native35_accepted": false,
+  "profile": "man-reference-linux-x86-64-regression-v1",
+  "publication_authorized": false,
+  "queries": [
+    {
+      "follow_final": true,
+      "outcome": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "plain.1"
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "plain.1"
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 0,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "unreadable.1"
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 0,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "unreadable.1"
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "errno": 2,
+        "state": "unavailable"
+      },
+      "path": "missing"
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "errno": 2,
+        "state": "unavailable"
+      },
+      "path": "missing"
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "errno": 20,
+        "state": "unavailable"
+      },
+      "path": "plain.1/"
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "errno": 20,
+        "state": "unavailable"
+      },
+      "path": "plain.1/"
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "errno": 20,
+        "state": "unavailable"
+      },
+      "path": "plain.1/."
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "errno": 20,
+        "state": "unavailable"
+      },
+      "path": "plain.1/."
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "errno": 20,
+        "state": "unavailable"
+      },
+      "path": "file-link/../goal.1"
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "errno": 20,
+        "state": "unavailable"
+      },
+      "path": "file-link/../goal.1"
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "bridge/../goal.1"
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "bridge/../goal.1"
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "absolute-link/../goal.1"
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "absolute-link/../goal.1"
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "link-a"
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "gid": 0,
+        "kind": "symlink",
+        "mode": 511,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "link-a"
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "errno": 40,
+        "state": "unavailable"
+      },
+      "path": "cycle.1"
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "gid": 0,
+        "kind": "symlink",
+        "mode": 511,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "cycle.1"
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "errno": 2,
+        "state": "unavailable"
+      },
+      "path": "dangling.1"
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "gid": 0,
+        "kind": "symlink",
+        "mode": 511,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "dangling.1"
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "gid": 0,
+        "kind": "directory",
+        "mode": 384,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "no-search/"
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "gid": 0,
+        "kind": "directory",
+        "mode": 384,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "no-search/"
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "errno": 13,
+        "state": "unavailable"
+      },
+      "path": "no-search/."
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "errno": 13,
+        "state": "unavailable"
+      },
+      "path": "no-search/."
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "errno": 13,
+        "state": "unavailable"
+      },
+      "path": "blocked/hidden.1"
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "errno": 13,
+        "state": "unavailable"
+      },
+      "path": "blocked/hidden.1"
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "group-search/goal.1"
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "group-search/goal.1"
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "other-search/goal.1"
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "other-search/goal.1"
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "gid": 0,
+        "kind": "directory",
+        "mode": 493,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "man2/deep/.."
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "gid": 0,
+        "kind": "directory",
+        "mode": 493,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "man2/deep/.."
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "literal \"$(inert)\".1"
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "literal \"$(inert)\".1"
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "gid": 0,
+        "kind": "directory",
+        "mode": 493,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "directory-slash"
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "gid": 0,
+        "kind": "symlink",
+        "mode": 511,
+        "state": "exists",
+        "uid": 0
+      },
+      "path": "directory-slash"
+    },
+    {
+      "follow_final": true,
+      "outcome": {
+        "errno": 36,
+        "state": "unavailable"
+      },
+      "path": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "follow_final": false,
+      "outcome": {
+        "errno": 36,
+        "state": "unavailable"
+      },
+      "path": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  ],
+  "scope": "Fixed UID6 kernel observations from failed CI, stripped of unstable inode/device IDs; not successful native35 acceptance",
+  "selections": [
+    {
+      "attempts": [
+        {
+          "access_f_ok": false,
+          "context": "manual-tree",
+          "extension": "",
+          "outcome": {
+            "state": "unavailable"
+          },
+          "path": "/var/cache/man/reference-fixtures/target.1"
+        },
+        {
+          "context": "manual-tree",
+          "extension": "gz",
+          "outcome": {
+            "gid": 0,
+            "kind": "file",
+            "mode": 420,
+            "state": "exists",
+            "uid": 0
+          },
+          "path": "/var/cache/man/reference-fixtures/target.1.gz"
+        }
+      ],
+      "operand": "target.1",
+      "selected": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      }
+    },
+    {
+      "attempts": [
+        {
+          "access_f_ok": true,
+          "context": "manual-tree",
+          "extension": "",
+          "outcome": {
+            "gid": 0,
+            "kind": "file",
+            "mode": 420,
+            "state": "exists",
+            "uid": 0
+          },
+          "path": "/var/cache/man/reference-fixtures/plain.1"
+        }
+      ],
+      "operand": "plain.1",
+      "selected": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      }
+    },
+    {
+      "attempts": [
+        {
+          "access_f_ok": false,
+          "context": "manual-tree",
+          "extension": "",
+          "outcome": {
+            "state": "unavailable"
+          },
+          "path": "/var/cache/man/reference-fixtures/dangling.1"
+        },
+        {
+          "context": "manual-tree",
+          "extension": "gz",
+          "outcome": {
+            "gid": 0,
+            "kind": "file",
+            "mode": 420,
+            "state": "exists",
+            "uid": 0
+          },
+          "path": "/var/cache/man/reference-fixtures/dangling.1.gz"
+        }
+      ],
+      "operand": "dangling.1",
+      "selected": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      }
+    },
+    {
+      "attempts": [
+        {
+          "access_f_ok": false,
+          "context": "manual-tree",
+          "extension": "",
+          "outcome": {
+            "state": "unavailable"
+          },
+          "path": "/var/cache/man/reference-fixtures/cycle.1"
+        },
+        {
+          "context": "manual-tree",
+          "extension": "gz",
+          "outcome": {
+            "gid": 0,
+            "kind": "file",
+            "mode": 420,
+            "state": "exists",
+            "uid": 0
+          },
+          "path": "/var/cache/man/reference-fixtures/cycle.1.gz"
+        }
+      ],
+      "operand": "cycle.1",
+      "selected": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      }
+    },
+    {
+      "attempts": [
+        {
+          "access_f_ok": false,
+          "context": "manual-tree",
+          "extension": "",
+          "outcome": {
+            "state": "unavailable"
+          },
+          "path": "/var/cache/man/reference-fixtures/poison.1"
+        },
+        {
+          "context": "manual-tree",
+          "extension": "gz",
+          "outcome": {
+            "gid": 0,
+            "kind": "directory",
+            "mode": 493,
+            "state": "exists",
+            "uid": 0
+          },
+          "path": "/var/cache/man/reference-fixtures/poison.1.gz"
+        }
+      ],
+      "operand": "poison.1",
+      "selected": {
+        "gid": 0,
+        "kind": "directory",
+        "mode": 493,
+        "state": "exists",
+        "uid": 0
+      }
+    },
+    {
+      "attempts": [
+        {
+          "access_f_ok": false,
+          "context": "manual-tree",
+          "extension": "",
+          "outcome": {
+            "state": "unavailable"
+          },
+          "path": "/var/cache/man/reference-fixtures/local.1"
+        },
+        {
+          "context": "manual-tree",
+          "extension": "gz",
+          "outcome": {
+            "errno": 2,
+            "state": "unavailable"
+          },
+          "path": "/var/cache/man/reference-fixtures/local.1.gz"
+        },
+        {
+          "context": "manual-tree",
+          "extension": "xz",
+          "outcome": {
+            "errno": 2,
+            "state": "unavailable"
+          },
+          "path": "/var/cache/man/reference-fixtures/local.1.xz"
+        },
+        {
+          "access_f_ok": false,
+          "context": "original-directory",
+          "extension": "",
+          "outcome": {
+            "state": "unavailable"
+          },
+          "path": "/var/cache/man/reference-fixtures/man1/local.1"
+        },
+        {
+          "context": "original-directory",
+          "extension": "gz",
+          "outcome": {
+            "gid": 0,
+            "kind": "file",
+            "mode": 420,
+            "state": "exists",
+            "uid": 0
+          },
+          "path": "/var/cache/man/reference-fixtures/man1/local.1.gz"
+        }
+      ],
+      "operand": "local.1",
+      "selected": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      }
+    },
+    {
+      "attempts": [
+        {
+          "access_f_ok": true,
+          "context": "manual-tree",
+          "extension": "",
+          "outcome": {
+            "gid": 0,
+            "kind": "file",
+            "mode": 420,
+            "state": "exists",
+            "uid": 0
+          },
+          "path": "/var/cache/man/reference-fixtures/bridge/../goal.1"
+        }
+      ],
+      "operand": "bridge/../goal.1",
+      "selected": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 420,
+        "state": "exists",
+        "uid": 0
+      }
+    },
+    {
+      "attempts": [
+        {
+          "access_f_ok": true,
+          "context": "manual-tree",
+          "extension": "",
+          "outcome": {
+            "gid": 0,
+            "kind": "file",
+            "mode": 0,
+            "state": "exists",
+            "uid": 0
+          },
+          "path": "/var/cache/man/reference-fixtures/unreadable.1"
+        }
+      ],
+      "operand": "unreadable.1",
+      "selected": {
+        "gid": 0,
+        "kind": "file",
+        "mode": 0,
+        "state": "exists",
+        "uid": 0
+      }
+    },
+    {
+      "attempts": [
+        {
+          "access_f_ok": false,
+          "context": "manual-tree",
+          "extension": "",
+          "outcome": {
+            "state": "unavailable"
+          },
+          "path": "/var/cache/man/reference-fixtures/absent"
+        },
+        {
+          "context": "manual-tree",
+          "extension": "gz",
+          "outcome": {
+            "errno": 2,
+            "state": "unavailable"
+          },
+          "path": "/var/cache/man/reference-fixtures/absent.gz"
+        },
+        {
+          "context": "manual-tree",
+          "extension": "xz",
+          "outcome": {
+            "errno": 2,
+            "state": "unavailable"
+          },
+          "path": "/var/cache/man/reference-fixtures/absent.xz"
+        },
+        {
+          "access_f_ok": false,
+          "context": "original-directory",
+          "extension": "",
+          "outcome": {
+            "state": "unavailable"
+          },
+          "path": "/var/cache/man/reference-fixtures/man1/absent"
+        },
+        {
+          "context": "original-directory",
+          "extension": "gz",
+          "outcome": {
+            "errno": 2,
+            "state": "unavailable"
+          },
+          "path": "/var/cache/man/reference-fixtures/man1/absent.gz"
+        },
+        {
+          "context": "original-directory",
+          "extension": "xz",
+          "outcome": {
+            "errno": 2,
+            "state": "unavailable"
+          },
+          "path": "/var/cache/man/reference-fixtures/man1/absent.xz"
+        }
+      ],
+      "operand": "absent",
+      "selected": null
+    }
+  ]
+}

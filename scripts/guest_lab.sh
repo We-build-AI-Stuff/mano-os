@@ -7,12 +7,17 @@ test ! -f /etc/mano-lab-prepared
 cd /opt/mano-lab
 mkdir -p evidence
 export DEBIAN_FRONTEND=noninteractive
+# The disposable lab owns package-index changes. Persistent masks survive the
+# btrfs reboot; scheduled refreshes must not race the catalog custody probes.
+systemctl mask --now apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service
+systemctl show apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service \
+  --property=Id --property=LoadState --property=ActiveState
 apt-get -o Acquire::Retries=3 update
 apt-get -o Acquire::Retries=3 -y upgrade
-apt-get -o Acquire::Retries=3 install -y --no-install-recommends python3 python3-jsonschema python3-apt gpgv python3-venv python3-pip bubblewrap acl git \
+apt-get -o Acquire::Retries=3 install -y --no-install-recommends python3 python3-jsonschema python3-apt gpgv python3-venv python3-pip bubblewrap apparmor acl git strace \
   sway xwayland foot grim wayland-utils dbus-user-session at-spi2-core \
   python3-pyatspi xdg-dbus-proxy btrfs-progs snapper chromium libreoffice-writer \
-  libreoffice-calc libreoffice-gtk3 python3-uno poppler-utils gir1.2-gtk-4.0 fonts-dejavu-core jq procps rsync gcc libc6-dev libpam0g-dev libjson-c-dev libsystemd-dev libseccomp-dev pkg-config libwayland-dev libxkbcommon-dev wayland-protocols xauth x11-utils xfonts-base
+  libreoffice-calc libreoffice-gtk3 python3-uno poppler-utils gir1.2-gtk-4.0 fonts-dejavu-core jq procps rsync gcc binutils libc6-dev libpam0g-dev libjson-c-dev libsystemd-dev libseccomp-dev pkg-config libwayland-dev libxkbcommon-dev wayland-protocols xauth x11-utils xfonts-base
 apt-get clean
 python3 scripts/install_ci_delegates.py
 # Interoperability fixture only; never shipped in the runtime package or run as Root.

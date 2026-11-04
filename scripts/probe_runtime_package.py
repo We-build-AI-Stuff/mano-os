@@ -260,6 +260,10 @@ print(json.dumps(control_request('prompt_context',dict(prompt_id=json.load(sys.s
         proof = Path(managed["workspace"]) / "package-proof"
         assert proof.read_text() == "package-ok"
         assert task["task_id"] == live["prompt"]["task_id"]
+        from probe_packaged_apply import run as packaged_apply
+
+        applied_package = packaged_apply(managed, password, installed_python, query,
+                                        packaged_recovery)
         edited = Path("/etc/mano/controller.json")
         edited.write_text(json.dumps(json.loads(edited.read_text()), indent=2) + "\n")
         before_uid = POLICY.read_bytes()
@@ -297,6 +301,13 @@ print(json.dumps(control_request('prompt_context',dict(prompt_id=json.load(sys.s
                 ).returncode
                 != 0
             )
+        package_domain = Path('/sys/fs/cgroup/mano.slice/mano-package.slice')
+        assert (not package_domain.exists() or
+                'populated 0' in (package_domain / 'cgroup.events').read_text())
+        # Do not unload a profile as cleanup and risk unconfine-on-removal.
+        # Measure the kernel object's retention separately from stopped tasks.
+        policy_retained = ('mano-package-worker (enforce)' in
+                           Path('/sys/kernel/security/apparmor/profiles').read_text().splitlines())
         shutil.copyfile(package, OUT / package.name)
         report = dict(
             schema_version="1.0",
@@ -317,10 +328,13 @@ print(json.dumps(control_request('prompt_context',dict(prompt_id=json.load(sys.s
             package_owned_production_gui_pam_profile=True,
             package_owned_langgraph_mock_effect=True,
             package_owned_root_recovery_snapshot=True,
+            package_owned_native_pam_root_apply=applied_package,
             effect_verified=False,
             policy_data_preserved_on_reinstall=True,
             reinstall_no_old_authority=True,
             package_removed_services_stopped_data_preserved=True,
+            package_domain_empty_on_remove=True,
+            kernel_package_path_policy_retained_on_remove=policy_retained,
             old_lab_environment_disabled=True,
             physical_input_provenance=None,
             paid_model_execution=False,

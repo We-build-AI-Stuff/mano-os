@@ -76,6 +76,26 @@ def main():
         match = re.search(r"^" + label + r": ([0-9a-f]{32})$", text(), re.MULTILINE)
         return match.group(1) if match else None
 
+    def limit_buffers():
+        """Read the public accessibility value/text without modifying the app."""
+        result = {}
+        for label, expected in (("Duration (seconds)", args.duration),
+                                ("Automatic grants", 3), ("Action timeout (seconds)", 10)):
+            node = control(label, {"spin button", "spinbutton"})
+            numeric = node.queryValue().currentValue
+            assert numeric == expected, (label, numeric, expected)
+            buffers = []
+            for child in nodes(node):
+                try:
+                    value = child.queryText()
+                except NotImplementedError:
+                    continue
+                content = value.getText(0, -1)
+                if content:
+                    buffers.append(content)
+            result[label] = dict(numeric=numeric, accessible_text_buffers=buffers)
+        return result
+
     def capture(name):
         compositor = json.loads(
             subprocess.check_output(["swaymsg", "-r", "-t", "get_tree"], text=True, timeout=5)
@@ -124,6 +144,7 @@ def main():
     assert "Pending terminal review at acknowledgement" in pending
     assert "New automatic grants: unavailable" in pending
     assert not any(node.getRoleName() in {"password text", "password entry"} for node in tree())
+    pending_limits = limit_buffers()
     capture("stock-permissions-pending.png")
     (ROOT / "pending.json").write_text(
         json.dumps(dict(prompt_id=prompt_id, task_id=task_id, approval_id=approval_id)) + "\n"
@@ -134,6 +155,7 @@ def main():
     effective = text()
     assert "Recorded mode: Auto" in effective and "Remaining: 3 grants" in effective
     assert "action timeout: 10 seconds" in effective
+    effective_limits = limit_buffers()
     capture("stock-permissions-effective.png")
     click("Close permissions")
     (ROOT / "result.json").write_text(
@@ -143,6 +165,8 @@ def main():
                 task_id=task_id,
                 pending=pending,
                 effective=effective,
+                pending_limit_buffers=pending_limits,
+                effective_limit_buffers=effective_limits,
                 unmodified_packaged_prompt=True,
                 app_observer_injected=False,
                 physical_input_provenance=None,
