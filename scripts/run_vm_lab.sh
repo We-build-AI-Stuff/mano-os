@@ -27,6 +27,7 @@ sha256sum "$lab_dir/runtime-pristine.qcow2" > "$repo_root/evidence/runtime-prist
 qemu-img resize "$lab_dir/$image" 12G
 qemu-img create -f qcow2 "$lab_dir/data.qcow2" 2G
 qemu-img create -f qcow2 "$lab_dir/root.qcow2" 6G
+python3 "$repo_root/scripts/lab_image_lifecycle.py" record
 ssh-keygen -q -t ed25519 -N '' -f "$lab_dir/key"
 cat > "$lab_dir/user-data" <<EOF
 #cloud-config
@@ -234,6 +235,12 @@ fi
 if [ "$result" = 0 ]; then
   stop_vm
   vm_pid=
+  # All first-VM uses/evidence exports are complete and QEMU has exited. Release
+  # only images recorded as this job's; keep the untouched stock base and evidence.
+  python3 "$repo_root/scripts/lab_image_lifecycle.py" release
+  if [ "${GITHUB_ACTIONS:-}" = true ]; then
+    test -s "$repo_root/evidence/released-vm-images.json"
+  fi
   free_kib=$(df -Pk "$repo_root" | awk 'NR==2 {print $4}')
   if [ "$free_kib" -lt 10485760 ]; then
     echo 'Stop: less than 10 GiB free; clean package VM refused.' >&2

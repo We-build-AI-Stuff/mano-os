@@ -30,6 +30,16 @@ below 10 GiB. The VM launcher checks its runner filesystem before downloads.
 The assistant also checks the Mac between implementation chunks. These are active
 work checks; no background automation or deletion is silently installed.
 
+In the GitHub disposable job, the lab records the run/job/attempt and file identities
+of its three first-VM images. After all uses and evidence exports finish and QEMU
+has exited, it releases only those owned regular files before starting the clean
+package VM. The untouched `runtime-pristine.qcow2` base and all evidence remain.
+The existing 10 GiB admission guard still applies after release. The artifact's
+`released-vm-images.json` records the exact filenames and observed free space.
+Other hosts retain their images; the helper does not release files on a personal
+Mac, as Root, or outside the matching GitHub workspace. This is a CI lifecycle
+operation, not user-data cleanup.
+
 ## Merges
 
 Only main's seed specification was pushed directly to establish the empty repo.
