@@ -63,3 +63,19 @@ class PromptIntakeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             model.update(model.token(), value(B))
         self.assertEqual(model.current, value())
+
+    def test_uncertain_new_submission_preserves_old_details_until_acknowledged_retry(self):
+        model = Intake()
+        model.select(value(state='task_created', task=TASK))
+        token = model.token()
+        model.mark_uncertain()
+        self.assertFalse(model.update(token, value(state='task_created', task=TASK)))
+        self.assertFalse(model.update_snapshot(token, {}))
+        self.assertIn('Latest submission uncertain', model.display())
+        self.assertIn('previous acknowledged request', model.display())
+        self.assertIn(TASK, model.display())
+        model.select(value(prompt=B))
+        self.assertFalse(model.uncertain)
+        self.assertNotIn('uncertain', model.display())
+        self.assertFalse(model.update_snapshot(token, {}))
+        self.assertEqual(model.current['id'], B)

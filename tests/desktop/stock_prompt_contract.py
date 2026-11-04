@@ -107,7 +107,7 @@ def main():
     prompt_id = wait(lambda: identity("Request"))
     (ROOT / "received.json").write_text(json.dumps(dict(prompt_id=prompt_id)) + "\n")
     wait(lambda: (ROOT / "provisioned").exists(), 40)
-    click("Check request status")
+    # No injected app observer or manual refresh: use the packaged status timer.
     task_id = wait(lambda: identity("Task"))
     click("Permissions")
     wait(lambda: "New automatic grants: unavailable" in text())
@@ -141,6 +141,7 @@ def main():
             dict(
                 prompt_id=prompt_id,
                 task_id=task_id,
+                automatic_task_status_updates=True,
                 pending=pending,
                 effective=effective,
                 unmodified_packaged_prompt=True,

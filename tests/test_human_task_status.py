@@ -1,7 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from mano_broker.approvals import Approvals
 from mano_broker.control import dispatch_control
@@ -11,6 +11,7 @@ from mano_broker.prompts import Prompts
 from mano_broker.protocol import ActionRequest, canonical
 from mano_broker.state import Denied, State
 from mano_prompt.intake import Intake
+from mano_prompt.status_refresh import StatusRefresh
 from mano_prompt.task_status import packet, parse_snapshot, read_task_status
 
 
@@ -37,6 +38,40 @@ class HumanTaskStatusTests(unittest.TestCase):
     def read(self, **changes):
         return snapshot(self.state, **(dict(human_uid=1002, prompt_id=self.prompt,
                                            boot_id='boot', now=12) | changes))
+
+    def test_periodic_reads_show_new_journal_state_without_creating_or_replaying_work(self):
+        model = Intake()
+        model.select(self.read()['prompt'])
+        def refresh():
+            token = model.token()
+            model.update_snapshot(token, read_task_status(token[1]))
+        timer = StatusRefresh(refresh, Mock(return_value=17), Mock())
+        with patch('mano_prompt.task_status.rpc',
+                   side_effect=lambda _: dict(ok=True, snapshot=self.read())) as rpc:
+            timer.start()
+            before = self.state.db.total_changes
+            timer.tick()
+            self.assertEqual(self.state.db.total_changes, before)
+            self.assertIn('Recent actions: 0 of 0', model.display())
+            action = self.action(1)
+            self.state.start(action, now=12, boot_id='boot')
+            before = self.state.db.total_changes
+            timer.tick()
+            self.assertIn('executing', model.display())
+            self.assertEqual(self.state.db.total_changes, before)
+            self.state.transition(action, 'done', exit_code=0)
+            before = self.state.db.total_changes
+            timer.tick()
+            timer.tick()
+            self.assertIn('done · effect not verified', model.display())
+            self.assertEqual(self.state.db.total_changes, before)
+            self.assertEqual(self.state.db.execute('SELECT count(*) FROM actions').fetchone()[0], 1)
+            self.assertEqual(self.state.db.execute('SELECT count(*) FROM grants').fetchone()[0], 1)
+            self.assertEqual(rpc.call_count, 4)
+            self.assertTrue(all(call.args == (packet(self.prompt),) for call in rpc.call_args_list))
+            timer.close()
+            self.assertFalse(timer.tick())
+            self.assertEqual(rpc.call_count, 4)
 
     def action(self, index):
         proposal = self.proposal | dict(idempotency_key=f'action{index}')

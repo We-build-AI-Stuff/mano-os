@@ -41,12 +41,17 @@ class Intake:
         self.current = None
         self.revision = 0
         self.activity = None
+        self.uncertain = False
 
     def select(self, result):
         value = parse(result)
         self.revision += 1
         self.current = value
         self.activity = None
+        self.uncertain = False
+
+    def mark_uncertain(self):
+        self.uncertain = True
 
     def token(self):
         if self.current is None:
@@ -54,7 +59,7 @@ class Intake:
         return self.revision, self.current['id']
 
     def update(self, token, result):
-        if token != self.token():
+        if self.uncertain or token != self.token():
             return False  # A slow reply cannot replace a newer acknowledged request.
         self.current = parse(result, token[1])
         self.activity = None
@@ -63,7 +68,7 @@ class Intake:
     def update_snapshot(self, token, result):
         from .task_status import parse_snapshot
 
-        if token != self.token():
+        if self.uncertain or token != self.token():
             return False
         value = parse_snapshot(result, token[1])
         if self.current['task_id'] is not None and (
@@ -93,4 +98,7 @@ class Intake:
             lines.append('Approval records (review pending IDs in the trusted terminal):')
             for item in self.activity['approvals']:
                 lines.append(f"{item['approval_id']} · {item['capability']} · {item['state']}")
+        if self.uncertain:
+            lines.insert(0, 'Latest submission uncertain; '
+                            'showing the previous acknowledged request.')
         return '\n'.join(lines)

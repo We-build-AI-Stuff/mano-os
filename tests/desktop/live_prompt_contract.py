@@ -79,7 +79,7 @@ def main():
     receipt = wait(lambda: view().get('prompt'))
     assert receipt['state'] == 'received' and receipt['task_id'] is None
     wait(lambda: (ROOT / 'provisioned').exists(), 40)
-    click('Check request status')
+    # The real broker-backed production UI must observe provisioning by itself.
     wait(lambda: view().get('prompt', {}).get('state') == 'task_created')
     click('Permissions')
     initial = wait(lambda: has_permissions(lambda p: p.get('status') is not None))
@@ -108,6 +108,7 @@ def main():
     capture('live-permissions-effective.png')
     click('Close permissions')
     result = dict(prompt=view()['prompt'], initial=initial, pending=pending, effective=effective,
+                  automatic_task_status_updates=True,
                   input_route='private human AT-SPI driver', physical_input_provenance=None,
                   transport='production Prompt defaults and installed native broker',
                   model_connected=False)

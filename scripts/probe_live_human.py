@@ -103,6 +103,7 @@ def run(native_terminal, password, register_identity, query, *, config_path=None
         (RUNTIME / 'approved').touch()
         wait(lambda: (RUNTIME / 'result.json').exists())
         result = json.loads((RUNTIME / 'result.json').read_text())
+        assert result['automatic_task_status_updates'] is True
         assert result['prompt']['id'] == receipt['id']
         assert result['prompt']['task_id'] == managed['context']['task_id']
         result['tty_cancel_wrong_password_then_pam'] = True
