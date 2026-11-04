@@ -396,10 +396,15 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run, *, b
     if type(baseline_tree) is not dict:
         raise ValueError('Observed fixed baseline tree required for descriptor execution')
     from mano_runtime import package_man_executable_origin as executable_origin
+    from mano_runtime import package_man_interpreter_origin as interpreter_origin
     executable_capture_source = (Path('/opt/mano-lab/src/mano_runtime') /
                                  'package_man_executable_origin.py').read_bytes()
     executable_elf_source = (Path('/opt/mano-lab/src/mano_runtime') /
                              'package_man_elf_memory.py').read_bytes()
+    interpreter_capture_source = (Path('/opt/mano-lab/src/mano_runtime') /
+                                  'package_man_interpreter_origin.py').read_bytes()
+    interpreter_selector_source = (Path('/opt/mano-lab/src/mano_runtime') /
+                                   'package_man_interpreter.py').read_bytes()
     digest = config_profile(config)
     runtime_view_source = (Path('/opt/mano-lab/src/mano_runtime') /
                            'package_man_runtime_view.py').read_text()
@@ -454,6 +459,7 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run, *, b
     original = control_identity()
     observations, source_receipts, mapping_receipts = {}, {}, {}
     executable_packet = None
+    interpreter_packet = None
     for mode in ('control', 'restricted'):
         role = 'man-cache-control' if mode == 'control' else 'regenerated-man-cache'
         cache = base / role
@@ -469,11 +475,24 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run, *, b
                 else 'staged-man-regeneration-worker')
         executable_context = (executable_origin.hold(baseline_tree) if mode == 'restricted'
                               else contextlib.nullcontext(None))
-        with runtime_origin.hold() as held, executable_context as executable_held:
+        with contextlib.ExitStack() as source_stack:
+            held = source_stack.enter_context(runtime_origin.hold())
+            executable_held = source_stack.enter_context(executable_context)
+            interpreter_context = (interpreter_origin.hold(baseline_tree, executable_held.raw)
+                if executable_held is not None else contextlib.nullcontext(None))
+            interpreter_held = source_stack.enter_context(interpreter_context)
             source_before = held.observe()
             executable_before = (executable_held.observe()
                                  if executable_held is not None else None)
             executable_after = None
+            interpreter_before = (interpreter_held.observe()
+                                  if interpreter_held is not None else None)
+            interpreter_after = None
+            interpreter_capture = (dict(before=interpreter_before,
+                raw_base64=base64.b64encode(interpreter_held.raw).decode(),
+                raw_bytes=len(interpreter_held.raw),
+                raw_sha256=hashlib.sha256(interpreter_held.raw).hexdigest())
+                if interpreter_held is not None else None)
             executable_capture = (dict(before=executable_before,
                 raw_base64=base64.b64encode(executable_held.raw).decode(),
                 raw_bytes=len(executable_held.raw),
@@ -493,7 +512,8 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run, *, b
                 with (evidence / (stem + '-launch-failure.json')).open('x') as stream:
                     json.dump(dict(failed, runtime_source_before=source_before,
                                    runtime_source_after=held.observe(), domain_drained=False,
-                                   executable_source_capture=executable_capture),
+                                   executable_source_capture=executable_capture,
+                                   interpreter_source_capture=interpreter_capture),
                               stream, sort_keys=True)
                 raise
             # Preserve captured worker bytes before parsing or asserting success.
@@ -537,6 +557,14 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run, *, b
                         generation_command_returned_zero=True,
                         source_capture_sha256=hashlib.sha256(executable_capture_source).hexdigest(),
                         elf_parser_source_sha256=hashlib.sha256(executable_elf_source).hexdigest())
+                    interpreter_after = interpreter_held.observe()
+                    interpreter_packet = interpreter_origin.compare(executable_held.raw,
+                        interpreter_held.raw, baseline_tree, interpreter_before, interpreter_after)
+                    interpreter_packet.update(domain_drained=True,
+                        generation_command_returned_zero=True,
+                        source_capture_sha256=hashlib.sha256(interpreter_capture_source).hexdigest(),
+                        selector_source_sha256=hashlib.sha256(interpreter_selector_source).hexdigest(),
+                        elf_parser_source_sha256=hashlib.sha256(executable_elf_source).hexdigest())
                 source_after = held.observe()
                 source_proof = compare_source_identities(row, source_before, source_after,
                                                          origin_sha)
@@ -550,7 +578,9 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run, *, b
                         runtime_source_before=source_before, runtime_source_after=source_after,
                         domain_drained=drained, worker_artifact=stem+'.json',
                         executable_source_capture=executable_capture,
-                        executable_source_after=executable_after),
+                        executable_source_after=executable_after,
+                        interpreter_source_capture=interpreter_capture,
+                        interpreter_source_after=interpreter_after),
                         stream, sort_keys=True)
                 raise
     raw, row = observations['restricted']
@@ -591,5 +621,8 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run, *, b
     if (executable_packet is None or len(json.dumps(executable_packet, sort_keys=True,
             allow_nan=False).encode()) > executable_origin.MAX_PACKET_BYTES):
         raise ValueError('Bounded retained actual executable source required')
+    if (interpreter_packet is None or len(json.dumps(interpreter_packet, sort_keys=True,
+            allow_nan=False).encode()) > interpreter_origin.MAX_PACKET_BYTES):
+        raise ValueError('Bounded retained baseline interpreter source required')
     return (data, config, raw, row, source_packet, mapping_packet, execmem_packet,
-            executable_packet)
+            executable_packet, interpreter_packet)

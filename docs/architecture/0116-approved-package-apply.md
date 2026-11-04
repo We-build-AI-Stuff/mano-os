@@ -640,7 +640,7 @@ original 200 MB budget. Fresh UI originals and detail crops were visually
 inspected. This proves the observed controls in the disposable VM, not complete
 runtime selection, physical input, protected updates or publication authority.
 
-### Descriptor-bound executable source candidate
+### Descriptor-bound executable source (native45 accepted)
 
 The new fixed v5 mode reports identity from an open readonly baseline mandb
 object and launches that same descriptor with execveat. Root independently holds
@@ -650,4 +650,20 @@ identities. The old v3/v4 schemas remain strict; failure has no pathname fallbac
 
 A bounded source packet adds a full 1 MiB reserve within the original 200 MB
 budget while retaining the 64-artifact count and worker resource limits. This is
-not yet native-accepted and does not establish complete loader or runtime closure.
+native-accepted at 0c883d2/run41789313358 with all 45 independent gates, 76 source
+comparisons and fresh visual inspection. It does not establish complete loader or
+runtime closure. Details and artifact digest are in docs/CONTINUATION.md.
+
+### Held interpreter source candidate (native validation pending)
+
+The Root collector now retains the baseline interpreter FD and bytes across the
+restricted v5 cache-generation run. Bounded manifest-only alias traversal resolves
+the ELF selector, and canonical descriptor-relative opening refuses symlinks.
+Captured bytes bind the baseline content, metadata, hardlinks and ET_DYN ELF memory
+declarations. Both held identity observations must match after the domain drains.
+The raw source is retained for launch/validation failures; all handles close on exit.
+A full additional 1 MiB reserve is charged inside the original 200 MB/64-artifact
+budget. Independent gate46 requires all 45 prior gates and reconstructs the bindings.
+Actual kernel loader selection and complete runtime/publication authority remain
+false. Local 263 component tests/four skips and 47 independent groups passed; native
+source capture, exact-head CI/artifact acceptance and fresh visual review are pending.

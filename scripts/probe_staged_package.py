@@ -803,7 +803,7 @@ def main():
         from probe_package_man_regeneration import regenerate
         (regeneration_program, _, regeneration_raw, regeneration_worker,
          runtime_source_identities, mapping_controls, execmem_enforcement,
-         executable_source) = regenerate(
+         executable_source, interpreter_source) = regenerate(
             BASE, PROGRAM, host_namespaces, state_masks, empty, config, run,
             baseline_tree=baseline_tree)
         regeneration_tree = tree_observation('regenerated-man-cache')
@@ -1049,7 +1049,7 @@ def main():
     # envelope; it is part of this Root report rather than a 65th artifact.
     if (len(artifacts) > 64
             or sum(len(data) for data in artifacts.values())+MAX_EMBEDDED_BYTES
-            +source_graph.MAX_REPORT_BYTES+65536+16384+16384+1048576 > 200_000_000):
+            +source_graph.MAX_REPORT_BYTES+65536+16384+16384+1048576+1048576 > 200_000_000):
         raise ValueError('Staged artifact count and total uncompressed byte budgets required')
     for name, data in artifacts.items():
         if (name in retained_trace or name in retained_commands or name in man_cache_artifacts
@@ -1094,6 +1094,10 @@ def main():
                 man_mapping_controls=mapping_controls,
                 man_execmem_enforcement=execmem_enforcement,
                 man_executable_source=executable_source,
+                man_interpreter_source=interpreter_source,
+                embedded_interpreter_source_bytes=len(json.dumps(
+                    interpreter_source, sort_keys=True, allow_nan=False).encode()),
+                embedded_interpreter_source_maximum_bytes=1048576,
                 embedded_executable_source_bytes=len(json.dumps(
                     executable_source, sort_keys=True, allow_nan=False).encode()),
                 embedded_executable_source_maximum_bytes=1048576,

@@ -5,7 +5,66 @@ Specification docs/spec-v2.1.md SHA256:
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 A passing prototype/CI slice cannot substitute for the full version.
 
-## Executable-descriptor source candidate — native validation pending
+## Held interpreter bytes candidate — native46 validation pending
+
+The interpreter resolver and Root holder are now integrated into restricted cache
+generation. Root opens the resolved canonical usr/lib object with descriptor-relative
+NOFOLLOW/CLOEXEC access inside the fixed private read-only Btrfs baseline. It retains
+the same FD across drained generation, hashes and binds exact ELF bytes and all eight
+shared metadata fields, and compares its before/after object identity. The raw capture
+is retained in launch/validation diagnostics. All descriptor handles close on failure.
+Main source guard v5, native worker bytes, all positive/negative controls and resource
+bounds remain unchanged. There is no claim that this descriptor is kernel-selected.
+
+A separate interpreter packet adds one FULL 1 MiB reserve inside the original 200 MB
+budget; named artifacts remain 64. The source read cap is 512 KiB for this fixed lab
+profile (observed baseline loader metadata: 225,672 bytes), not broad loader support.
+Explicit independent gate46 (--man-interpreter-source) requires all 45 predecessors,
+reconstructs selector and ELF/content/metadata/hardlink bindings without producer
+imports, checks exact Git sources and charges all SEVEN full reserves. Actual kernel
+loading, readonly kernel source, full loader/runtime closure and publication stay false.
+
+Portable local checks pass: 263 component tests with four Linux-only skips; 47 independent
+reader/dependency/wiring groups; repository lint and diff checks. No native or Root code
+ran on Mac. Exact fresh CI, artifact custody, all 46 gates and fresh UI inspection are
+still required before accepting this candidate. Latest accepted native remains45 below.
+Three unrelated untracked files ending " 2" are preserved. Disk about 18 GiB free/91%.
+
+## Accepted native45 — descriptor-bound main executable
+
+Head 0c883d296f1e6b3588c0f58605bb3811d08c831a, base
+65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Run 41789313358 passed all three
+required jobs: quality 126438720690 (1,126 tests, one skip), security
+126438720375 and merge gate 126447522714. Collector 67398 terminated with exit 0;
+do not restart it. All 45 independent staging gates and every predecessor passed.
+Artifact 13304340344 has 49,635,587 bytes and SHA-256
+548ac0e5a952cff7bcc9b72733a6c99cc1d1a1d2bba3a7b45c6482de55261c87.
+Tested merge 1562edc13d021d3d37435e0bbc27963adeac6b94 has the expected exact
+parents and 76 matching source files. No CI or collector is currently live.
+
+Actual v5 generation returned 0 with complete capture. Native descriptor identity
+matches Root's held object before and after drained generation. The retained
+151,152-byte mandb matches baseline metadata and SHA-256
+2febdb360353414714816f336a0a6254fa8b1bff57420abf4f09647f4b6601d8.
+The native guard launches that descriptor using execveat with no pathname fallback.
+The 2,148-byte raw header and 205,054-byte source packet were independently checked.
+64 artifacts and all six full reserves charge 177,458,979 bytes against the
+original 200 MB budget. Existing resource restrictions and all 44 prior gates pass.
+
+Six fresh originals, eight detail crops and the contact sheet were actually viewed;
+the receipt binds 15 PNG hashes. Full 900/120 values are visible and pending/effective
+numeric pixels match. Receipt: acceptance-pr134-man-executable-source/inspection.json.
+Proof: pr134-0c883d2-native45-proof.json. Disk about 18 GiB free / 91% used; warned.
+PR134 remains open. Current required checks succeed; CodeRabbit skipped, with five
+previous threads resolved/outdated. No new review or human approval is claimed.
+
+Main-executable bytes and descriptor identity are accepted; interpreter resolution,
+actual kernel loader selection, libraries/plugins/scripts, protected runtime updates,
+across-exec personality/hardware NX, full generated-state/publication and original
+phases 0–7 remain incomplete. Physical input and peak RAM remain unmeasured.
+This is not full-version completion or sufficient evidence to merge PR134.
+
+## Descriptor source implementation (accepted by native45 above)
 
 The next candidate adds --mandb-enforced-source and native guard profile v5.
 After all existing controls, the guard opens fixed /usr/bin/mandb read-only with
@@ -27,8 +86,8 @@ additional 1 MiB reserve is charged inside the original 200 MB budget; named
 artifact count stays 64. Actual current mandb is 151,152 bytes; fixed-source read
 cap is 512 KiB. Existing 70-second, 256 MiB and 32-task limits remain unchanged.
 Raw worker results and executable-source captures remain in failure diagnostics.
-The independent new source gate still needs completion and native evidence before
-acceptance. Do not use the previous 44-gate acceptance alone for this v5 candidate.
+The independent 45th source gate has passed with native evidence recorded above.
+Full runtime/interpreter and publication requirements remain open.
 
 ## Latest accepted native44 — fixed cache-generator memory controls
 
