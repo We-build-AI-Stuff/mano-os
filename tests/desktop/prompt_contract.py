@@ -73,6 +73,14 @@ def main():
         time.sleep(0.05)
     response = json.loads(response_path.read_text())
     assert response['responsive_during_slow_ack'] is True and response['ui_ticks'] >= 2
+    # Wait for the production timer before invoking any status control. The
+    # submission receipt must remain singular while read-only updates arrive.
+    status_path = ROOT / 'status-response.json'
+    deadline = time.monotonic() + 12
+    while not status_path.exists() and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert status_path.is_file(), 'Task status did not refresh automatically'
+    assert len(receipt.read_text().splitlines()) == prior + 1
     deadline = time.monotonic() + 5
     while time.monotonic() < deadline:
         tree = list(nodes(pyatspi.Registry.getDesktop(0)))
@@ -87,11 +95,11 @@ def main():
             if node.name == 'Check request status']))
     action = refresh[0].queryAction()
     assert action.nActions and action.doAction(0)  # Exactly one click; no action retry.
-    status_path = ROOT / 'status-response.json'
     deadline = time.monotonic() + 5
     while not status_path.exists() and time.monotonic() < deadline:
         time.sleep(0.05)
     intake_status = json.loads(status_path.read_text())
+    intake_status['automatic_refresh_without_status_click'] = True
     assert intake_status['responsive_during_slow_status'] and intake_status['ui_ticks'] >= 2
     assert 'Workspace ready; journal status below' in intake_status['display']
     assert 'Request: ' + 'a' * 32 in intake_status['display']

@@ -101,11 +101,13 @@ def main():
             assert status_ticks >= 2, 'GTK did not run during slow status lookup'
             assert app.intake.current == dict(id='a' * 32, state='task_created', task_id='b' * 32)
             assert app.refresh.get_sensitive()
-            (ROOT / 'status-response.json').write_text(json.dumps(dict(
+            temporary = ROOT / 'status-response.tmp'
+            temporary.write_text(json.dumps(dict(
                 responsive_during_slow_status=True, ui_ticks=status_ticks,
                 display=app.details.get_text(), intake=app.intake.current,
                 journal=app.intake.activity,
                 scope='synthetic local status UI fixture', physical_input_provenance=None)) + '\n')
+            temporary.replace(ROOT / 'status-response.json')
             return False
         return True
     submission_ticks = 0

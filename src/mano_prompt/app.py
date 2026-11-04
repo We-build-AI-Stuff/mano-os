@@ -9,6 +9,7 @@ from gi.repository import Gdk, GLib, Gtk  # noqa: E402
 from mano_prompt.dispatch import SubmissionWorker  # noqa: E402
 from mano_prompt.intake import Intake  # noqa: E402
 from mano_prompt.permissions_ui import PermissionsWindow  # noqa: E402
+from mano_prompt.status_refresh import StatusRefresh  # noqa: E402
 from mano_prompt.submit import Submission  # noqa: E402
 from mano_prompt.task_status import read_task_status  # noqa: E402
 from mano_protocol.actions import text  # noqa: E402
@@ -64,9 +65,10 @@ class Prompt(Gtk.Application):
 
         permissions = Gtk.Button(label='Permissions')
         permissions.set_sensitive(False)
+        closed = False
 
         def open_permissions(_widget):
-            if self.worker.busy or self.status_worker.busy or self.intake.current is None:
+            if closed or self.intake.uncertain or self.worker.busy or self.intake.current is None:
                 return
             if self.intake.current['task_id'] is None:
                 return
@@ -75,7 +77,8 @@ class Prompt(Gtk.Application):
                 return
             token, task_id = self.intake.token(), self.intake.current['task_id']
             def valid():
-                return (not self.worker.busy and token == self.intake.token()
+                return (not closed and not self.intake.uncertain and not self.worker.busy
+                        and token == self.intake.token()
                         and self.intake.current['task_id'] == task_id)
             self.permission_window = PermissionsWindow(window, token[1], task_id, valid=valid,
                 read=self.permission_read, request=self.permission_request)
@@ -83,14 +86,17 @@ class Prompt(Gtk.Application):
 
         permissions.connect('clicked', open_permissions)
 
-        def check_status(_widget):
-            if self.worker.busy or self.status_worker.busy or self.intake.current is None:
+        def check_status(_widget=None, *, automatic=False):
+            if (closed or self.intake.uncertain or self.worker.busy or self.status_worker.busy
+                    or self.intake.current is None):
                 return
             token = self.intake.token()
 
             def finished(result, error):
-                refresh.set_sensitive(not self.worker.busy)
-                if self.worker.busy or token != self.intake.token():
+                if closed:
+                    return
+                refresh.set_sensitive(not self.worker.busy and not self.intake.uncertain)
+                if self.intake.uncertain or self.worker.busy or token != self.intake.token():
                     return
                 try:
                     if error or not self.intake.update_snapshot(token, result):
@@ -98,44 +104,63 @@ class Prompt(Gtk.Application):
                 except ValueError:
                     status.set_text('Status unavailable. Your request was not resubmitted.')
                 else:
-                    details.set_text(self.intake.display())
+                    display = self.intake.display()
+                    if details.get_text() != display:
+                        details.set_text(display)
                     status.set_text('Request status updated')
                 permissions.set_sensitive(self.intake.current['task_id'] is not None)
 
             try:
                 if self.status_worker.start(token[1], finished):
-                    refresh.set_sensitive(False)
-                    permissions.set_sensitive(False)
-                    status.set_text('Checking request status…')
+                    # The acknowledged task remains pinned while a read is in
+                    # flight, so permission review can use that same identity.
+                    if not automatic:
+                        refresh.set_sensitive(False)
+                        status.set_text('Checking request status…')
             except RuntimeError:
                 status.set_text('Status check could not start. Please retry.')
 
         refresh.connect('clicked', check_status)
+        status_refresh = StatusRefresh(lambda: check_status(automatic=True),
+                                       GLib.timeout_add, GLib.source_remove)
+
+        def close_window(_window):
+            nonlocal closed
+            closed = True
+            status_refresh.close()
+            if self.permission_window is not None:
+                self.permission_window.close()
+            return False
+
+        window.connect('close-request', close_window)
 
         def submit(_widget):
             if self.worker.busy:
                 return
 
             def finished(result, error):
+                if closed:
+                    return
                 entry.set_sensitive(True)
-                permissions.set_sensitive(self.intake.current is not None
-                                          and self.intake.current['task_id'] is not None)
                 send.set_sensitive(True)
-                refresh.set_sensitive(not self.status_worker.busy
-                                      and self.intake.current is not None)
                 if not error:
                     try:
                         self.intake.select(result)
                     except ValueError:
                         error = True
                 if error:
+                    self.intake.mark_uncertain()
+                    details.set_text(self.intake.display())
                     status.set_text("Acknowledgement uncertain. Retry the same request to check.")
                 else:
                     details.set_text(self.intake.display())
-                    permissions.set_sensitive(self.intake.current['task_id'] is not None)
-                    refresh.set_sensitive(not self.status_worker.busy)
                     status.set_text("Request received")
                     entry.set_text("")
+                permissions.set_sensitive(not self.intake.uncertain
+                    and self.intake.current is not None
+                    and self.intake.current['task_id'] is not None)
+                refresh.set_sensitive(not self.intake.uncertain and not self.status_worker.busy
+                                      and self.intake.current is not None)
                 entry.grab_focus()
 
             try:
@@ -176,6 +201,7 @@ entry, button { font-size: 19px; min-height: 44px; padding: 8px 16px; }
         )
         window.present()
         entry.grab_focus()
+        status_refresh.start()
 
 
 def main():

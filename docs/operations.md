@@ -64,7 +64,16 @@ See architecture/0083-trusted-mode-selection.md for protocol and acceptance limi
 
 ## Prompt permission management
 
-Once Check request status shows a provisioned task, open Permissions to inspect
+After a request is acknowledged, the prompt refreshes its broker-backed status
+every five seconds. Status reads show the task journal and pending approvals;
+they do not resubmit the request, approve work or execute an action. The manual
+Check request status button remains available. Reads do not overlap, late replies
+cannot replace a newer request, and closing the window stops its refresh timer.
+An unavailable status keeps the last acknowledged details visible.
+An uncertain submission pauses reads and permission proposals until its retry is
+acknowledged; any retained details are labeled as the previous request.
+
+Once request status shows a provisioned task, open Permissions to inspect
 availability for new automatic grants and propose a bounded mode. Selecting a mode
 or requesting review does not activate it. The pending approval ID and fixed
 terminal-review command are shown; review the exact broker-owned terms and complete

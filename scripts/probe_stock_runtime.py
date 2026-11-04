@@ -218,6 +218,7 @@ def gui(password, label):
         wait(lambda: (RUNTIME / "result.json").exists())
         result = json.loads((RUNTIME / "result.json").read_text())
         assert result["unmodified_packaged_prompt"] and not result["app_observer_injected"]
+        assert result["automatic_task_status_updates"] is True
         effective = query("status", receipt["prompt_id"])["profile"]
         assert effective["automatic"] and effective["remaining_actions"] == 3
         assert effective["mode"] == "auto" and 0 < effective["seconds_remaining"] <= duration
