@@ -184,7 +184,7 @@ static struct json_object *prompt_control(uid_t human,const char *id,const char 
     uid_t broker_uid=broker->pw_uid;
     struct json_object *request=json_object_new_object(),*body=json_object_new_object();
     json_object_object_add(request,"schema_version",json_object_new_string("1.0"));
-    json_object_object_add(request,"operation",json_object_new_string(query==2?"permission_status":(query==1?"human_task_status":(prompt?"submit_prompt":"prompt_status"))));
+    json_object_object_add(request,"operation",json_object_new_string(query==3?"human_task_result":(query==2?"permission_status":(query==1?"human_task_status":(prompt?"submit_prompt":"prompt_status")))));
     json_object_object_add(body,"human_uid",json_object_new_int64(human));
     json_object_object_add(body,prompt?"request_key":"prompt_id",json_object_new_string(id));
     if (prompt) json_object_object_add(body,"prompt",json_object_new_string_len(prompt,(int)length));
@@ -254,9 +254,9 @@ static void handle(int fd,uid_t human) {
     }
     if (size<34 || !hex((char *)packet+2,32)) goto done;
     char id[33]={0};memcpy(id,packet+2,32);
-    if (packet[1]==5 || packet[1]==6 || packet[1]==7 || packet[1]==9) {
-        if ((packet[1]==6 || packet[1]==7 || packet[1]==9) && size==34)
-            reply=prompt_control(human,id,NULL,0,packet[1]==9?2:packet[1]==7?1:0);
+    if (packet[1]==5 || packet[1]==6 || packet[1]==7 || packet[1]==9 || packet[1]==10) {
+        if ((packet[1]==6 || packet[1]==7 || packet[1]==9 || packet[1]==10) && size==34)
+            reply=prompt_control(human,id,NULL,0,packet[1]==10?3:packet[1]==9?2:packet[1]==7?1:0);
         else if (packet[1]==5 && size>=37) {
             unsigned length=((unsigned)packet[34]<<8)|packet[35];
             if (!length || length>8192 || size!=36+(ssize_t)length || memchr(packet+36,0,length)) goto failed;

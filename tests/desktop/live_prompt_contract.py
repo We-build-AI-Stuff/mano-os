@@ -54,14 +54,14 @@ def main():
         panel = view().get('permissions', {})
         return panel if not panel.get('busy', True) and check(panel) else None
 
-    def capture(name):
+    def capture(name, title='Task permissions'):
         tree = json.loads(subprocess.check_output(['swaymsg', '-t', 'get_tree', '-r'],
                                                   text=True, timeout=5))
         def walk(node):
             yield node
             for child in node.get('nodes', []) + node.get('floating_nodes', []):
                 yield from walk(child)
-        dialogs = [node for node in walk(tree) if node.get('name') == 'Task permissions']
+        dialogs = [node for node in walk(tree) if node.get('name') == title]
         assert len(dialogs) == 1 and dialogs[0]['visible'] and dialogs[0]['focused']
         time.sleep(0.3)
         subprocess.run(['grim', str(ROOT / name)], timeout=10, check=True, capture_output=True)
@@ -107,7 +107,21 @@ def main():
     assert 'New automatic grants: available' in effective['summary']
     capture('live-permissions-effective.png')
     click('Close permissions')
+    (ROOT / 'preview-ready').touch()
+    wait(lambda: (ROOT / 'preview-published').exists(), 60)
+    click('View verified result')
+    def result_ready():
+        panel = view().get('result_preview', {})
+        return panel if not panel.get('busy', True) and panel.get('value') else None
+    preview = wait(result_ready)
+    assert preview['value']['prompt']['id'] == receipt['id']
+    assert preview['value']['prompt']['task_id'] == view()['prompt']['task_id']
+    assert preview['text'] == 'Verified GUI result\n'
+    assert 'Verified snapshot; the workspace may have changed' in preview['summary']
+    capture('live-verified-result.png', 'Verified result')
+    click('Close result')
     result = dict(prompt=view()['prompt'], initial=initial, pending=pending, effective=effective,
+                  verified_result_preview=preview, actual_native_verified_result_display=True,
                   automatic_task_status_updates=True,
                   input_route='private human AT-SPI driver', physical_input_provenance=None,
                   transport='production Prompt defaults and installed native broker',

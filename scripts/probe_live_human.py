@@ -101,15 +101,60 @@ def run(native_terminal, password, register_identity, query, *, config_path=None
         assert approved == 0 and b'Approval recorded:' in approved_output
         assert password.encode() not in approved_output
         (RUNTIME / 'approved').touch()
+        wait(lambda: (RUNTIME / 'preview-ready').exists())
+        # The existing Auto demonstration is complete. A separately PAM-approved
+        # Supervised profile and exact effect now produce a real preview artifact.
+        supervised, supervised_output = native_terminal('mano_prompt.mode',
+            (receipt['id'], 'supervised', '--duration', '60', '--max-actions', '1',
+             '--max-timeout', '10'), actor='mano-human', answers=(
+                (b'Approve this exact operation?', 'y'),
+                (b'OS authentication password:', password)))
+        assert supervised == 0 and password.encode() not in supervised_output
+        from mano_broker.lifecycle import run_mock_step
+        from mano_broker.task_factory import control_request
+
+        content = b'Verified GUI result\n'
+        scoped = managed | dict(context=managed['context'] | dict(operation_key='gui-result'))
+        plan = dict(capability='terminal.run', reason='Create the exact GUI preview fixture',
+            args=dict(argv=['/usr/bin/python3', '-c',
+                "from pathlib import Path;Path('/workspace/gui-result.txt').write_text("
+                + repr(content.decode()) + ")"], cwd='.', timeout_seconds=5))
+        pending_result = run_mock_step(scoped, plan)
+        assert pending_result['status'] == 'awaiting_grant'
+        control_request('declare_artifact_contract', dict(
+            approval_id=pending_result['approval_id'], path='gui-result.txt',
+            size=len(content), sha256=hashlib.sha256(content).hexdigest()))
+        approved_result, result_output = native_terminal('mano_prompt.approve',
+            (pending_result['approval_id'],), actor='mano-human', answers=(
+                (b'Approve this exact operation?', 'y'),
+                (b'OS authentication password:', password)))
+        assert approved_result == 0 and password.encode() not in result_output
+        deadline = time.monotonic() + 20
+        while True:
+            observed = run_mock_step(scoped, plan)
+            if observed['status'] == 'verifying':
+                break
+            assert observed['status'] in {'queued', 'running'}, observed['status']
+            assert time.monotonic() < deadline
+            time.sleep(0.2)
+        artifact = control_request('capture_artifact', dict(
+            action_id=observed['action_id'], path='gui-result.txt'))['artifact']
+        control_request('check_artifact_contract', dict(
+            action_id=observed['action_id'], artifact_id=artifact['artifact_id']))
+        (RUNTIME / 'preview-published').touch()
         wait(lambda: (RUNTIME / 'result.json').exists())
         result = json.loads((RUNTIME / 'result.json').read_text())
         assert result['automatic_task_status_updates'] is True
+        assert result['actual_native_verified_result_display'] is True
+        assert result['verified_result_preview']['value']['result']['artifact_id'] == (
+            artifact['artifact_id'])
         assert result['prompt']['id'] == receipt['id']
         assert result['prompt']['task_id'] == managed['context']['task_id']
         result['tty_cancel_wrong_password_then_pam'] = True
         result['rendering_profile'] = 'headless pixman / GTK cairo; full-frame redraw'
         result['artifact_sha256'] = {}
-        for name in ('live-permissions-pending.png', 'live-permissions-effective.png'):
+        for name in ('live-permissions-pending.png', 'live-permissions-effective.png',
+                     'live-verified-result.png'):
             data = (RUNTIME / name).read_bytes()
             result['artifact_sha256'][name] = hashlib.sha256(data).hexdigest()
             (OUT / name).write_bytes(data)

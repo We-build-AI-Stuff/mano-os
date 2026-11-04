@@ -210,6 +210,7 @@ from mano_prompt.approve import (rpc,view_packet,confirmation_packet,
 from mano_prompt.submit import prompt_packet
 from mano_prompt.intake import read_status
 from mano_prompt.task_status import read_task_status
+from mano_prompt.results import read_result
 from mano_prompt.mode import read_profile_status
 body=json.loads(sys.stdin.read())
 try:
@@ -219,6 +220,8 @@ try:
  elif body['mode']=='permission_status':result=read_profile_status(body['id'])
  elif body['mode']=='task_status':
   result=dict(schema_version='1.0',ok=True,snapshot=read_task_status(body['id']))
+ elif body['mode']=='task_result':
+  result=dict(schema_version='1.0',ok=True,**read_result(body['id']))
  elif body['mode']=='raw_prompt':result=rpc(bytes.fromhex(body['wire']))
  elif body['mode']=='view':result=rpc(view_packet(body['id']))
  elif body['mode']=='rearm_view':result=rpc(rearm_view_packet())
@@ -1072,6 +1075,8 @@ print(json.dumps(dict(default_handler_native_ack=True,task_id=None)))
         body=terminal_proposal), actor=identity.name)["approval"]
     task_snapshot_query = dict(mode="task_status", id=human_receipt["prompt"]["id"])
     task_snapshot = human(task_snapshot_query)["snapshot"]
+    result_query = dict(mode="task_result", id=human_receipt["prompt"]["id"])
+    assert human(result_query)["result"] is None
     assert task_snapshot["prompt"]["task_id"] == terminal_task["task_id"]
     assert task_snapshot["action_count"] == 0 and task_snapshot["actions"] == []
     assert any(item == dict(approval_id=terminal_pending["approval_id"],
@@ -1255,6 +1260,20 @@ finally:client.close()
     assert any(item["action_id"] == agent_action_id and item["state"] == "done"
                and item["effect_verified"] is True for item in verified_snapshot["actions"])
     assert agent_step(agent_state)["status"] == "completed"
+    result_preview = human(result_query)
+    assert result_preview["prompt"]["task_id"] == terminal_task["task_id"]
+    assert result_preview["result"]["artifact_id"] == source_artifact["artifact_id"]
+    assert base64.b64decode(result_preview["result"]["data"]) == expected_source
+    assert not result_preview["result"]["truncated"]
+    assert (terminal_workspace / "golden-result").read_text() == "replay-canary"
+    for actor in ("mano-agent", "mano-core", "mano-worker", identity.name):
+        assert human(result_query, actor=actor) == {"ok": False}
+    cross_result = dict(schema_version="1.0", operation="human_task_result", body=dict(
+        human_uid=pwd.getpwnam("mano-worker").pw_uid, prompt_id=human_receipt["prompt"]["id"]))
+    assert rpc("control", cross_result, actor="root") == denied
+    assert rpc("request", cross_result, actor=identity.name) == denied
+    malformed_result = b"\x01\x0a" + human_receipt["prompt"]["id"].encode() + b"extra"
+    assert human(dict(mode="raw_prompt", wire=malformed_result.hex())) == {"ok": False}
     assert rpc("request", artifact_query) == denied
     assert rpc("request", artifact_query | {"body": artifact_query["body"] | {"length": 4097}},
         actor=identity.name) == denied
@@ -1293,6 +1312,7 @@ finally:client.close()
         authenticated_native_human_prompt_queue=True,
         read_only_intake_client_actual_native_transport=True,
         human_task_snapshot_pending_done_scope_and_redaction=True,
+        human_verified_result_native_custody_scope_and_no_replay=True,
         default_prompt_handler_actual_native_transport=True,
         protected_pending_prompt_discovery=True,
         installed_bounded_queue_cycle=True,

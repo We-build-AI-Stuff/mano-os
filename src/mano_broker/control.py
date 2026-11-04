@@ -154,6 +154,12 @@ def dispatch_control(state, packet, *, peer, now, boot_id, runtime=None):
 
         return dict(schema_version='1.0', ok=True,
                     **request_profile(state, **body, now=now, boot_id=boot_id, runtime=runtime))
+    if value['operation'] == 'human_task_result':
+        if set(body) != {'human_uid', 'prompt_id'}:
+            raise Denied('Unexpected human result query fields')
+        from .human_results import preview
+
+        return dict(schema_version='1.0', ok=True, **preview(state, **body, boot_id=boot_id))
     if value["operation"] == "human_task_status":
         if set(body) != {"human_uid", "prompt_id"}:
             raise Denied("Unexpected human task status fields")
