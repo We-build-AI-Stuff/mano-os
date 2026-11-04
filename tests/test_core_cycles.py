@@ -65,6 +65,19 @@ class CoreCycleTests(unittest.TestCase):
         row = self.state.db.execute('SELECT state,status FROM core_cycles').fetchone()
         self.assertEqual(tuple(row), ('terminal', 'read_ready'))
 
+    def test_write_publication_settles_cycle_without_replay_or_goal_completion(self):
+        claim = self.claim()
+        self.attach()
+        self.finish(claim, status='write_published')
+        self.assertIsNone(self.claim(now=100))
+        row = self.state.db.execute('SELECT state,status FROM core_cycles').fetchone()
+        self.assertEqual(tuple(row), ('terminal', 'write_published'))
+        prompt = self.state.db.execute('SELECT state FROM human_prompts').fetchone()
+        self.assertEqual(prompt['state'], 'task_created')
+        for table in ('grants', 'actions', 'provider_jobs'):
+            self.assertEqual(self.state.db.execute(
+                f'SELECT count(*) FROM {table}').fetchone()[0], 0)
+
     def test_restart_keeps_interrupted_claim_unknown_without_reallocation(self):
         self.claim()
         self.state.recover()

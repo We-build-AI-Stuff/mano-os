@@ -1,3 +1,24 @@
+# Current: published file status in controller cycles
+
+Main e54a68381c1f8818aba84989409524acf3af8953 contains the automatic prompt
+status view (PR144) and atomic Stop fixture readiness markers (PR145).
+Its exact-main CI run 41840594368 has passed quality; Debian VM acceptance is
+still running. Keep this run and its evidence distinct from local checks.
+
+The controller rejected `write_published`, even though the lifecycle derives
+that status from the broker's file publication receipt. Accept it as a terminal
+controller cycle, just like `read_ready`: publication does not establish goal
+completion and must not schedule an automatic replay. The regression failed
+with Invalid controller cycle result before the fix; all 27 focused cycle,
+controller and lifecycle tests pass after it. No native execution on this Mac.
+
+User explicitly authorized conflict-free CI/review merge overrides. Record
+pending checks as pending, retain merge commits and restore repository policy
+after any temporary override. Full v2.1 delivery remains incomplete; PR134's
+unfinished package executor stays parked. Current handoff: outputs/CONTINUATION.md.
+
+## Historical notes (superseded where above differs)
+
 # PR133 native dependency-set correction
 
 Initial b911bf3 CI39825969416 failed before effects: fixture assumed exactly one
