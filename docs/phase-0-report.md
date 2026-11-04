@@ -1,5 +1,11 @@
 # Phase 0 evidence index
 
+Current architecture status: **GO for Phase 1 development**, subject to the
+[ADR0008 scope and evidence](architecture/0008-phase0-original-spec-audit.md).
+Production execution and physical acceptance remain separate gates. The entries
+below retain the historical progression, including earlier NO-GO decisions. See
+the [delivery ledger](DELIVERY.md) for current project scope and remaining work.
+
 Verified first lab run: [CI 38289411969](https://github.com/ManoharPaturi/mano-os/actions/runs/38289411969),
 PR #1 merged, 13 passing probes, zero failures, nine pending checks.
 The run used KVM and Debian 13 with a 4 GiB RAM ceiling.
@@ -16,11 +22,12 @@ Root recovery: [CI 38294272602](https://github.com/ManoharPaturi/mano-os/actions
 PR #5 merged. Actual `@recovery` boot, distinct boot ID, restored sentinel,
 changed `@` retained, separate snapshot store; 21 passing probes, zero failures.
 
-Current architecture decision: **NO-GO for production execution**.
+Production execution remains restricted; Phase 0 feasibility GO permits Phase 1
+development only.
 CI emits `report.json`, hashed logs, a package manifest, memory observations,
 mount inventory, Sway screenshot and independent-stop outputs.
 
-| Issue | Current implementation and evidence boundary |
+| Issue | Historical implementation checkpoint and evidence boundary |
 |---|---|
 | P0-01 | Debian 13 QEMU guest at 4 GiB; real btrfs-root second boot implemented for CI acceptance |
 | P0-02 | Security updates and minimum patched bubblewrap/proxy checks implemented |
