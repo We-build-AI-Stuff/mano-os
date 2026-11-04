@@ -18,9 +18,10 @@ final head passed the complete packaged-runtime integration.
 
 docs/phase-1-workspace-evidence.md publishes exact downloads/hashes, distinguishes
 the addition-project mock agent from the later recorded correction, and maps all
-eight original Phase 1 items. README/ledger/demo point to it. A complete shared
-workspace inventory, original whole-task trace and appropriately scoped aggregate
-metrics remain open; a one-file correction diff does not close those requirements.
+eight original Phase 1 items. README/ledger/demo point to it. Section 14 requires
+per-phase measurements, which remain incomplete for Phase 1. Its native mock-project
+exit demonstration is evidenced. The full workspace diff/task trace belongs to the
+first cross-app MVP, and must not become an invented early Phase 1 prerequisite.
 All 53 original numbered requirements and the original spec hash are preserved.
 Do not rebuild an accepted fixture merely to create activity. Full v2.1, native
 cross-app/runtime GUI integration, authenticated coding, PR #134 package apply and

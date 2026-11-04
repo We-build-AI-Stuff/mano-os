@@ -19,17 +19,19 @@ None alone closes a phase or proves the requested version complete.
 | Track | Visible state | Completion boundary |
 | --- | --- | --- |
 | Audited runtime baseline | `7f255805d3b1d6c1f7b5485f1b2ea4e6db7a79f6`, including merged PR148 | Native result viewer and recorded-project download verified at their indexed revisions; full version incomplete |
-| Workspace evidence | [Published evidence index](phase-1-workspace-evidence.md), [run 41871350554](https://github.com/We-build-AI-Stuff/mano-os/actions/runs/41871350554) | Downloaded source/log hashes and action/artifact bindings checked; whole-workspace change inventory and aggregate metrics remain open |
+| Workspace evidence | [Published evidence index](phase-1-workspace-evidence.md), [run 41871350554](https://github.com/We-build-AI-Stuff/mano-os/actions/runs/41871350554) | Downloaded source/log hashes and action/artifact bindings checked; Phase 1 measurements and the later full cross-app MVP remain open |
 | Package apply | [PR #134](https://github.com/We-build-AI-Stuff/mano-os/pull/134), 191 changed files and 28,977 additions at audit time | Unmerged; source/runtime and publication integrity still incomplete |
 | Latest package lab evidence | [Run 41794862656](https://github.com/We-build-AI-Stuff/mano-os/actions/runs/41794862656), head `9d8c491` | All three CI jobs and 46 external staging checks passed; specific held-file evidence, not phase completion |
 | Unpushed package experiments | Kernel-event collector/parser drafts remain in the original local checkout | Not included in main or the accepted CI head |
 
 ## Next delivery milestone
 
-**Publish and audit the installed Phase 1 workspace create/test journey.** Use the existing
-broker, sandbox, prompt, recorded developer workflow and journal before expanding
-later-phase package experiments. A deterministic run is labeled recorded/mock;
-it does not establish live-model or authenticated delegate success.
+**Complete Phase 1 measurements against its evidenced native mock-project exit
+demonstration.** The installed workspace create/test journey and its recorded
+correction are published and inspected. Use the existing broker, sandbox, prompt,
+workflow and journal before expanding later-phase package experiments. A
+deterministic run remains labeled recorded/mock and does not establish live-model
+or authenticated delegate success.
 
 The lab now exports the finished recorded project, original captured test logs,
 correction diff and identity/hash manifest. See [the workspace demonstration](workspace-demo.md)
@@ -41,19 +43,12 @@ The [published Phase 1 evidence index](phase-1-workspace-evidence.md) now record
 the inspected main `63da53f` download and PR148 native viewer, with their exact CI
 runs, archive hashes, original actions and eight-item requirement audit. It separates
 the mock-agent addition project from the later recorded correction fixture. The
-download contains a one-file correction diff; a complete task/workspace change
-inventory and appropriately scoped resource/task metrics remain outstanding.
-
-Completion evidence for this milestone must include:
-
-- One documented invocation in the disposable Debian CI environment, linked from GitHub.
-- Exact starting human request, native approval boundaries and task/workspace identity.
-- Project creation, a failing test, a correction and a passing test through authorized executors.
-- Original broker actions, exact workspace diff, test logs and independently checked output artifact.
-- Protected-policy/configuration and human-session isolation negatives on the same revision.
-- Stop/restart evidence with no blind replay or follow-on work after revocation.
-- Measured elapsed time/resource observations and explicit nulls for unmeasured physical/model fields.
-- A reviewer-reproducible evidence index showing which original Phase 1 requirements remain open.
+download contains a one-file correction diff. Section 14 requires per-phase task
+success/bypass/intervention, elapsed/cost, idle/peak RAM, OOM recovery and regression
+measurements with honest scope and unknowns; that Phase 1 reporting remains
+incomplete. The complete workspace diff and original task trace remain required
+for Section 14's first cross-app MVP, alongside its browser/report evidence. They
+are not new prerequisites for the minimal Phase 1 mock-project exit demonstration.
 
 The specification explicitly includes a mock model in Phase 1. Credit valid recorded
 evidence within that scope, and do not rerun or rebuild a completed fixture merely
@@ -111,7 +106,7 @@ open. [Evidence and eight-item audit](phase-1-workspace-evidence.md).
 | P1-4 | Build supervised, Auto and Full Access policy **profiles** (initial small scope, then expand later). | Workspace permission profiles and native PAM/GUI permission proposal flow exist. |
 | P1-5 | Implement isolated terminal adapter and minimal model adapter / LangGraph `AgentRuntime`. | Native LangGraph mock-project and installed planner/core fixtures inspected; live-provider acceptance is a separate product gap. |
 | P1-6 | Implement prompt bar and broker-driven approval UI. | Native prompt, broker status/permissions and verified-snapshot viewer have CI evidence; submission alone does not execute a task. |
-| P1-7 | Build golden-task tests, mock model, recorded traces/replay, malicious shell attempts and CI gating. | Reproducible source/log/action evidence published; whole-workspace trace and broader task/corpus metrics remain open. |
+| P1-7 | Build golden-task tests, mock model, recorded traces/replay, malicious shell attempts and CI gating. | Reproducible source/log/action and negative evidence published; per-phase metrics remain incomplete. The broader red-team corpus belongs to Phase 2. |
 | P1-8 | Implement stop/revoke end-to-end and verify unknown-effect recovery. | Native Stop/revoke and unknown-state handling exist; integrated phase exit evidence remains open. |
 
 ### Phase 2 — Developer tool workflows and independent coding adapters
@@ -196,7 +191,7 @@ Development runtime package; signed installable distribution not accepted. [Exis
 | Phase | Required exit | Acceptance today |
 | --- | --- | --- |
 | 0 | Isolation, approval protection, trusted Stop, headless GUI; revise architecture if they fail | Lab GO for Phase 1 development, using the documented OS-authenticated fallback; no production or physical guarantee |
-| 1 | Agent creates/tests a workspace project; protected policy/host writes fail at OS boundary | Native mock-project and protected-policy negatives indexed; whole-workspace trace and aggregate evidence still incomplete |
+| 1 | Agent creates/tests a workspace project; protected policy/host writes fail at OS boundary | Native mock-project and protected-policy exit demonstration evidenced; Section 14's per-phase reporting remains incomplete |
 | 2 | Coding job → tests → correction → verified result; malicious delegate leaves policy/settings unchanged | Recorded correction and offline adapter fixtures; authenticated delegate gate remains open |
 | 3 | Build website → tests → Chromium verification → summary, plus Writer; approval/user-session attacks fail | Individual browser/Writer/runtime fixtures; integrated MVP gate remains open |
 | 4 | Restart core without repeating completed effects; reconcile unknown effects; show accurate status | Components/fixtures present; full multi-app restart gate remains open |

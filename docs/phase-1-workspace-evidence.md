@@ -87,17 +87,19 @@ runtime acceptance.
 | Original item | Evidence inspected | Remaining boundary |
 | --- | --- | --- |
 | P1-1: typed requests/results/grants and identities | Typed protocol source; `broker-ipc.json` peer/caller negatives; `workspaces.json` distinct identities and cross-workspace kernel denials | Protocol/identity fixtures, not a general product completion claim |
-| P1-2: broker policy, grants and action journal | `broker-service.json` native PAM, argument binding, durable terminal outcomes and original workflow action observations | Complete source/journal export for the whole human task remains open |
+| P1-2: broker policy, grants and action journal | `broker-service.json` native PAM, argument binding, durable terminal outcomes and original workflow action observations | Evidence covers these native fixtures; the complete cross-app MVP bundle remains a later requirement |
 | P1-3: sandbox, filesystem/IPC/cgroup/seccomp/Landlock | Integrated broker-service kernel denials; `fd-sandbox.json` descriptor, IPC, syscall and Landlock primitive checks | The FD primitive report explicitly excludes broker integration; use the broker-service fixture for integrated claims |
 | P1-4: initial Supervised/Auto/Full Access profiles | Broker-service profile count/expiry/exact-grant and protected-policy kernel negatives; native GUI/PAM profile workflow | Workspace scope only; broader later-phase autonomy is not accepted |
 | P1-5: terminal, minimal model adapter and LangGraph core | Native mock-agent golden project, installed core/broker-planner entrypoints and SQLite reopening | Phase 1 explicitly permits a mock model; accepted live-agent operation remains a broader product gap |
 | P1-6: prompt and broker-driven approval surface | `human-prompt.json`, native transport/PAM checks and real `live-human-permissions.json` viewer flow | Submission remains intent; controller/provider configuration is separate. Physical input acceptance remains deferred |
-| P1-7: golden/mock/trace/replay/negative tests and CI | Four-step exported definition/logs, same-action replay canary, protected-policy negatives and successful exact-revision CI | Full workspace change inventory and broader task/corpus metrics remain open |
+| P1-7: golden/mock/trace/replay/negative tests and CI | Four-step exported definition/logs, same-action replay canary, protected-policy negatives and successful exact-revision CI | Phase-specific success/bypass/intervention and regression measurements remain incomplete; the broader red-team corpus is a Phase 2 requirement |
 | P1-8: Stop/revoke and unknown-effect recovery | `recorded_developer_native_stop_restart_no_follow_on_effect`, frozen-service/native Stop, durable unknown/restart and revoked-profile checks in broker-service report | Native VM fixtures; physical trigger and broader workflow/release acceptance remain open |
 
 The original exit condition has concrete native mock-project and OS-boundary
-negative evidence. This report credits that demonstration while retaining the
-missing aggregate evidence and original phase/product scope.
+negative evidence. The complete phase still needs the per-phase measurements in
+Section 14. The complete workspace diff belongs to Section 14's first cross-app
+MVP demonstration; it is not an additional prerequisite for this minimal Phase 1
+mock-project exit demonstration.
 
 ## Measurements and next work
 
@@ -113,10 +115,14 @@ missing aggregate evidence and original phase/product scope.
 states that the production core/broker are absent from that measurement scope.
 Do not use those values as the memory footprint of this installed workflow.
 
-The remaining workspace milestone needs a complete before/after change inventory
-and original task trace, plus appropriately scoped resource and task/corpus metrics.
-Those gaps must be filled rather than converting this one-file diff or fixture
-result into full Phase 1 acceptance. Do not rebuild this accepted fixture solely
-to create activity. Live AI, authenticated coding delegates, integrated browser/
-Writer workflows, full recovery/autonomy, package apply, hardware, physical 8 GB
-testing and signed installation retain their original later acceptance gates.
+The remaining Phase 1 reporting work is to measure and publish its own task success,
+policy bypass, intervention, cost, idle/peak RAM, OOM recovery and regression values
+with explicit trial counts and scopes. Unmeasured values remain unknown.
+
+The first cross-app MVP separately needs the full workspace diff, tests/build logs,
+browser trace, report, original broker actions, cgroup limits and input-isolation
+evidence specified in Section 14. This recorded one-file correction does not satisfy
+that bundle. Do not rebuild the accepted fixture solely to create activity. Live AI,
+authenticated coding delegates, integrated browser/Writer workflows, full recovery/
+autonomy, package apply, hardware, physical 8 GB testing and signed installation
+retain their original acceptance gates.
