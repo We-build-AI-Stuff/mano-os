@@ -1666,6 +1666,10 @@ finally:client.close()
     terminal_report["recorded_developer_workflow_witness"] = witness
     terminal_report["recorded_developer_create_fail_fix_pass_exact_artifact"] = True
     terminal_report["recorded_developer_checkpoint_replay_no_model_disclosure"] = True
+    from probe_runtime_oom import run as runtime_oom_trial
+
+    terminal_report['installed_runtime_oom'] = runtime_oom_trial(
+        rpc, human, identity, password, terminal_task, human_receipt['prompt']['id'])
     # Explicitly selected historical failure; no automatic provider disclosure.
     feedback_source = workflow_state["observations"][1]["action_id"]
     feedback_managed = managed | dict(context=managed["context"] | dict(
