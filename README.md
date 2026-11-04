@@ -124,6 +124,7 @@ The runtime package is unsigned and remains a development prototype.
 - [Product specification](docs/spec-v2.1.md) — the full v2.1 vision, architecture, and delivery phases.
 - [Runtime operations](docs/operations.md) — prototype package setup and operation.
 - [Architecture decisions](docs/architecture/) — how the system is designed and why.
+- [Delivery ledger](docs/DELIVERY.md) — original requirements, accepted scope, remaining gaps and next milestone.
 - [Development status and handoff](docs/CONTINUATION.md) — detailed implementation progress.
 - [Engineering guide](AGENTS.md) — contribution and development workflow.
 

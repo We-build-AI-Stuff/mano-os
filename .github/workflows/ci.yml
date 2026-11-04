@@ -60,6 +60,9 @@ jobs:
           path: evidence/
           retention-days: 7
           if-no-files-found: error
+      - name: Show product journeys and remaining acceptance gates
+        if: always()
+        run: python3 scripts/delivery_summary.py --evidence evidence --revision '${{ github.sha }}' --output "$GITHUB_STEP_SUMMARY"
   merge-gate:
     if: always()
     needs: [quality, security-lab]
