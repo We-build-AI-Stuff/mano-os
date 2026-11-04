@@ -1,19 +1,19 @@
 # Current: inspected Phase 1 evidence index
 
-Main7f255805d3b1d6c1f7b5485f1b2ea4e6db7a79f6 contains merged PR148. Its exact
-final headf1a764f/run41871505838 passed quality, native VM and merge-gate plus
-CodeRabbit. Tested synthetic mergee417b99 has the same source tree as main7f25580;
+Main `7f255805d3b1d6c1f7b5485f1b2ea4e6db7a79f6` contains merged PR #148. Its exact
+final head `f1a764f` / run `41871505838` passed quality, native VM and merge-gate plus
+CodeRabbit. Tested synthetic merge `e417b99` has the same source tree as main `7f25580`;
 review-only override merged it with branch protection unchanged. Real result
 screenshot, native task/artifact binding and restored Auto fixture were inspected.
-Post-main run41875252637 is still live at this documentation audit; retain it.
+Post-main run `41875252637` is still live at this documentation audit; retain it.
 
-Main63da53f/run41871350554 all3SUCCESS artifact13347110077 now actually includes
+Main `63da53f` / run `41871350554`: all three jobs succeeded. Artifact `13347110077` includes
 the recorded project bundle after PR149's collection fix. Archive hash, all eight
 file hashes, original failed/passed output, four actions/approval IDs and final
-artifact bindings checked; downloaded convenience test passed. Elapsed35.62486908s
+artifact bindings checked; downloaded convenience test passed. Elapsed: 35.62486908 seconds
 is scoped to that recorded workflow. Peak RAM/physical/live-model measurements
-remain null. Earlier main147's green run omitted the folder and is not accepted
-as downloadable delivery. Failed PR148 run41847400448 remains failed; corrected
+remain null. Earlier main from PR #147 omitted the folder and is not accepted
+as downloadable delivery. Failed PR #148 run `41847400448` remains failed; corrected
 final head passed the complete packaged-runtime integration.
 
 docs/phase-1-workspace-evidence.md publishes exact downloads/hashes, distinguishes
@@ -21,9 +21,9 @@ the addition-project mock agent from the later recorded correction, and maps all
 eight original Phase 1 items. README/ledger/demo point to it. A complete shared
 workspace inventory, original whole-task trace and appropriately scoped aggregate
 metrics remain open; a one-file correction diff does not close those requirements.
-All53 original numbered requirements and the original spec hash are preserved.
+All 53 original numbered requirements and the original spec hash are preserved.
 Do not rebuild an accepted fixture merely to create activity. Full v2.1, native
-cross-app/runtime GUI integration, authenticated coding, package134 apply and
+cross-app/runtime GUI integration, authenticated coding, PR #134 package apply and
 physical/signed OS gates remain unfinished. Original package drafts stay parked.
 No local Linux/Root/native VM execution, paid calls, credential experiments or
 data deletion. Runtime handoff/watch IDs and accepted artifact receipts are in
