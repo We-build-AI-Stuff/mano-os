@@ -49,14 +49,27 @@ print(json.dumps(dict(state=state,config_sha256=hashlib.sha256(config).hexdigest
 '''
 
 
-def program(capture_source, *, runtime_view_source=None):
+def program(capture_source, *, runtime_view_source=None, runtime_origin_source=None):
     tree = ast.parse(capture_source)
     capture = next(node for node in tree.body
                    if isinstance(node, ast.FunctionDef) and node.name == 'run_observed')
     fd_guard = next(node for node in tree.body
                     if isinstance(node, ast.FunctionDef)
                     and node.name == 'verify_no_inherited_fds')
-    body, view_program = BODY, ''
+    body, view_program, origin_program = BODY, '', ''
+    if runtime_origin_source is not None:
+        if (runtime_view_source is None or type(runtime_origin_source) is not str
+                or not 0 < len(runtime_origin_source.encode()) <= 65536):
+            raise ValueError('Bounded origin source requires the runtime view')
+        origin_nodes = [node for node in ast.parse(runtime_origin_source).body
+                        if isinstance(node, ast.FunctionDef) and node.name == 'identity']
+        if len(origin_nodes) != 1:
+            raise ValueError('One fixed source identity serializer required')
+        serializer = ast.get_source_segment(runtime_origin_source, origin_nodes[0])
+        serializer = serializer.replace('def identity(', 'def runtime_source_identity(', 1)
+        origin_program = ('import stat\n' + serializer + '\nRUNTIME_ORIGIN_SOURCE_SHA256 = '
+                          + repr(hashlib.sha256(runtime_origin_source.encode()).hexdigest())
+                          + '\n')
     if runtime_view_source is not None:
         if (type(runtime_view_source) is not str
                 or not 0 < len(runtime_view_source.encode()) <= 65536):
@@ -79,11 +92,21 @@ def program(capture_source, *, runtime_view_source=None):
             "except (ValueError, KeyError, TypeError, UnicodeError):\n"
             "    print('MANO_MAN_RUNTIME_VIEW=' + json.dumps(runtime_view, sort_keys=True),"
             " file=sys.stderr, flush=True)\n    raise\n")
+        if runtime_origin_source is not None:
+            preflight = preflight.replace('runtime_view=capture()',
+                'runtime_view, runtime_source_identities=capture('
+                'identity_function=runtime_source_identity)')
         body = body.replace(marker, preflight+marker)
         body = body.replace(frame, 'print(json.dumps(dict(runtime_view=runtime_view,'
             'runtime_view_proof=runtime_view_proof,'
             'runtime_view_source_sha256=RUNTIME_VIEW_SOURCE_SHA256,state=state,')
-    data = (HEADER + view_program + ast.get_source_segment(capture_source, fd_guard) + '\n'
+        if runtime_origin_source is not None:
+            body = body.replace('print(json.dumps(dict(runtime_view=runtime_view,',
+                'print(json.dumps(dict(runtime_source_identities=runtime_source_identities,'
+                'runtime_origin_source_sha256=RUNTIME_ORIGIN_SOURCE_SHA256,'
+                'runtime_view=runtime_view,')
+    data = (HEADER + view_program + origin_program
+            + ast.get_source_segment(capture_source, fd_guard) + '\n'
             + ast.get_source_segment(capture_source, capture) + '\n' + body)
     compile(data, 'man-regeneration-ci-worker', 'exec')
     return data.encode()
@@ -235,8 +258,29 @@ def launch_failure(error):
         raw = original[:65536]
         streams[label] = dict(base64=base64.b64encode(raw).decode(), bytes=len(raw),
             sha256=hashlib.sha256(raw).hexdigest(), complete=len(original) <= 65536)
-    return dict(schema_version='1.0', launch_failed=True, returncode=error.returncode,
+    timed_out = isinstance(error, subprocess.TimeoutExpired)
+    return dict(schema_version='1.0', launch_failed=True,
+                returncode=None if timed_out else error.returncode, timed_out=timed_out,
                 streams=streams, fresh_generation_observed=False, publication_authorized=False)
+
+
+def compare_source_identities(row, before, after, source_sha):
+    from mano_runtime import package_man_runtime_origin
+
+    if (re.fullmatch('[a-f0-9]{64}', source_sha) is None
+            or row.get('runtime_origin_source_sha256') != source_sha
+            or row.get('domain_drained') is not True):
+        raise ValueError('Drained source-bound runtime identity worker required')
+    worker = row['runtime_source_identities']
+    proof = package_man_runtime_origin.compare(before, after, worker)
+    for target, identity in worker.items():
+        observed = row['runtime_view']['paths'][target]
+        fields = ('device', 'uid', 'mode', 'kind')
+        if (json.dumps({key: identity[key] for key in fields}, sort_keys=True, allow_nan=False)
+                != json.dumps({key: observed[key] for key in fields},
+                              sort_keys=True, allow_nan=False)):
+            raise ValueError('Mount and source observations must describe the same FD')
+    return proof
 
 
 def regenerate(base, capture_source, host, state_masks, empty, config, run):
@@ -254,7 +298,12 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
     runtime_view_source = (Path('/opt/mano-lab/src/mano_runtime') /
                            'package_man_runtime_view.py').read_text()
     runtime_view_sha = hashlib.sha256(runtime_view_source.encode()).hexdigest()
-    data = program(capture_source, runtime_view_source=runtime_view_source)
+    from mano_runtime import package_man_runtime_origin as runtime_origin
+    runtime_origin_source = (Path('/opt/mano-lab/src/mano_runtime') /
+                             'package_man_runtime_origin.py').read_text()
+    origin_sha = hashlib.sha256(runtime_origin_source.encode()).hexdigest()
+    data = program(capture_source, runtime_view_source=runtime_view_source,
+                   runtime_origin_source=runtime_origin_source)
     source = base / 'man-regeneration.py'
     with source.open('xb') as stream:
         stream.write(data)
@@ -286,7 +335,7 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
                 info.st_mtime_ns, info.st_ctime_ns)
 
     original = control_identity()
-    observations = {}
+    observations, source_receipts = {}, {}
     for mode in ('control', 'restricted'):
         role = 'man-cache-control' if mode == 'control' else 'regenerated-man-cache'
         cache = base / role
@@ -300,36 +349,69 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
                 else 'mano-man-regeneration-ci.service')
         stem = ('staged-man-regeneration-control' if mode == 'control'
                 else 'staged-man-regeneration-worker')
-        try:
-            raw = run(unit_command(mode=mode) +
-                      sandbox(base, state_masks, empty, digest, mode=mode), timeout=80)
-        except subprocess.CalledProcessError as error:
-            with (evidence / (stem + '-launch-failure.json')).open('x') as stream:
-                json.dump(launch_failure(error), stream, sort_keys=True)
-            raise
-        # Preserve captured worker bytes before parsing or asserting success.
-        with (evidence / (stem + '.json')).open('xb') as stream:
-            stream.write(raw)
-        group = Path('/sys/fs/cgroup/mano.slice/mano-package.slice') / unit
-        deadline = time.monotonic() + 5
-        while True:
+        with runtime_origin.hold() as held:
+            source_before = held.observe()
             try:
-                events = dict(line.split() for line in
-                              (group / 'cgroup.events').read_text().splitlines())
-            except FileNotFoundError:
-                break
-            if events.get('populated') == '0':
-                break
-            if time.monotonic() >= deadline:
-                raise ValueError('Fresh cache process domain did not drain')
-            time.sleep(.02)
-        row = json.loads(raw)
-        row['domain_drained'] = True
-        validate(row, host, digest, require_input_guard=mode == 'restricted',
-                 runtime_view_source_sha256=runtime_view_sha)
-        if (row['mode'] != mode or (mode == 'control' and row['input_guard'] is not None)
-                or control_identity() != original):
-            raise ValueError('Fixed comparison mode and unchanged control fixture required')
-        observations[mode] = (raw, row)
+                raw = run(unit_command(mode=mode) +
+                          sandbox(base, state_masks, empty, digest, mode=mode), timeout=80)
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired,
+                    OSError, ValueError) as error:
+                failed = (launch_failure(error) if isinstance(error, (
+                    subprocess.CalledProcessError, subprocess.TimeoutExpired)) else
+                    dict(stage='source-launch', error_type=type(error).__name__,
+                         launch_failed=True, streams_available=False,
+                         fresh_generation_observed=False, publication_authorized=False))
+                with (evidence / (stem + '-launch-failure.json')).open('x') as stream:
+                    json.dump(dict(failed, runtime_source_before=source_before,
+                                   runtime_source_after=held.observe(), domain_drained=False),
+                              stream, sort_keys=True)
+                raise
+            # Preserve captured worker bytes before parsing or asserting success.
+            with (evidence / (stem + '.json')).open('xb') as stream:
+                stream.write(raw)
+            drained, source_after = False, None
+            try:
+                group = Path('/sys/fs/cgroup/mano.slice/mano-package.slice') / unit
+                deadline = time.monotonic() + 5
+                while True:
+                    try:
+                        events = dict(line.split() for line in
+                                      (group / 'cgroup.events').read_text().splitlines())
+                    except FileNotFoundError:
+                        break
+                    if events.get('populated') == '0':
+                        break
+                    if time.monotonic() >= deadline:
+                        raise ValueError('Fresh cache process domain did not drain')
+                    time.sleep(.02)
+                drained = True
+                row = json.loads(raw)
+                row['domain_drained'] = True
+                validate(row, host, digest, require_input_guard=mode == 'restricted',
+                         runtime_view_source_sha256=runtime_view_sha)
+                if (row['mode'] != mode or (mode == 'control' and row['input_guard'] is not None)
+                        or control_identity() != original):
+                    raise ValueError('Fixed comparison mode and unchanged control fixture required')
+                source_after = held.observe()
+                source_proof = compare_source_identities(row, source_before, source_after,
+                                                         origin_sha)
+                source_receipts[mode] = dict(before=source_before, after=source_after,
+                                             comparison=source_proof, domain_drained=True)
+                observations[mode] = (raw, row)
+            except (OSError, ValueError, KeyError, TypeError) as error:
+                with (evidence / (stem + '-launch-failure.json')).open('x') as stream:
+                    json.dump(dict(stage='source-validation', error_type=type(error).__name__,
+                        runtime_source_before=source_before, runtime_source_after=source_after,
+                        domain_drained=drained, worker_artifact=stem+'.json'),
+                        stream, sort_keys=True)
+                raise
     raw, row = observations['restricted']
-    return data, config, raw, row
+    source_packet = dict(
+        profile='man-runtime-source-identities-pair-v1', source_sha256=origin_sha,
+        workers=source_receipts, collector_authentication_verified=False,
+        complete_runtime_closure_verified=False, loader_selection_verified=False,
+        generated_state_validated=False, changes_authorized=False,
+        publication_authorized=False)
+    if len(json.dumps(source_packet, sort_keys=True, allow_nan=False).encode()) > 65536:
+        raise ValueError('Bounded embedded runtime source identity evidence required')
+    return data, config, raw, row, source_packet

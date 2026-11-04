@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from mano_runtime import package_man_runtime_view as view
+from mano_runtime.package_man_runtime_origin import identity
 
 
 def mount_field(raw):
@@ -125,7 +126,7 @@ class RuntimeViewTests(unittest.TestCase):
         with patch.object(view, 'MAX_MOUNT_BYTES', 1), self.assertRaises(ValueError):
             view.parse(raw)
 
-    def mocked_capture(self, *, fail_fdinfo=False, change_mounts=False):
+    def mocked_capture(self, *, fail_fdinfo=False, change_mounts=False, include_identities=False):
         value = fixture()
         raw = base64.b64decode(value['mountinfo']['base64'])
         opened = {}
@@ -141,7 +142,8 @@ class RuntimeViewTests(unittest.TestCase):
             row = value['paths'][opened[fd]]
             kind = 0o040000 if row['kind'] == 'directory' else 0o100000
             return SimpleNamespace(st_dev=view.os.makedev(*row['device']), st_uid=row['uid'],
-                                   st_mode=kind | row['mode'])
+                st_mode=kind | row['mode'], st_ino=fd+100, st_gid=0,
+                st_size=4096, st_nlink=1, st_mtime_ns=7, st_ctime_ns=8)
 
         def fdinfo(path, *args, **kwargs):
             if fail_fdinfo:
@@ -175,7 +177,7 @@ class RuntimeViewTests(unittest.TestCase):
                                              side_effect=fdinfo))
             close = stack.enter_context(patch.object(view.os, 'close'))
             try:
-                result = view.capture()
+                result = view.capture(identity_function=identity if include_identities else None)
             finally:
                 self.assertEqual([call.args[0] for call in close.call_args_list], list(opened))
         return result, value
@@ -184,6 +186,15 @@ class RuntimeViewTests(unittest.TestCase):
         actual, expected = self.mocked_capture()
         self.assertEqual(actual, expected)
         self.assertEqual(view.verify(actual)['fixed_targets_readonly'], 10)
+
+    def test_optional_source_identities_come_from_the_same_open_fds(self):
+        (actual, identities), expected = self.mocked_capture(include_identities=True)
+        self.assertEqual(actual, expected)
+        self.assertEqual(set(identities), set(view.TARGETS))
+        for target, row in identities.items():
+            self.assertGreater(row['inode'], 100)
+            for key in ('device', 'uid', 'mode', 'kind'):
+                self.assertEqual(row[key], actual['paths'][target][key])
 
     def test_mocked_capture_closes_the_fd_when_fdinfo_read_fails(self):
         with self.assertRaisesRegex(OSError, 'synthetic fdinfo failure'):

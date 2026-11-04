@@ -489,9 +489,9 @@ commit interrupted by any enforced bound remains unknown, is never automatically
 replayed, and requires explicit operator reconciliation/recovery. This change
 does not promise that every Debian transaction can finish within 60 seconds.
 
-## Pending baseline runtime mount evidence
+## Accepted baseline runtime mount evidence
 
-The next local measurement adds raw kernel mountinfo and open-FD mount IDs for
+Native41 at 956eb07/run41587601147 accepted raw kernel mountinfo and open-FD mount IDs for
 the fixed manual-generation worker's ten code/configuration targets. It runs
 only after complete UID/GID drop and all-five-capability-set/NNP checks, before
 any native manual input processing, in both control and restricted workers.
@@ -510,3 +510,36 @@ This proves named mount protection only. File origin, plugin/loader selection,
 full runtime closure, generated-state validity and publication remain false.
 The default-false man-runtime-view acceptance gate requires all earlier 40 gates;
 old worker schemas cannot be promoted to this new evidence contract.
+
+
+## Pending named source descriptor identity comparison
+
+The next CI change retains Root-owned source descriptors across each control and
+restricted worker. Eight descriptors point into the existing immutable baseline;
+two point to the fixed private worker/guard artifacts. Fixed-directory traversal
+refuses symlinks, and handles use O_PATH/NOFOLLOW/CLOEXEC. The existing Btrfs
+snapshot-property contract is checked separately from worker VFS mount flags.
+The worker serializes the same fstat object used for each named mount observation,
+before config/native input processing. Only that fixed serializer is embedded;
+Root guards, filesystem traversal and Btrfs commands are absent from the worker.
+
+After the worker domain drains, the controller compares exact bounded devices,
+inodes, owner/group/mode/type, size, links and modification/change timestamps with
+the held sources before and after execution. Atime is excluded because reads can
+change it. A matching inode on another Btrfs subvolume is insufficient. The helper
+source hash and agreement with the raw mount witness are mandatory. Failed launch,
+timeout and validation evidence retains source observations in bounded private
+diagnostics. A timeout has no invented process exit code or successful drain claim.
+
+The Root report embeds both pairs with a 64 KiB bound and reserves the full bound
+against the original 200 MB aggregate. Artifact count remains at most64. No command
+authority, capability, namespace, package policy, time or memory ceiling changes.
+The default-false man-runtime-origin independent gate requires all41 earlier gates,
+reconstructs the exact isolated worker and replays raw source comparisons without
+importing producer code. Old receipts cannot be promoted to this new contract.
+
+These are ten named identities. Collector authentication, complete executable/
+library/plugin/configuration origin, loader selection, generated-state validity
+and publication remain false and mandatory. Child self-reported values alone do
+not authenticate the interpreter that produced them. Native validation and fresh
+actual UI inspection are required; portable mocks/compilation are insufficient.

@@ -182,6 +182,15 @@ class ManRegenerationTests(unittest.TestCase):
         self.assertFalse(report['streams']['stdout']['complete'])
         self.assertEqual(report['streams']['stdout']['bytes'], 65536)
 
+    def test_launch_timeout_preserves_partial_streams_without_inventing_an_exit_code(self):
+        error = subprocess.TimeoutExpired(['fixed'], 80, output=b'partial', stderr=b'diagnostic')
+        report = probe.launch_failure(error)
+        self.assertIsNone(report['returncode'])
+        self.assertTrue(report['timed_out'])
+        self.assertFalse(report['fresh_generation_observed'])
+        self.assertFalse(report['publication_authorized'])
+        self.assertEqual(base64.b64decode(report['streams']['stdout']['base64']), b'partial')
+
     def test_worker_diagnostics_and_private_capability_free_identity(self):
         host, row = worker()
         probe.validate(row, host, 'a'*64)

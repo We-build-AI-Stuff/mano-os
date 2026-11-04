@@ -1,6 +1,7 @@
 """Compile the optional future worker only; never execute its Linux operations."""
 import ast
 import contextlib
+import copy
 import io
 import json
 import sys
@@ -8,19 +9,63 @@ import unittest
 from pathlib import Path
 
 import test_package_man_regeneration as regeneration
+import test_package_man_runtime_origin as origin_fixtures
 import test_package_man_runtime_view as view_fixtures
 
 from mano_runtime import package_man_runtime_view as view
 
 
 class RuntimeViewProgramTests(unittest.TestCase):
+    def test_origin_mode_embeds_only_serializer_and_binds_it_before_generation(self):
+        root = Path(__file__).resolve().parents[1]/'src/mano_runtime'
+        source = (root/'package_man_runtime_origin.py').read_text()
+        data = regeneration.probe.program(regeneration.stage.PROGRAM,
+            runtime_view_source=(root/'package_man_runtime_view.py').read_text(),
+            runtime_origin_source=source)
+        compile(data, 'source-identity-worker-compile-only', 'exec')
+        text = data.decode()
+        self.assertIn('def runtime_source_identity(info):', text)
+        self.assertNotIn('def hold(', text)
+        self.assertNotIn('def root_guard(', text)
+        self.assertNotIn('/usr/bin/btrfs', text)
+        self.assertIn('RUNTIME_ORIGIN_SOURCE_SHA256', text)
+        self.assertLess(text.index("assert state['nnp']==1"),
+                        text.index('runtime_view, runtime_source_identities=capture('))
+        self.assertLess(text.index('runtime_view, runtime_source_identities=capture('),
+                        text.index('result=run_observed('))
+        with self.assertRaises(ValueError):
+            regeneration.probe.program(regeneration.stage.PROGRAM, runtime_origin_source=source)
+
+    def test_source_comparison_rejects_wrong_serializer_undrained_or_mismatched_view(self):
+        identities = origin_fixtures.fixture()
+        row = dict(runtime_view=view_fixtures.fixture(), domain_drained=True,
+                   runtime_origin_source_sha256='c'*64)
+        for target, sample in row['runtime_view']['paths'].items():
+            for key in ('device', 'uid', 'mode', 'kind'):
+                identities[target][key] = copy.deepcopy(sample[key])
+        row['runtime_source_identities'] = copy.deepcopy(identities)
+        result = regeneration.probe.compare_source_identities(row, identities, identities, 'c'*64)
+        self.assertTrue(result['worker_source_identities_match'])
+        for key, value in (('runtime_origin_source_sha256', 'd'*64), ('domain_drained', False)):
+            altered = copy.deepcopy(row)
+            altered[key] = value
+            with self.subTest(field=key), self.assertRaises(ValueError):
+                regeneration.probe.compare_source_identities(
+                    altered, identities, identities, 'c'*64)
+        for field, value in (('mode', 0o600), ('uid', False), ('device', [0.0, 1])):
+            altered = copy.deepcopy(row)
+            altered['runtime_view']['paths']['/etc/passwd'][field] = value
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                regeneration.probe.compare_source_identities(
+                    altered, identities, identities, 'c'*64)
+
     def test_optional_isolated_worker_embeds_fixed_source_after_dropped_state_checks(self):
         source = (Path(__file__).resolve().parents[1]/
                   'src/mano_runtime/package_man_runtime_view.py').read_text()
         data = regeneration.probe.program(regeneration.stage.PROGRAM, runtime_view_source=source)
         compile(data, 'future-runtime-view-worker-fixture', 'exec')
         text = data.decode()
-        self.assertIn('def capture():', text)
+        self.assertIn('def capture(*, identity_function=None):', text)
         self.assertIn('os.O_PATH | os.O_CLOEXEC', text)
         self.assertLess(text.index("assert state['nnp']==1"),
                         text.index('runtime_view=capture()'))

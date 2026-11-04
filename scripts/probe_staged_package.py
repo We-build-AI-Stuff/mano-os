@@ -801,7 +801,8 @@ def main():
         config = candidate_read(baseline, 'etc/manpath.config', 65536)
         regeneration_inputs = man_regeneration_inputs(baseline_tree, candidate_tree, config)
         from probe_package_man_regeneration import regenerate
-        regeneration_program, _, regeneration_raw, regeneration_worker = regenerate(
+        (regeneration_program, _, regeneration_raw, regeneration_worker,
+         runtime_source_identities) = regenerate(
             BASE, PROGRAM, host_namespaces, state_masks, empty, config, run)
         regeneration_tree = tree_observation('regenerated-man-cache')
         regenerated_fd = os.open(BASE / 'regenerated-man-cache',
@@ -1046,7 +1047,7 @@ def main():
     # envelope; it is part of this Root report rather than a 65th artifact.
     if (len(artifacts) > 64
             or sum(len(data) for data in artifacts.values())+MAX_EMBEDDED_BYTES
-            +source_graph.MAX_REPORT_BYTES > 200_000_000):
+            +source_graph.MAX_REPORT_BYTES+65536 > 200_000_000):
         raise ValueError('Staged artifact count and total uncompressed byte budgets required')
     for name, data in artifacts.items():
         if (name in retained_trace or name in retained_commands or name in man_cache_artifacts
@@ -1087,6 +1088,10 @@ def main():
                 man_compression_table=compression_table,
                 man_reference_fixtures=reference_fixtures,
                 man_reference_caller=reference_caller,
+                man_runtime_source_identities=runtime_source_identities,
+                embedded_runtime_source_identity_bytes=len(json.dumps(
+                    runtime_source_identities, sort_keys=True, allow_nan=False).encode()),
+                embedded_runtime_source_identity_maximum_bytes=65536,
                 man_primary_source_graph=primary_graph,
                 embedded_primary_source_graph_bytes=primary_graph_bytes,
                 embedded_primary_source_graph_maximum_bytes=source_graph.MAX_REPORT_BYTES,

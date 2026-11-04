@@ -128,7 +128,7 @@ def verify(value):
         generated_state_validated=False, changes_authorized=False, publication_authorized=False)
 
 
-def capture():
+def capture(*, identity_function=None):
     if sys.platform != 'linux':
         raise PermissionError('Dropped Linux manual-generation worker only')
     if (os.getresuid() != (6, 6, 6) or os.getresgid() != (12, 12, 12)
@@ -141,8 +141,10 @@ def capture():
         parse(data)
         return data
 
+    if identity_function is not None and not callable(identity_function):
+        raise ValueError('Fixed source identity serializer required')
     before = mount_bytes()
-    paths = {}
+    paths, identities = {}, {}
     for target in TARGETS:
         fd = os.open(target, os.O_PATH | os.O_CLOEXEC)
         try:
@@ -159,6 +161,8 @@ def capture():
                 uid=info.st_uid, mode=info.st_mode & 0o7777,
                 kind='directory' if info.st_mode & 0o170000 == 0o040000 else
                      'file' if info.st_mode & 0o170000 == 0o100000 else 'unsupported')
+            if identity_function is not None:
+                identities[target] = identity_function(info)
         finally:
             os.close(fd)
     if mount_bytes() != before:
@@ -167,4 +171,4 @@ def capture():
                                sha256=hashlib.sha256(before).hexdigest()), paths=paths)
     # Return raw evidence first. The fixed caller verifies it before generation
     # and can retain a refused witness without treating it as authority.
-    return value
+    return value if identity_function is None else (value, identities)
