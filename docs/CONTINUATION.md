@@ -5,6 +5,25 @@ Specification docs/spec-v2.1.md SHA256:
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 A passing prototype/CI slice cannot substitute for the full version.
 
+## Latest accepted native42 — named source identities
+
+Head17c022e1fb22fe11a681b454f6ca8f05baf8b8b9/base65fdfc02e3dbb18f791a92374a24690ae4e1ba87.
+Run41769328482 ALL3SUCCESS: quality126375064452(1090tests/oneskip),
+security126375064634,merge126382658769. Collector17517 TERMINAL EXIT0; do not restart.
+Artifact13295191227/49492006B/SHA934b8cecf51b4003ac2488b4cc534e2033493707b33bc8e8367cb5eec24d5d8b.
+Testedmergeb96a109c6ebec84a9f4b81f61ed560b5bc4b9db6 exactparents/66matching sources.
+ALL42 independent gates plus earlier54hash/45flag/PAM/Stop/recovery/package/ELFchain
+PASS. Six fresh UI originals/eight crops ACTUALLY viewed, full900/120 values visible,
+pending/effective numeric pixels identical. Proofoutputs/pr134-17c022e-native42-proof.json;
+receiptoutputs/acceptance-pr134-man-runtime-origin/inspection.json. Global UI receipts updated.
+Both worker pairs match all10 held source objects (8baseline/2injected), Rootbefore/
+after unchanged. Actual FDs use Btrfs devices0:56 baseline/0:48 injected in both.
+Source packet9313B within full64KiB reserve,64artifacts, charged176330164B within
+original200MB. Worker15638B.13native fixedcases/4515primarycontexts terminal,
+248virtual/catexcluded. Graph15063104B/reference293856B. Authentication/fullruntime/
+loader/generatedstate/publication FALSE; physicalinput andpeakRAM null.
+No native43 mapping evidence, Root/runtime integration or mitigation accepted yet.
+
 ## Latest accepted native41
 
 PR134 OPEN, branch feat/approved-package-apply. Committed/pushed head
@@ -32,9 +51,9 @@ match;248 virtual/cat records excluded. Embedded graph15063104B/reference293856B
 64 artifacts, charged aggregate176247018B within original200MB, including full
 32MiB graph +1MiB reference reserves. Wider semantic flags remain false.
 
-## Next source identity integration — locally validated, native42 pending
+## Source identity implementation — accepted in native42 above
 
-Current local change wires package_man_runtime_origin.py into both existing CI
+Accepted17c wires package_man_runtime_origin.py into both existing CI
 manual-generation workers and the Root controller. Holds ten O_PATH/NOFOLLOW/
 CLOEXEC source FDs across each worker domain, compares before/after/child exact
 bounded fstat values from the same FD used for the readonly mount witness. Eight
@@ -53,12 +72,38 @@ reconstruction. New reader imports no producers/native APIs. Old41 receipts refu
 new42 contract; all authentication/full closure/loader/generated-state/publication
 flags remain false. Source identity equality alone cannot authenticate an interpreter.
 
-Local137 focused producer tests /one Linux skip,13 independent reader groups,
-repo-wide lint and diff pass. Updated compiler worker compiled only, never executed
-natively on Mac. Next commit/push requires fresh exact-head CI, ALL42 gates,
-66 source comparisons (previous63 +origin module/test +regeneration test), exact
-merge parents and fresh ACTUAL UI viewing. Current accepted41 remains956eb07;
-new local code is not current CI/native acceptance. Preserve unrelated duplicates.
+The 17c change passed fresh native42 CI, all42 gates,66source comparisons and
+actual UI viewing as recorded above. Portable tests alone were not acceptance.
+
+## Next executable-mapping controls — integrated locally, native43 pending
+
+Native optional --mapping-controls retains all v3 UID/cap/NNP/Landlock/seccomp,
+positive/negative temporary-launch and inherited-child controls. Seven before/
+after cases: baseline read/RX, copied temporary ELF read/RX/privateRWX, anonymous
+RWX and RW-to-RX mprotect. Diagnostic mappings are never jumped into; the existing
+positive trusted true-copy exec remains. Default v3 modes/output unchanged.
+The controller now requests the bounded5s probe in BOTH existing workers before
+mandb, with source identity mode and original70s/256MiB/32task limits unchanged.
+Failure/incomplete output retained in private diagnostics and generation refuses.
+
+Root checks canonical bounded byte streams/counts/hashes, zero typed exit and
+complete capture, strict4KiB packet/14outcomes and real permission errnos; ENOMEM
+is not a denial. Native reports kernel release, matched with controller and both
+workers. Root paired report binds parser/native source/binary, capped16KiB; full
+new reserve charged original200MB alongside32MiB graph/1MiB reference/64KiB source
+reserves, still64 artifacts. Independent --man-mapping-controls defaultsfalse,
+requiresall42 and exact source reconstruction/raw-packet/source/binary/kernel/
+summary/aggregate verification. Tests refuse source substitution, truncation,
+numeric aliases, missing positives/duplicate fields, unexpected errors or promoted
+claims. All complete-runtime/loader/generated-state/publication flags remainfalse.
+
+Local143 focused producer tests/one Linux skip,20 independent reader groups,
+repo lint/diff PASS. Python worker compiled only; Linux C uncompiled/unexecuted on
+Mac. Fresh native43 CI needs68source comparisons (66 +parser/test), exact parents,
+all43 gates and fresh actual UI. Current accepted42 remains17c above; this next
+code is uncommitted/unaccepted. Primary pinned Linux6.12 audit URLs/hashes in task
+outputs/man-runtime-executable-mapping-review.json are context, not VM proof.
+After real outcomes, select/test required mitigation before any full-runtime claim.
 
 ## Preserved accepted and failed history
 
@@ -103,7 +148,7 @@ paid-provider/key/auth experiments.
 
 Root/Linux/native DB/staged inflation/VM operations ONLY disposable Debian CI.
 Portable unprivileged Python, metadata/byte/mock tests allowed Mac. No local VM or
-model downloads; never silently delete user data. Latest disk about20GiB free/91%
+model downloads; never silently delete user data. Latest disk about19GiB free/91%
 used: WARNING communicated. Warn<20GiB or>=90%; stop large downloads<10GiB.
 Preserve unrelated untracked duplicates, never stage/delete:
 - docs/architecture/0109-privileged-package-stop-domain 2.md

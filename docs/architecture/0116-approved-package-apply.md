@@ -512,9 +512,9 @@ The default-false man-runtime-view acceptance gate requires all earlier 40 gates
 old worker schemas cannot be promoted to this new evidence contract.
 
 
-## Pending named source descriptor identity comparison
+## Accepted named source descriptor identity comparison
 
-The next CI change retains Root-owned source descriptors across each control and
+Native42 at 17c022e/run41769328482 accepted Root-owned source descriptors across each control and
 restricted worker. Eight descriptors point into the existing immutable baseline;
 two point to the fixed private worker/guard artifacts. Fixed-directory traversal
 refuses symlinks, and handles use O_PATH/NOFOLLOW/CLOEXEC. The existing Btrfs
@@ -543,3 +543,41 @@ library/plugin/configuration origin, loader selection, generated-state validity
 and publication remain false and mandatory. Child self-reported values alone do
 not authenticate the interpreter that produced them. Native validation and fresh
 actual UI inspection are required; portable mocks/compilation are insufficient.
+
+
+## Pending executable mapping observations
+
+Program launches, file-backed executable mappings and anonymous executable memory
+are distinct controls. A local optional native measurement mode records seven
+before/after cases under the existing Landlock/seccomp guard, retaining original
+positive/negative launch and inherited-child controls. It never jumps into the
+diagnostic mappings. Read/baseline executable positives must succeed; optional
+outcomes preserve actual permission results, and allocation errors are not called
+security denials. This is integrated locally and awaits fresh compilation/execution in the disposable VM.
+
+The pure parser and independently reconstructed optional worker pass portable
+checks; the default worker remains byte-identical to accepted42. The controller enables this mode in both existing workers. Source/binary/namespace/custody binding, bounded raw
+results, independent native acceptance and a tested mitigation remain required.
+A pinned source review is retained with exact URLs/hashes in task outputs:
+Linux v6.12 security/landlock/fs.c and security/apparmor/lsm.c. That review does not
+establish the current VM kernel's behavior. No executable-memory or full runtime
+policy claim is made by these drafts.
+
+
+The current integration retains each raw mapping result inside its existing worker
+artifact and revalidates typed completion, zero exit, canonical base64, exact byte
+counts/SHA256 and empty stderr before parsing. The source-bound native helper
+reports its actual kernel release; both worker reports must match the controller.
+The Root report binds parser source, native source and binary hashes, caps the
+paired summary at16KiB and charges that full reserve against the ORIGINAL200MB
+budget, still64 artifacts. Failed/incomplete probes print bounded private evidence
+and prevent generation. The independent man-mapping-controls gate defaultsfalse,
+requires all42 prior gates, reconstructs the exact worker and checks raw reports,
+source/binary/summary/kernel binding and the complete aggregate budget.
+
+Local143 focused tests/one Linux skip and20 independent reader groups pass with
+repo lint/diff. These are portable/mock/compile-only checks. Native C has not been
+compiled or executed on Mac. Fresh ALL CI,68source comparisons, full43-gate native
+acceptance and actual UI inspection are mandatory. Successful observations may
+reveal allowed mappings; they are diagnostic evidence and do not authorize merge
+or establish a mitigation/full runtime closure.

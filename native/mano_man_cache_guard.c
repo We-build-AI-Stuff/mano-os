@@ -11,9 +11,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/prctl.h>
+#include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
+#include <sys/utsname.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -201,11 +203,86 @@ static void wait_ok(pid_t pid) {
         { errno = EPERM; fail("man guard child failed"); }
 }
 
+/* Measurement only: request mappings, retain kernel results, never execute them. */
+struct mapping_result { int allowed; int error; };
+struct mapping_controls {
+    struct mapping_result baseline_read, baseline_exec, temporary_read, temporary_exec;
+    struct mapping_result temporary_write_exec, anonymous_write_exec, anonymous_to_exec;
+};
+
+static struct mapping_result map_file(const char *path, int protection) {
+    int fd = open(path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+    struct stat info;
+    if (fd < 0 || fstat(fd, &info) || !S_ISREG(info.st_mode) || info.st_size < 4096)
+        fail("man guard mapping fixed source");
+    errno = 0;
+    void *address = mmap(NULL, 4096, protection, MAP_PRIVATE, fd, 0);
+    struct mapping_result result = { address != MAP_FAILED,
+                                    address == MAP_FAILED ? errno : 0 };
+    if (close(fd) || (address != MAP_FAILED && munmap(address, 4096)))
+        fail("man guard mapping source cleanup");
+    return result;
+}
+
+static struct mapping_result map_anonymous(int change_protection) {
+    int protection = PROT_READ | PROT_WRITE | (change_protection ? 0 : PROT_EXEC);
+    errno = 0;
+    void *address = mmap(NULL, 4096, protection, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    struct mapping_result result = { address != MAP_FAILED,
+                                    address == MAP_FAILED ? errno : 0 };
+    if (change_protection) {
+        if (address == MAP_FAILED) fail("man guard anonymous RW positive control");
+        errno = 0;
+        int status = mprotect(address, 4096, PROT_READ | PROT_EXEC);
+        result.allowed = status == 0;
+        result.error = status == 0 ? 0 : errno;
+    }
+    if (address != MAP_FAILED && munmap(address, 4096))
+        fail("man guard anonymous mapping cleanup");
+    return result;
+}
+
+static struct mapping_controls observe_mappings(void) {
+    struct mapping_controls result = {
+        .baseline_read = map_file("/usr/bin/true", PROT_READ),
+        .baseline_exec = map_file("/usr/bin/true", PROT_READ | PROT_EXEC),
+        .temporary_read = map_file(EXEC_PROBE, PROT_READ),
+        .temporary_exec = map_file(EXEC_PROBE, PROT_READ | PROT_EXEC),
+        .temporary_write_exec = map_file(EXEC_PROBE, PROT_READ | PROT_WRITE | PROT_EXEC),
+        .anonymous_write_exec = map_anonymous(0),
+        .anonymous_to_exec = map_anonymous(1)
+    };
+    return result;
+}
+
+static int mapping_positives(struct mapping_controls result) {
+    return result.baseline_read.allowed && result.baseline_exec.allowed &&
+        result.temporary_read.allowed;
+}
+
+static void mapping_field(const char *name, struct mapping_result result, int comma) {
+    printf("%s\"%s\":{\"allowed\":%s,\"errno\":%d}", comma ? "," : "", name,
+           result.allowed ? "true" : "false", result.error);
+}
+
+static void mapping_packet(const char *name, struct mapping_controls result, int comma) {
+    printf("%s\"%s\":{", comma ? "," : "", name);
+    mapping_field("baseline_read", result.baseline_read, 0);
+    mapping_field("baseline_exec", result.baseline_exec, 1);
+    mapping_field("temporary_read", result.temporary_read, 1);
+    mapping_field("temporary_exec", result.temporary_exec, 1);
+    mapping_field("temporary_write_exec", result.temporary_write_exec, 1);
+    mapping_field("anonymous_write_exec", result.anonymous_write_exec, 1);
+    mapping_field("anonymous_to_exec", result.anonymous_to_exec, 1);
+    printf("}");
+}
+
 int main(int argc, char **argv) {
     int source_bytes = argc == 2 && !strcmp(argv[1], "--source-bytes");
     int source_content = argc == 2 && !strcmp(argv[1], "--source-content");
     int probe_child = argc == 2 && !strcmp(argv[1], "--probe-child");
-    if (argc != 1 && !source_bytes && !source_content && !probe_child)
+    int mapping_controls = argc == 2 && !strcmp(argv[1], "--mapping-controls");
+    if (argc != 1 && !source_bytes && !source_content && !probe_child && !mapping_controls)
         { errno = EINVAL; fail("man guard fixed entrypoint"); }
     identity();
     if (syscall(SYS_close_range, 3U, ~0U, 0)) fail("man guard FD closure");
@@ -222,6 +299,8 @@ int main(int argc, char **argv) {
     pid_t before = fork();
     if (before == 0) { execl(EXEC_PROBE, EXEC_PROBE, (char *)NULL); _exit(125); }
     wait_ok(before); /* Demonstrates that mount/DAC alone previously allowed this exec. */
+    struct mapping_controls mapping_before = {0}, mapping_after = {0};
+    if (mapping_controls) mapping_before = observe_mappings();
     int abi = restrict_files(source_content ? 2 : source_bytes ? 1 : 0);
     restrict_syscalls();
     identity();
@@ -235,10 +314,34 @@ int main(int argc, char **argv) {
         _exit(errno == EACCES ? 0 : 125);
     }
     wait_ok(after);
+    if (mapping_controls) mapping_after = observe_mappings();
     if (unlink(EXEC_PROBE)) fail("man guard own exec probe cleanup");
     pid_t child = fork();
     if (child == 0) { execl(SELF, SELF, "--probe-child", (char *)NULL); _exit(125); }
     wait_ok(child);
+    if (mapping_controls) {
+        struct utsname kernel;
+        if (uname(&kernel)) fail("man guard mapping kernel release");
+        if (!strlen(kernel.release) || strlen(kernel.release) > 128 ||
+            strspn(kernel.release, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._+-")
+                != strlen(kernel.release)) {
+            errno = EINVAL; fail("man guard mapping kernel release characters");
+        }
+        printf("{\"profile\":\"man-cache-mapping-controls-v1\",\"landlock_abi\":%d,"
+               "\"kernel_release\":\"%s\","
+               "\"uid\":6,\"gid\":12,\"temporary_exec_before_allowed\":true,"
+               "\"temporary_exec_after_denied\":true,\"diagnostic_mapping_bytes_executed\":false,",
+               abi, kernel.release);
+        mapping_packet("before", mapping_before, 0);
+        mapping_packet("after", mapping_after, 1);
+        printf(",\"complete_runtime_closure_verified\":false,"
+               "\"publication_authorized\":false}\n");
+        if (fflush(stdout)) fail("man guard mapping report flush");
+        if (!mapping_positives(mapping_before) || !mapping_positives(mapping_after)) {
+            errno = EPERM; fail("man guard mapping read/baseline-code positive controls");
+        }
+        return 0;
+    }
     printf("{\"profile\":\"man-cache-landlock-seccomp-v3\",\"role\":\"%s\",\"landlock_abi\":%d,"
            "\"uid\":6,\"gid\":12,\"groups_empty\":true,\"nnp\":true,"
            "\"all_capability_sets_zero\":true,\"control_read_before_allowed\":true,"

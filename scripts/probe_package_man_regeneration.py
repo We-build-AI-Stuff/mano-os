@@ -49,7 +49,11 @@ print(json.dumps(dict(state=state,config_sha256=hashlib.sha256(config).hexdigest
 '''
 
 
-def program(capture_source, *, runtime_view_source=None, runtime_origin_source=None):
+def program(capture_source, *, runtime_view_source=None, runtime_origin_source=None,
+            mapping_controls=False):
+    if (type(mapping_controls) is not bool
+            or (mapping_controls and runtime_origin_source is None)):
+        raise ValueError('Mapping controls require the source-identity worker')
     tree = ast.parse(capture_source)
     capture = next(node for node in tree.body
                    if isinstance(node, ast.FunctionDef) and node.name == 'run_observed')
@@ -105,6 +109,20 @@ def program(capture_source, *, runtime_view_source=None, runtime_origin_source=N
                 'print(json.dumps(dict(runtime_source_identities=runtime_source_identities,'
                 'runtime_origin_source_sha256=RUNTIME_ORIGIN_SOURCE_SHA256,'
                 'runtime_view=runtime_view,')
+    if mapping_controls:
+        marker = 'result=run_observed(command,env,60)'
+        if body.count(marker) != 1:
+            raise ValueError('Fixed native generation marker required')
+        body = body.replace(marker,
+            "mapping_result=run_observed(['/run/man-cache-guard','--mapping-controls'],env,5)\n"
+            "if (type(mapping_result['returncode']) is not int or mapping_result['returncode']!=0\n"
+            "        or mapping_result['capture_complete'] is not True):\n"
+            "    print('MANO_MAN_MAPPING_RESULT='+json.dumps(mapping_result,sort_keys=True),"
+            "file=sys.stderr,flush=True)\n"
+            "    raise ValueError('Complete successful mapping controls required')\n"+marker)
+        body = body.replace('print(json.dumps(dict(runtime_source_identities=',
+            'print(json.dumps(dict(mapping_controls_result=mapping_result,'
+            'runtime_source_identities=')
     data = (HEADER + view_program + origin_program
             + ast.get_source_segment(capture_source, fd_guard) + '\n'
             + ast.get_source_segment(capture_source, capture) + '\n' + body)
@@ -283,6 +301,31 @@ def compare_source_identities(row, before, after, source_sha):
     return proof
 
 
+def inspect_mapping_result(result):
+    from mano_runtime.package_man_mapping_controls import inspect
+
+    if (type(result) is not dict or set(result) != {
+            'returncode', 'capture_complete', 'stdout', 'stderr'}
+            or type(result['returncode']) is not int or result['returncode'] != 0
+            or result['capture_complete'] is not True):
+        raise ValueError('Complete successful mapping control capture required')
+    streams = {}
+    for label, maximum in (('stdout', 4096), ('stderr', 0)):
+        field = result[label]
+        if (type(field) is not dict or set(field) != {'base64', 'bytes', 'sha256'}
+                or type(field['base64']) is not str
+                or len(field['base64']) > 4*((maximum+2)//3)
+                or type(field['bytes']) is not int):
+            raise ValueError('Bounded exact mapping control stream required')
+        data = base64.b64decode(field['base64'], validate=True)
+        if (base64.b64encode(data).decode() != field['base64']
+                or len(data) > maximum or field['bytes'] != len(data)
+                or field['sha256'] != hashlib.sha256(data).hexdigest()):
+            raise ValueError('Retained mapping control stream custody differs')
+        streams[label] = data
+    return inspect(streams['stdout'])
+
+
 def regenerate(base, capture_source, host, state_masks, empty, config, run):
     """Called only after the staging controller's Linux/Root/disposable guard."""
     if sys.platform != 'linux':
@@ -303,7 +346,9 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
                              'package_man_runtime_origin.py').read_text()
     origin_sha = hashlib.sha256(runtime_origin_source.encode()).hexdigest()
     data = program(capture_source, runtime_view_source=runtime_view_source,
-                   runtime_origin_source=runtime_origin_source)
+                   runtime_origin_source=runtime_origin_source, mapping_controls=True)
+    mapping_source = (Path('/opt/mano-lab/src/mano_runtime') /
+                       'package_man_mapping_controls.py').read_bytes()
     source = base / 'man-regeneration.py'
     with source.open('xb') as stream:
         stream.write(data)
@@ -335,7 +380,7 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
                 info.st_mtime_ns, info.st_ctime_ns)
 
     original = control_identity()
-    observations, source_receipts = {}, {}
+    observations, source_receipts, mapping_receipts = {}, {}, {}
     for mode in ('control', 'restricted'):
         role = 'man-cache-control' if mode == 'control' else 'regenerated-man-cache'
         cache = base / role
@@ -395,6 +440,7 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
                 source_after = held.observe()
                 source_proof = compare_source_identities(row, source_before, source_after,
                                                          origin_sha)
+                mapping_receipts[mode] = inspect_mapping_result(row['mapping_controls_result'])
                 source_receipts[mode] = dict(before=source_before, after=source_after,
                                              comparison=source_proof, domain_drained=True)
                 observations[mode] = (raw, row)
@@ -414,4 +460,16 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
         publication_authorized=False)
     if len(json.dumps(source_packet, sort_keys=True, allow_nan=False).encode()) > 65536:
         raise ValueError('Bounded embedded runtime source identity evidence required')
-    return data, config, raw, row, source_packet
+    kernel = os.uname().release
+    if any(proof['kernel_release'] != kernel for proof in mapping_receipts.values()):
+        raise ValueError('Mapping controls must report the actual controller kernel')
+    mapping_packet = dict(profile='man-executable-mapping-pair-v1', kernel_release=kernel,
+        parser_source_sha256=hashlib.sha256(mapping_source).hexdigest(),
+        guard_source_sha256=hashlib.sha256(native_source).hexdigest(),
+        guard_binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
+        workers=mapping_receipts, diagnostic_mapping_bytes_executed=False,
+        complete_runtime_closure_verified=False, loader_selection_verified=False,
+        generated_state_validated=False, changes_authorized=False, publication_authorized=False)
+    if len(json.dumps(mapping_packet, sort_keys=True, allow_nan=False).encode()) > 16384:
+        raise ValueError('Bounded embedded mapping controls required')
+    return data, config, raw, row, source_packet, mapping_packet

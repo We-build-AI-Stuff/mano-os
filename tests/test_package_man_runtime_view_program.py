@@ -16,6 +16,40 @@ from mano_runtime import package_man_runtime_view as view
 
 
 class RuntimeViewProgramTests(unittest.TestCase):
+    def test_future_mapping_mode_is_fixed_bounded_and_precedes_generation(self):
+        root = Path(__file__).resolve().parents[1]/'src/mano_runtime'
+        sources = dict(runtime_view_source=(root/'package_man_runtime_view.py').read_text(),
+                       runtime_origin_source=(root/'package_man_runtime_origin.py').read_text())
+        data = regeneration.probe.program(regeneration.stage.PROGRAM, mapping_controls=True,
+                                          **sources)
+        compile(data, 'future-mapping-worker-compile-only', 'exec')
+        text = data.decode()
+        marker = "mapping_result=run_observed(['/run/man-cache-guard','--mapping-controls'],env,5)"
+        self.assertIn(marker, text)
+        self.assertLess(text.index('runtime_view, runtime_source_identities=capture('),
+                        text.index(marker))
+        self.assertLess(text.index(marker), text.index('result=run_observed(command,env,60)'))
+        self.assertIn('mapping_controls_result=mapping_result', text)
+        start, end = text.index(marker), text.index('result=run_observed(command,env,60)')
+        for complete, code in ((True, 0), (False, 0), (True, 1), (True, False)):
+            state = dict(env={}, json=json, sys=sys,
+                         run_observed=lambda *args, code=code, complete=complete: dict(
+                returncode=code, capture_complete=complete), generation_started=False)
+            fragment = text[start:end]+'generation_started=True\n'
+            if complete and type(code) is int and code == 0:
+                exec(compile(fragment, 'mocked-mapping-preflight', 'exec'), state)
+                self.assertTrue(state['generation_started'])
+            else:
+                stderr = io.StringIO()
+                with contextlib.redirect_stderr(stderr), self.assertRaises(ValueError):
+                    exec(compile(fragment, 'mocked-mapping-preflight', 'exec'), state)
+                self.assertTrue(stderr.getvalue().startswith('MANO_MAN_MAPPING_RESULT='))
+                self.assertEqual(json.loads(stderr.getvalue().split('=', 1)[1]),
+                                 state['mapping_result'])
+                self.assertFalse(state['generation_started'])
+        with self.assertRaises(ValueError):
+            regeneration.probe.program(regeneration.stage.PROGRAM, mapping_controls=True)
+
     def test_origin_mode_embeds_only_serializer_and_binds_it_before_generation(self):
         root = Path(__file__).resolve().parents[1]/'src/mano_runtime'
         source = (root/'package_man_runtime_origin.py').read_text()
