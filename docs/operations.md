@@ -83,6 +83,22 @@ authority. Keep the same limits when explicitly retrying an uncertain request.
 Closing the window leaves any server-side pending challenge to expire; it does not
 approve or revoke it. Independent Stop revokes authority and running work.
 
+## View a verified result
+
+For an acknowledged request with a workspace, **View verified result** opens a
+read-only preview of the first checked artifact from its latest verified action.
+The broker checks the original verification reference, stored bytes and task owner
+before returning a bounded preview. A published file or exit-zero command without
+artifact verification is not offered as a verified result.
+
+The window shows the file, action/artifact identity, full snapshot hash and size,
+plus up to 4096 bytes of literal text. Longer results are labeled as truncated;
+binary data has no text preview. This is the verified historical snapshot, not a
+fresh read of a possibly changed workspace and not proof that the entire task is
+complete. Reads do not run commands, disclose anything to a model, approve work,
+or create grants. Closing the dialog or submitting a new request discards its late
+replies. An uncertain submission must be acknowledged before viewing a result.
+
 ## Independent human Stop
 
 On the installed Debian prototype, run `/usr/libexec/mano-stop` from the configured

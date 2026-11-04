@@ -9,6 +9,7 @@ from gi.repository import Gdk, GLib, Gtk  # noqa: E402
 from mano_prompt.dispatch import SubmissionWorker  # noqa: E402
 from mano_prompt.intake import Intake  # noqa: E402
 from mano_prompt.permissions_ui import PermissionsWindow  # noqa: E402
+from mano_prompt.results_ui import ResultWindow  # noqa: E402
 from mano_prompt.status_refresh import StatusRefresh  # noqa: E402
 from mano_prompt.submit import Submission  # noqa: E402
 from mano_prompt.task_status import read_task_status  # noqa: E402
@@ -16,7 +17,8 @@ from mano_protocol.actions import text  # noqa: E402
 
 
 class Prompt(Gtk.Application):
-    def __init__(self, *, submit=None, status=None, permission_read=None, permission_request=None):
+    def __init__(self, *, submit=None, status=None, permission_read=None, permission_request=None,
+                 result_read=None):
         super().__init__(application_id="org.mano.Prompt")
         self.submit = submit if submit is not None else Submission().submit
         self.worker = SubmissionWorker(self.submit, GLib.idle_add)
@@ -24,6 +26,8 @@ class Prompt(Gtk.Application):
         self.intake = Intake()
         self.permission_read, self.permission_request = permission_read, permission_request
         self.permission_window = None
+        self.result_window = None
+        self.result_read = result_read
         self.connect("activate", self.activate_window)
 
     def activate_window(self, _app):
@@ -65,6 +69,8 @@ class Prompt(Gtk.Application):
 
         permissions = Gtk.Button(label='Permissions')
         permissions.set_sensitive(False)
+        result_button = Gtk.Button(label='View verified result')
+        result_button.set_sensitive(False)
         closed = False
 
         def open_permissions(_widget):
@@ -76,6 +82,8 @@ class Prompt(Gtk.Application):
                 self.permission_window.present()
                 return
             token, task_id = self.intake.token(), self.intake.current['task_id']
+            if self.result_window is not None:
+                self.result_window.close()
             def valid():
                 return (not closed and not self.intake.uncertain and not self.worker.busy
                         and token == self.intake.token()
@@ -85,6 +93,26 @@ class Prompt(Gtk.Application):
             self.permission_window.present()
 
         permissions.connect('clicked', open_permissions)
+
+        def open_result(_widget):
+            if (closed or self.intake.uncertain or self.worker.busy or self.intake.current is None
+                    or self.intake.current['task_id'] is None):
+                return
+            if self.result_window is not None and self.result_window.alive:
+                self.result_window.present()
+                return
+            if self.permission_window is not None:
+                self.permission_window.close()
+            token, task_id = self.intake.token(), self.intake.current['task_id']
+            def valid():
+                return (not closed and not self.intake.uncertain and not self.worker.busy
+                        and token == self.intake.token()
+                        and self.intake.current['task_id'] == task_id)
+            self.result_window = ResultWindow(window, token[1], task_id, valid=valid,
+                                              read=self.result_read)
+            self.result_window.present()
+
+        result_button.connect('clicked', open_result)
 
         def check_status(_widget=None, *, automatic=False):
             if (closed or self.intake.uncertain or self.worker.busy or self.status_worker.busy
@@ -109,6 +137,7 @@ class Prompt(Gtk.Application):
                         details.set_text(display)
                     status.set_text('Request status updated')
                 permissions.set_sensitive(self.intake.current['task_id'] is not None)
+                result_button.set_sensitive(self.intake.current['task_id'] is not None)
 
             try:
                 if self.status_worker.start(token[1], finished):
@@ -130,6 +159,8 @@ class Prompt(Gtk.Application):
             status_refresh.close()
             if self.permission_window is not None:
                 self.permission_window.close()
+            if self.result_window is not None:
+                self.result_window.close()
             return False
 
         window.connect('close-request', close_window)
@@ -159,6 +190,7 @@ class Prompt(Gtk.Application):
                 permissions.set_sensitive(not self.intake.uncertain
                     and self.intake.current is not None
                     and self.intake.current['task_id'] is not None)
+                result_button.set_sensitive(permissions.get_sensitive())
                 refresh.set_sensitive(not self.intake.uncertain and not self.status_worker.busy
                                       and self.intake.current is not None)
                 entry.grab_focus()
@@ -167,8 +199,11 @@ class Prompt(Gtk.Application):
                 text(entry.get_text(), 8192)
                 if self.permission_window is not None:
                     self.permission_window.close()
+                if self.result_window is not None:
+                    self.result_window.close()
                 if self.worker.start(entry.get_text(), finished):
                     permissions.set_sensitive(False)
+                    result_button.set_sensitive(False)
                     entry.set_sensitive(False)
                     send.set_sensitive(False)
                     refresh.set_sensitive(False)
@@ -182,11 +217,12 @@ class Prompt(Gtk.Application):
         send.connect("clicked", submit)
         row.append(entry)
         row.append(send)
-        for widget in (title, subtitle, row, status, scroll, refresh, permissions):
+        for widget in (title, subtitle, row, status, scroll, refresh, permissions, result_button):
             outer.append(widget)
         self.entry, self.window = entry, window
         self.details, self.refresh = details, refresh
         self.permissions_button = permissions
+        self.result_button = result_button
         window.set_child(outer)
         css = Gtk.CssProvider()
         css.load_from_string("""

@@ -1,3 +1,30 @@
+# Current: human verified result preview
+
+Main 8bffb93f9b6db79b5a93c45d99d433add3e8ae78 contains PR146's controller
+publication fix and PR147's downloadable recorded-project bundle. Main
+run41844043376 finished all three jobs successfully; its result bundle is being
+downloaded for inspection. Earlier exact main e54a683/run41840594368 passed all three jobs; downloaded
+artifact and actual UI images verified automatic broker/stock status updates.
+
+The next feature adds View verified result to the prompt. A fixed native human
+read follows the owner's latest verified action and original artifact reference;
+it returns a hash-checked bounded historical snapshot without opening workspace
+paths or granting execution. The GUI pins the acknowledged task, renders literal
+text asynchronously and ignores closed/new/uncertain request replies. Eight new
+SQLite/client tests and 21 related tests pass locally; Ruff/diff/AST checks pass.
+Native C compilation and real GUI/native/custody scope tests require this changed
+revision's CI. The default GUI fixture separately approves a Supervised profile
+and exact file-producing effect, verifies its captured artifact and opens it in
+the actual result window. No model/provider call or physical input claim.
+
+Full v2.1 remains incomplete. Preserve merge commits and recorded CI state under
+the user's explicit conflict-free override; fix genuine review findings. Keep
+the original package134 checkout/drafts parked. No Linux/Root/native execution
+on the Mac, no credential/paid-call experiments, no data deletion. Current runtime
+handoff and exact run/artifact receipts are in outputs/CONTINUATION.md.
+
+## Historical notes (superseded where above differs)
+
 # Current: published file status in controller cycles
 
 Main e54a68381c1f8818aba84989409524acf3af8953 contains the automatic prompt

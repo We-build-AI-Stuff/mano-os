@@ -22,6 +22,12 @@ def main():
                 snapshot['permissions'] = dict(status=panel.model.status,
                     approval=panel.model.approval, summary=panel.summary.get_text(),
                     review=panel.review.get_text(), busy=panel.worker.busy)
+            result = app.result_window
+            if result is not None and result.alive:
+                buffer = result.content.get_buffer()
+                snapshot['result_preview'] = dict(value=result.result,
+                    summary=result.summary.get_text(), busy=result.worker.busy,
+                    text=buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False))
             temporary = ROOT / 'view.tmp'
             temporary.write_text(json.dumps(snapshot) + '\n')
             temporary.replace(ROOT / 'view.json')
