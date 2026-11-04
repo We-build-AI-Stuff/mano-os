@@ -1,16 +1,16 @@
 # Current: human verified result preview
 
 Main 8bffb93f9b6db79b5a93c45d99d433add3e8ae78 contains PR146's controller
-publication fix and PR147's downloadable recorded-project bundle. Retain main
-run41844043376 until terminal: quality passed, Debian VM still running at this
-handoff. Earlier exact main e54a683/run41840594368 passed all three jobs; downloaded
+publication fix and PR147's downloadable recorded-project bundle. Main
+run41844043376 finished all three jobs successfully; its result bundle is being
+downloaded for inspection. Earlier exact main e54a683/run41840594368 passed all three jobs; downloaded
 artifact and actual UI images verified automatic broker/stock status updates.
 
 The next feature adds View verified result to the prompt. A fixed native human
 read follows the owner's latest verified action and original artifact reference;
 it returns a hash-checked bounded historical snapshot without opening workspace
 paths or granting execution. The GUI pins the acknowledged task, renders literal
-text asynchronously and ignores closed/new/uncertain request replies. Seven new
+text asynchronously and ignores closed/new/uncertain request replies. Eight new
 SQLite/client tests and 21 related tests pass locally; Ruff/diff/AST checks pass.
 Native C compilation and real GUI/native/custody scope tests require this changed
 revision's CI. The default GUI fixture separately approves a Supervised profile

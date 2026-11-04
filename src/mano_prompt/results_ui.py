@@ -3,7 +3,7 @@
 import gi
 
 gi.require_version('Gtk', '4.0')
-from gi.repository import GLib, Gtk  # noqa: E402
+from gi.repository import GLib, Gtk, Pango  # noqa: E402
 
 from .dispatch import SubmissionWorker  # noqa: E402
 from .results import display, parse_result, read_result  # noqa: E402
@@ -29,6 +29,8 @@ class ResultWindow(Gtk.Window):
         heading.add_css_class('subtitle')
         self.summary = Gtk.Label(label='Reading verified snapshot…', wrap=True, xalign=0,
                                  selectable=True)
+        self.summary.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+        self.summary.set_max_width_chars(80)
         self.content = Gtk.TextView(editable=False, cursor_visible=False, monospace=True)
         self.content.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
         self.content.update_property([Gtk.AccessibleProperty.LABEL], ['Result preview'])

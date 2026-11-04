@@ -58,7 +58,10 @@ def display(value):
     item = value['result']
     if item is None:
         return 'No verified snapshot is available for this request yet.', ''
-    summary = (f"File: {item['path']!r}\nAction: {item['action_id']}\n"
+    path = repr(item['path'])
+    if len(path) > 180:
+        path = path[:180] + '… (path shortened)'
+    summary = (f"File: {path}\nAction: {item['action_id']}\n"
                f"Artifact: {item['artifact_id']}\nSize: {item['size']} bytes\n"
                f"SHA-256: {item['sha256']}\n"
                'Verified snapshot; the workspace may have changed since capture.')

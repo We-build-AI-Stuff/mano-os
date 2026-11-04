@@ -97,6 +97,16 @@ class HumanResultTests(unittest.TestCase):
         value = parse_result(self.read(), self.prompt)
         self.assertIn('Binary snapshot', display(value)[1])
 
+    def test_long_untrusted_path_cannot_fill_the_result_header(self):
+        self.publish()
+        value = self.read()
+        value['result']['path'] = '/'.join(['long-name' * 20] * 10)
+        checked = parse_result(value, self.prompt)
+        summary, content = display(checked)
+        self.assertIn('(path shortened)', summary)
+        self.assertLess(len(summary), 600)
+        self.assertEqual(content, 'answer = 42\n')
+
     def test_cross_human_boot_task_and_corrupt_custody_are_denied(self):
         self.publish()
         for changes in (dict(human_uid=1003), dict(human_uid=True), dict(boot_id='old')):
