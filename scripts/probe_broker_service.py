@@ -3,6 +3,7 @@
 
 import base64
 import contextlib
+import difflib
 import hashlib
 import json
 import os
@@ -1526,6 +1527,7 @@ finally:client.close()
         artifact=dict(path="workflow_answer.py",
                       sha256=hashlib.sha256(fixed_source.encode()).hexdigest(),
                       size=len(fixed_source.encode())))
+    workflow_started = time.monotonic()
     registered_workflow = developer_request(dict(managed=managed,
         request_key="recorded-developer-project", workflow=recorded_workflow))
     workflow_id = registered_workflow["id"]
@@ -1557,6 +1559,76 @@ finally:client.close()
     assert (terminal_workspace / "workflow_answer.py").read_text() == fixed_source
     witness = {key: workflow_state[key] for key in ("id", "status", "observations", "artifact_id",
                "verification_scope", "provider_disclosure")}
+    # Export the actual broker-held result and captured logs before the replay
+    # canary changes the workspace. This is a recorded demo, not a live model run.
+    elapsed = time.monotonic() - workflow_started
+    project = ROOT / "evidence/developer-project"
+    project.mkdir()
+    artifact_reply = rpc("request", dict(schema_version="1.0", operation="artifact_read",
+        body=dict(task_id=terminal_task["task_id"], artifact_id=workflow_state["artifact_id"],
+                  offset=0, length=4096)), actor=identity.name)
+    assert artifact_reply["ok"] and artifact_reply["eof"]
+    source = base64.b64decode(artifact_reply["data"], validate=True)
+    assert source == fixed_source.encode()
+    assert hashlib.sha256(source).hexdigest() == recorded_workflow["artifact"]["sha256"]
+    (project / "workflow_answer.py").write_bytes(source)
+    (project / "correction.diff").write_text("".join(difflib.unified_diff(
+        broken_source.splitlines(keepends=True), source.decode().splitlines(keepends=True),
+        fromfile="recorded-initial/workflow_answer.py", tofile="published/workflow_answer.py")))
+    # Use the ordinary task-scoped reader, including its metadata and hash checks.
+    log_reader = """import base64,json,sys
+from mano_core.broker import BrokerClient,read_terminal_output
+body=json.load(sys.stdin)
+client=BrokerClient()
+try:
+ results=[]
+ for action_id in body['actions']:
+  value=read_terminal_output(client,task_id=body['task_id'],action_id=action_id)
+  results.append(dict(metadata=value['metadata'],stdout=base64.b64encode(value['stdout']).decode(),
+                      stderr=base64.b64encode(value['stderr']).decode()))
+ print(json.dumps(results))
+finally:client.close()
+"""
+    log_result = subprocess.run(["/usr/sbin/runuser", "-u", identity.name, "--", "env",
+        "PYTHONPATH=/usr/lib/mano-os", "PYTHONDONTWRITEBYTECODE=1", "python3", "-c", log_reader],
+        input=json.dumps(dict(task_id=terminal_task["task_id"], actions=[
+            workflow_state["observations"][index]["action_id"] for index in (1, 3)])),
+        text=True, capture_output=True, timeout=15, check=True)
+    logs = json.loads(log_result.stdout)
+    assert len(logs) == 2
+    for label, index, log in zip(("failed-test", "passed-test"), (1, 3), logs, strict=True):
+        assert log["metadata"] == workflow_state["observations"][index]["output"]
+        for stream in ("stdout", "stderr"):
+            data = base64.b64decode(log[stream], validate=True)
+            assert hashlib.sha256(data).hexdigest() == log["metadata"]["streams"][stream]["sha256"]
+            (project / f"{label}.{stream}").write_bytes(data)
+    (project / "test_workflow_answer.py").write_text(
+        "import unittest\nfrom workflow_answer import answer\n\n"
+        "class AnswerTest(unittest.TestCase):\n"
+        "    def test_answer(self):\n        self.assertEqual(answer(), 42)\n")
+    (project / "README.md").write_text(
+        "# Recorded workspace result\n\n"
+        "The source and failed/passed logs came from broker-held captures in this CI run.\n"
+        "correction.diff compares the recorded initial plan with the captured final source.\n"
+        "test_workflow_answer.py is a supplied convenience test, not the original command;\n"
+        "the exact original test command is in manifest.json under definition.steps.\n"
+        "Inspect the source, then run: python3 -m unittest -v\n\n"
+        "This used recorded plans and four native PAM approvals, without a model call.\n"
+        "It does not establish live AI, physical input, whole-phase or release acceptance.\n")
+    files = {path.name: dict(size=path.stat().st_size,
+        sha256=hashlib.sha256(path.read_bytes()).hexdigest()) for path in project.iterdir()}
+    (project / "manifest.json").write_text(json.dumps(dict(
+        scope="recorded developer fixture; exported broker-held snapshot and logs",
+        revision=json.loads((ROOT / "source-info.json").read_text())["revision"],
+        human_prompt=managed["context"]["prompt"], task_id=terminal_task["task_id"],
+        resource_id=managed["context"]["resource_id"], workflow_id=workflow_id,
+        definition=recorded_workflow, observations=witness["observations"],
+        artifact_id=workflow_state["artifact_id"], artifact=artifact_reply["artifact"],
+        approval_ids=sorted(seen_approvals),
+        native_pam_approvals=4, provider_disclosure=False, elapsed_seconds=elapsed,
+        peak_ram_bytes=None, physical_input_provenance=None, live_model_success=None,
+        files=files), indent=2) + "\n")
+    terminal_report["recorded_developer_result_bundle"] = "developer-project/manifest.json"
     (terminal_workspace / "workflow_answer.py").write_text("workflow replay canary")
     workflow_replay = developer_request(dict(workflow_id=workflow_id))
     assert workflow_replay["status"] == "verified"
