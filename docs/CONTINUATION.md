@@ -1,3 +1,30 @@
+# Current: CI-owned VM image lifecycle
+
+Main `bc75fded4bb82c441511c995cbe846bdbec88785` run `41879330858` failed the
+existing 10 GiB admission guard before the clean-package VM. Its quality check
+passed; the native suite stopped with insufficient runner space, not a passed
+stock/reboot result. Preserve the failure log and do not lower the guard.
+
+The runner now records ownership of its three first-VM images immediately after
+creation. After all first-VM uses/evidence exports and confirmed QEMU shutdown,
+only the matching job/run/attempt's owned regular, single-link images are released.
+The read-only pristine base and all evidence stay intact. A release receipt records
+names, identities and free space, including a partial operation if interrupted.
+Outside an eligible non-root GitHub disposable workspace it retains every image.
+Six portable ownership/eligibility/filesystem tests, Ruff, shell syntax and diff
+checks pass. No actual VM or user data was removed locally. Native capacity,
+pristine-base preservation and clean package/reboot acceptance still require CI.
+
+The memory observer work is saved separately on `feat/runtime-memory-observations`
+at `b9f2f84`; five portable tests pass, native data pending. It correctly observes
+broker/launcher/approval/Stop under system.slice and the separate core slice;
+mano.slice alone omits most runtime services. Resume after the capacity fix is
+integrated, preserving all approvals/Stop assertions and measurement scopes.
+Full Phase 1 measurements and full v2.1 remain incomplete. Runtime handoff and
+live CI handles are in outputs/CONTINUATION.md; goal stays ACTIVE.
+
+## Historical notes (superseded where above differs)
+
 # Current: inspected Phase 1 evidence index
 
 Main `7f255805d3b1d6c1f7b5485f1b2ea4e6db7a79f6` contains merged PR #148. Its exact
