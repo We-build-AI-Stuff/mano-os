@@ -606,3 +606,19 @@ denials, with an additional full 16 KiB reserve inside the original 200 MB budge
 This candidate has portable schema/wiring tests; Linux compilation, actual native
 controls and independent evidence acceptance remain pending. It does not establish
 complete interpreter/loader/plugin selection, runtime closure or publication authority.
+
+### Failed executable-memory candidate and scoped policy correction
+
+Native run 41778116412 failed at head d35b5d1. The worker entered the enforcing
+AppArmor profile, but temporary file RX and private RWX mappings still succeeded.
+The actual generation guard rejected its pre-filter controls and exited 125;
+its memory filter and mandb generation were not reached. The failed run remains
+failed and its raw worker report is retained as a regression fixture.
+
+The AppArmor 4.1.0 compiler adds executable mmap permission for inherit execution
+(ix). The correction removes inherit execution from the general data rule and
+limits it to baseline code paths and the injected guard. The fixed temporary
+true-copy exec positive keeps its own ix rule, combined with explicit mmap denial
+for temporary files. Cache and manual-source mappings also receive explicit
+denials. Existing native controls must demonstrate this distinction in the next
+VM run. This correction is not yet accepted as native mitigation or runtime closure.

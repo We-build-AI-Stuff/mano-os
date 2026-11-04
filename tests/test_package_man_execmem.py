@@ -216,3 +216,32 @@ class ExecmemControllerTests(unittest.TestCase):
         exec(preflight, env)
         path.assert_not_called()
         self.assertIsNone(env['execmem_context'])
+
+    def test_retained_native44_failure_refuses_despite_enforcing_label_and_clean_identity(self):
+        import hashlib
+        from pathlib import Path
+        raw = (Path(__file__).parent/'fixtures/'
+               'man-execmem-d35b5d1-prefilter-failure.json').read_bytes()
+        self.assertEqual(hashlib.sha256(raw).hexdigest(),
+                         'c1a0dff57b64fd392673b9735cbea7ab5fbafc8e4b5f020e78ba848f2b4f3943')
+        row = json.loads(raw)
+        self.assertEqual(row['execmem_context'], 'mano-man-cache-execmem (enforce)')
+        self.assertEqual(row['result']['returncode'], 125)
+        self.assertIs(row['result']['capture_complete'], True)
+        self.assertIsNone(row['input_guard'])
+        proof = self.probe.inspect_mapping_result(row['mapping_controls_result'])
+        for key in ('temporary_launch_denied_but_rx_mapping_allowed',
+                    'temporary_private_write_exec_mapping_allowed',
+                    'anonymous_write_exec_mapping_allowed', 'anonymous_rw_to_rx_allowed'):
+            self.assertIs(proof[key], True)
+        row['domain_drained'] = True
+        host = {key: key+':[0]' for key in row['state']['namespaces']}
+        with self.assertRaisesRegex(ValueError, 'Fresh mandb must finish'):
+            self.probe.validate(row, host, row['config_sha256'],
+                                require_input_guard=True, require_execmem=True)
+        self.assertEqual(row['result']['stdout']['bytes'], 0)
+        import base64
+        expected = b'manual memory pre-filter positive/profile controls: Operation not permitted\n'
+        self.assertEqual(row['result']['stderr']['bytes'], len(expected))
+        self.assertEqual(base64.b64decode(row['result']['stderr']['base64'], validate=True),
+                         expected)

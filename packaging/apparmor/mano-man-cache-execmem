@@ -3,10 +3,18 @@
 # This profile alone does not restrict anonymous executable memory or prove
 # interpreter, library/plugin selection, full runtime closure or publication.
 profile mano-man-cache-execmem flags=(mediate_deleted) {
-  /** rwlkix,
-  /usr/bin/** m,
-  /usr/lib/** m,
-  /run/man-cache-guard m,
+  # ix implicitly grants executable mmap. Never attach ix to the data rule.
+  /** rwlk,
+  /usr/bin/** mix,
+  /usr/lib/** mix,
+  /run/man-cache-guard mix,
+
+  # The fixed trusted true-copy canary must execute before Landlock, while
+  # ordinary O_RDONLY + mmap(PROT_EXEC) on temporary data must remain denied.
+  /tmp/.mano-man-exec-probe ix,
+  deny /tmp/** m,
+  deny /var/cache/man/** m,
+  deny /usr/share/man/** m,
   network,
   signal,
   ptrace (readby) peer=unconfined,

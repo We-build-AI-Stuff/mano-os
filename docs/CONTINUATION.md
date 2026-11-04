@@ -5,6 +5,37 @@ Specification docs/spec-v2.1.md SHA256:
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 A passing prototype/CI slice cannot substitute for the full version.
 
+## Failed native44 and policy correction (fresh native run pending)
+
+Run 41778116412 at head d35b5d1849948155ede8c56ea94672867c402c91 failed.
+Quality job 126403106339 passed: 1,106 tests, one skip and strict native compilation.
+Security job 126403106005 and merge gate 126408591621 failed. Collector session
+6208 terminated with exit 1 after preserving the failed artifact; do not restart it.
+Artifact 13298273220 has 12,496,924 bytes and SHA-256
+1c8733a5c4dda3ab73c545a33c4c237cb11cac3ada0e5f7030daf3fd7ffc7f36.
+Tested merge name: 92585963e0ab854218fe771754fd56ac04d47a8b.
+No native44 acceptance or merge occurred.
+
+The restricted worker reported the exact enforcing AppArmor label, but its seven
+legacy mapping controls still all succeeded before and after Landlock. Actual
+--mandb-enforced exited 125 at the pre-filter checks, before its memory filter or
+cache generation. The failed raw worker is preserved as the regression fixture
+man-execmem-d35b5d1-prefilter-failure.json (SHA-256
+c1a0dff57b64fd392673b9735cbea7ab5fbafc8e4b5f020e78ba848f2b4f3943).
+The controller continues to reject that result despite its enforcing label and
+clean credentials. Source and failure proof: outputs/pr134-d35b5d1-native44-failure-proof.json.
+
+AppArmor 4.1.0 parser_regex.c confirms that ix implicitly grants executable mmap.
+The broad /** rwlkix rule therefore defeated the intended m allowlist. The
+correction removes ix from the general data rule, scopes mix to /usr/bin,
+/usr/lib and the injected native guard, and explicitly denies m for /tmp,
+/var/cache/man and /usr/share/man. Only the fixed trusted true-copy canary retains
+temporary ix for the pre-Landlock exec positive; its ordinary executable mmap
+remains denied. That exec/mmap distinction still requires actual VM verification.
+The C guard now emits its bounded pre-filter mapping results before a pre-filter
+failure. No canary, permission check, identity drop or resource limit was removed.
+All prior gates remain required, including the independent44th enforcement gate.
+
 ## Latest accepted native43 — confirmed executable-mapping gap
 
 Head7039597ce9123c6af054dda6bdb9eeb72920e649/base65fdfc02e3dbb18f791a92374a24690ae4e1ba87.

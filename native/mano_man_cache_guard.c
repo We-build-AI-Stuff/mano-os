@@ -472,6 +472,11 @@ int main(int argc, char **argv) {
             !mapping_before.anonymous_to_exec.allowed ||
             !permission_denied(mapping_before.temporary_exec, 0) ||
             !permission_denied(mapping_before.temporary_write_exec, 0))) {
+        printf("{\"profile\":\"man-execmem-enforcement-failure-v1\","
+               "\"stage\":\"prefilter\",");
+        mapping_packet("before", mapping_before, 0);
+        printf("}\n");
+        if (fflush(stdout)) fail("manual memory pre-filter failure report flush");
         errno = EPERM; fail("manual memory pre-filter positive/profile controls");
     }
     int abi = restrict_files(source_content ? 2 : source_bytes ? 1 : 0);
