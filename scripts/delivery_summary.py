@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import math
 import re
 from pathlib import Path
 
@@ -25,13 +26,19 @@ def load(directory, name):
             return result
         def nonfinite(_):
             raise ValueError('Nonfinite report value')
-        value = json.loads(raw, object_pairs_hook=pairs, parse_constant=nonfinite)
+        def finite_float(token):
+            number = float(token)
+            if not math.isfinite(number):
+                raise ValueError('Nonfinite report number')
+            return number
+        value = json.loads(raw, object_pairs_hook=pairs, parse_constant=nonfinite,
+                           parse_float=finite_float)
         if type(value) is not dict:
             return None, 'invalid report object'
         return value, hashlib.sha256(raw).hexdigest()
     except FileNotFoundError:
         return None, 'not collected'
-    except (OSError, ValueError, UnicodeError):
+    except (OSError, ValueError, UnicodeError, RecursionError):
         return None, 'unreadable or invalid report'
 
 

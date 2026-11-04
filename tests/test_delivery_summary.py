@@ -71,3 +71,18 @@ class DeliverySummaryTests(unittest.TestCase):
         for value in ('main', 'a'*39, 'a'*40+'\nInjected', '<script>'):
             with self.assertRaises(ValueError):
                 summary.render(Path('/unused'), value)
+
+    def test_overflow_and_deep_nesting_with_true_flags_do_not_establish_a_journey(self):
+        prefix = (b'{"services_inactive_on_install":true,'
+                  b'"policy_data_preserved_on_reinstall":true,'
+                  b'"package_removed_services_stopped_data_preserved":true,"extra":')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root/'runtime-package.json'
+            for extra in (b'1e999', b'-1e999', b'['*10000+b'0'+b']'*10000):
+                path.write_bytes(prefix+extra+b'}')
+                self.assertIsNone(summary.load(root, path.name)[0])
+                self.assertNotIn('| Reported by fixture |', summary.render(root, 'a'*40))
+            path.write_bytes(prefix+b'0.5}')
+            self.assertIsNotNone(summary.load(root, path.name)[0])
+            self.assertEqual(summary.render(root, 'a'*40).count('| Reported by fixture |'), 1)
