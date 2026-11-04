@@ -1547,43 +1547,49 @@ finally:client.close()
         artifact=dict(path="workflow_answer.py",
                       sha256=hashlib.sha256(fixed_source.encode()).hexdigest(),
                       size=len(fixed_source.encode())))
-    workflow_started = time.monotonic()
-    registered_workflow = developer_request(dict(managed=managed,
-        request_key="recorded-developer-project", workflow=recorded_workflow))
-    workflow_id = registered_workflow["id"]
-    assert registered_workflow["status"] == "ready"
-    assert not (terminal_workspace / "workflow_answer.py").exists()
-    assert rpc("request", dict(schema_version="1.0", operation="developer_workflow_status",
-        body=dict(workflow_id=workflow_id)), actor=identity.name) == denied
-    seen_approvals = set()
-    deadline = time.monotonic() + 120
-    while time.monotonic() < deadline:
-        workflow_state = developer_request(dict(workflow_id=workflow_id))
-        if workflow_state["status"] == "verified":
-            break
-        assert workflow_state["status"] in {"ready", "awaiting_grant", "queued", "running",
-                                             "needs_verification"}, workflow_state["status"]
-        if workflow_state["status"] == "awaiting_grant":
-            approval_id = workflow_state["approval_id"]
-            assert approval_id not in seen_approvals
-            seen_approvals.add(approval_id)
-            workflow_view = human(dict(mode="view", id=approval_id))["view"]
-            assert workflow_view["task_id"] == terminal_task["task_id"]
-            assert human(dict(mode="confirm", view=workflow_view, password=password))["ok"]
-        time.sleep(0.15)
-    assert workflow_state["status"] == "verified", workflow_state["status"]
-    assert len(seen_approvals) == 4 and len(workflow_state["observations"]) == 4
-    assert workflow_state["observations"][1]["output"]["return_code"] == 1
-    assert workflow_state["observations"][3]["output"]["return_code"] == 0
-    assert workflow_state["provider_disclosure"] is False
-    assert (terminal_workspace / "workflow_answer.py").read_text() == fixed_source
-    witness = {key: workflow_state[key] for key in ("id", "status", "observations", "artifact_id",
-               "verification_scope", "provider_disclosure")}
+    from runtime_memory import RuntimeMemory
+
+    with RuntimeMemory() as runtime_memory:
+        workflow_started = time.monotonic()
+        registered_workflow = developer_request(dict(managed=managed,
+            request_key="recorded-developer-project", workflow=recorded_workflow))
+        workflow_id = registered_workflow["id"]
+        assert registered_workflow["status"] == "ready"
+        assert not (terminal_workspace / "workflow_answer.py").exists()
+        assert rpc("request", dict(schema_version="1.0", operation="developer_workflow_status",
+            body=dict(workflow_id=workflow_id)), actor=identity.name) == denied
+        seen_approvals = set()
+        deadline = time.monotonic() + 120
+        while time.monotonic() < deadline:
+            workflow_state = developer_request(dict(workflow_id=workflow_id))
+            if workflow_state["status"] == "verified":
+                break
+            assert workflow_state["status"] in {"ready", "awaiting_grant", "queued", "running",
+                                                 "needs_verification"}, workflow_state["status"]
+            if workflow_state["status"] == "awaiting_grant":
+                approval_id = workflow_state["approval_id"]
+                assert approval_id not in seen_approvals
+                seen_approvals.add(approval_id)
+                workflow_view = human(dict(mode="view", id=approval_id))["view"]
+                assert workflow_view["task_id"] == terminal_task["task_id"]
+                assert human(dict(mode="confirm", view=workflow_view, password=password))["ok"]
+            time.sleep(0.15)
+        assert workflow_state["status"] == "verified", workflow_state["status"]
+        assert len(seen_approvals) == 4 and len(workflow_state["observations"]) == 4
+        assert workflow_state["observations"][1]["output"]["return_code"] == 1
+        assert workflow_state["observations"][3]["output"]["return_code"] == 0
+        assert workflow_state["provider_disclosure"] is False
+        assert (terminal_workspace / "workflow_answer.py").read_text() == fixed_source
+        witness = {key: workflow_state[key] for key in (
+            "id", "status", "observations", "artifact_id", "verification_scope",
+            "provider_disclosure")}
+        workflow_elapsed = time.monotonic() - workflow_started
     # Export the actual broker-held result and captured logs before the replay
     # canary changes the workspace. This is a recorded demo, not a live model run.
-    elapsed = time.monotonic() - workflow_started
     project = ROOT / "evidence/developer-project"
     project.mkdir()
+    (project / "runtime-memory.json").write_text(
+        json.dumps(runtime_memory.result, indent=2) + "\n")
     artifact_reply = rpc("request", dict(schema_version="1.0", operation="artifact_read",
         body=dict(task_id=terminal_task["task_id"], artifact_id=workflow_state["artifact_id"],
                   offset=0, length=4096)), actor=identity.name)
@@ -1645,10 +1651,12 @@ finally:client.close()
         definition=recorded_workflow, observations=witness["observations"],
         artifact_id=workflow_state["artifact_id"], artifact=artifact_reply["artifact"],
         approval_ids=sorted(seen_approvals),
-        native_pam_approvals=4, provider_disclosure=False, elapsed_seconds=elapsed,
-        peak_ram_bytes=None, physical_input_provenance=None, live_model_success=None,
+        native_pam_approvals=4, provider_disclosure=False, elapsed_seconds=workflow_elapsed,
+        peak_ram_bytes=None, runtime_memory=runtime_memory.result["summary"],
+        physical_input_provenance=None, live_model_success=None,
         files=files), indent=2) + "\n")
     terminal_report["recorded_developer_result_bundle"] = "developer-project/manifest.json"
+    terminal_report["recorded_developer_runtime_memory"] = runtime_memory.result["summary"]
     (terminal_workspace / "workflow_answer.py").write_text("workflow replay canary")
     workflow_replay = developer_request(dict(workflow_id=workflow_id))
     assert workflow_replay["status"] == "verified"
