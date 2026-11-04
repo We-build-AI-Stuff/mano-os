@@ -238,6 +238,9 @@ if [ "$result" = 0 ]; then
   # All first-VM uses/evidence exports are complete and QEMU has exited. Release
   # only images recorded as this job's; keep the untouched stock base and evidence.
   python3 "$repo_root/scripts/lab_image_lifecycle.py" release
+  if [ "${GITHUB_ACTIONS:-}" = true ]; then
+    test -s "$repo_root/evidence/released-vm-images.json"
+  fi
   free_kib=$(df -Pk "$repo_root" | awk 'NR==2 {print $4}')
   if [ "$free_kib" -lt 10485760 ]; then
     echo 'Stop: less than 10 GiB free; clean package VM refused.' >&2
