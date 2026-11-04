@@ -116,7 +116,8 @@ def run(rpc, human, identity, password, task, prompt_id):
     assert output['ok']
     metadata = output['output']
     assert metadata['return_code'] == 0
-    assert metadata['streams']['stdout']['sha256'] == hashlib.sha256((nonce + '\n').encode()).hexdigest()
+    expected_stdout = (nonce + '\n').encode()
+    assert metadata['streams']['stdout']['sha256'] == hashlib.sha256(expected_stdout).hexdigest()
     assert metadata['streams']['stdout']['size'] == len(nonce) + 1
     assert metadata['streams']['stderr']['size'] == 0
     chunk = rpc('request', dict(schema_version='1.0', operation='terminal_output_read',
