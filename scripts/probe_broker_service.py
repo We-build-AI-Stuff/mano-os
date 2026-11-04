@@ -2069,7 +2069,8 @@ else:raise AssertionError('task reached native Stop')
     stop_pty_proposal = public_pty_proposal | dict(idempotency_key="public-pty-stop",
         args=public_pty_proposal["args"] | dict(timeout_seconds=60, argv=["/usr/bin/python3", "-c",
             "from pathlib import Path;import time;"
-            "Path('/workspace/public-pty-stop').write_text('ready');time.sleep(60)"]))
+            "ready=Path('/workspace/public-pty-stop');pending=ready.with_suffix('.tmp');"
+            "pending.write_text('ready');pending.replace(ready);time.sleep(60)"]))
     stop_pty_pending = rpc("request", dict(schema_version="1.0", operation="request_approval",
         body=stop_pty_proposal), actor=identity.name)["approval"]
     assert stop_pty_pending["state"] == "pending"
@@ -2494,7 +2495,8 @@ s.close()
     replaced_proposal = terminal_proposal | dict(task_id=replaced_task["task_id"],
         resource_id=replaced_task["resource_id"], idempotency_key="replacement-stop", args=dict(
             argv=["/usr/bin/python3", "-c", "import time;from pathlib import Path;"
-                  "Path('/workspace/replacement-ready').write_text('ready');time.sleep(60)"],
+                  "ready=Path('/workspace/replacement-ready');pending=ready.with_suffix('.tmp');"
+                  "pending.write_text('ready');pending.replace(ready);time.sleep(60)"],
             cwd=".", timeout_seconds=60))
     replaced_pending = rpc("request", dict(schema_version="1.0", operation="request_approval",
         body=replaced_proposal), actor=identity.name)["approval"]
