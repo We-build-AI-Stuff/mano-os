@@ -2,6 +2,7 @@
 #define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <linux/capability.h>
 #include <linux/landlock.h>
 #include <sched.h>
@@ -16,6 +17,8 @@
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
+#include <sys/sysmacros.h>
 #include <sys/syscall.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
@@ -24,6 +27,9 @@
 #ifndef LANDLOCK_ACCESS_FS_IOCTL_DEV
 #define LANDLOCK_ACCESS_FS_IOCTL_DEV (1ULL << 15)
 #endif
+
+#define MANDB "/usr/bin/mandb"
+#define MANDB_MAX_BYTES (512 * 1024)
 
 #define CONTROL "/run/man-cache-control"
 #define SELF "/run/man-cache-guard"
@@ -439,12 +445,57 @@ static void execmem_packet(struct mapping_controls before, struct execmem_contro
            "\"complete_runtime_closure_verified\":false,\"publication_authorized\":false}");
 }
 
+/* Source identity is reported from the same descriptor used by execveat.
+ * Root independently holds and hashes the baseline object across this worker. */
+static int open_mandb_source(struct stat *info) {
+    int fd = open(MANDB, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+    struct statvfs view;
+    unsigned char magic[4];
+    if (fd < 0 || fstat(fd, info) || !S_ISREG(info->st_mode) || info->st_uid != 0 ||
+            (info->st_mode & 0022) || info->st_size < 64 || info->st_size > MANDB_MAX_BYTES ||
+            !(info->st_mode & (info->st_gid == 12 ? S_IXGRP : S_IXOTH)) ||
+            fstatvfs(fd, &view) || !(view.f_flag & ST_RDONLY) ||
+            fcntl(fd, F_GETFD) != FD_CLOEXEC || pread(fd, magic, sizeof(magic), 0) != 4 ||
+            memcmp(magic, "\177ELF", sizeof(magic))) {
+        errno = EPERM; fail("man guard fixed readonly executable descriptor");
+    }
+    return fd;
+}
+
+static int64_t stat_nanoseconds(struct timespec value) {
+    if (value.tv_nsec < 0 || value.tv_nsec >= 1000000000 ||
+            value.tv_sec < INT64_MIN / INT64_C(1000000000) ||
+            value.tv_sec > INT64_MAX / INT64_C(1000000000)) {
+        errno = EOVERFLOW; fail("man guard executable identity time range");
+    }
+    int64_t base = (int64_t)value.tv_sec * INT64_C(1000000000);
+    if (base > INT64_MAX - value.tv_nsec) {
+        errno = EOVERFLOW; fail("man guard executable identity nanoseconds");
+    }
+    return base + value.tv_nsec;
+}
+
+static void executable_source_packet(const struct stat *info) {
+    printf("\"executable_source\":{\"profile\":\"man-fixed-mandb-execfd-v1\","
+           "\"path\":\"/usr/bin/mandb\",\"execution_method\":\"execveat-empty-path\","
+           "\"descriptor_cloexec\":true,\"readonly_mount\":true,\"identity\":{"
+           "\"device\":[%ju,%ju],\"inode\":%ju,\"uid\":%ju,\"gid\":%ju,"
+           "\"mode\":%ju,\"kind\":\"file\",\"bytes\":%jd,\"nlink\":%ju,"
+           "\"mtime_ns\":%" PRId64 ",\"ctime_ns\":%" PRId64 "}}",
+           (uintmax_t)major(info->st_dev), (uintmax_t)minor(info->st_dev),
+           (uintmax_t)info->st_ino, (uintmax_t)info->st_uid, (uintmax_t)info->st_gid,
+           (uintmax_t)(info->st_mode & 07777), (intmax_t)info->st_size,
+           (uintmax_t)info->st_nlink, stat_nanoseconds(info->st_mtim),
+           stat_nanoseconds(info->st_ctim));
+}
+
 int main(int argc, char **argv) {
     int source_bytes = argc == 2 && !strcmp(argv[1], "--source-bytes");
     int source_content = argc == 2 && !strcmp(argv[1], "--source-content");
     int probe_child = argc == 2 && !strcmp(argv[1], "--probe-child");
     int mapping_controls = argc == 2 && !strcmp(argv[1], "--mapping-controls");
-    int mandb_enforced = argc == 2 && !strcmp(argv[1], "--mandb-enforced");
+    int source_enforced = argc == 2 && !strcmp(argv[1], "--mandb-enforced-source");
+    int mandb_enforced = source_enforced || (argc == 2 && !strcmp(argv[1], "--mandb-enforced"));
     int enforced_child = argc == 2 && !strcmp(argv[1], "--probe-child-enforced");
     if (argc != 1 && !mandb_enforced && !enforced_child && !source_bytes && !source_content && !probe_child && !mapping_controls)
         { errno = EINVAL; fail("man guard fixed entrypoint"); }
@@ -527,6 +578,8 @@ int main(int argc, char **argv) {
         }
         return 0;
     }
+    struct stat executable_info;
+    int executable_fd = source_enforced ? open_mandb_source(&executable_info) : -1;
     printf("{\"profile\":\"%s\",\"role\":\"%s\",\"landlock_abi\":%d,"
            "\"uid\":6,\"gid\":12,\"groups_empty\":true,\"nnp\":true,"
            "\"all_capability_sets_zero\":true,\"control_read_before_allowed\":true,"
@@ -535,11 +588,16 @@ int main(int argc, char **argv) {
            "\"tmp_exec_denied\":true,\"cache_write_allowed\":true,"
            "\"namespace_change_denied\":true,\"identity_change_denied\":true,"
            "\"child_exec_inheritance_verified\":true,\"seccomp_enforced\":true",
-           mandb_enforced ? "man-cache-landlock-seccomp-v4" : "man-cache-landlock-seccomp-v3",
+           source_enforced ? "man-cache-landlock-seccomp-v5" :
+               mandb_enforced ? "man-cache-landlock-seccomp-v4" : "man-cache-landlock-seccomp-v3",
            source_content ? "source-content" : source_bytes ? "source-bytes" : "mandb", abi);
     if (mandb_enforced) {
         printf(",");
         execmem_packet(mapping_before, execmem_after);
+    }
+    if (source_enforced) {
+        printf(",");
+        executable_source_packet(&executable_info);
     }
     printf("}\n");
     if (fflush(stdout)) fail("man guard report flush");
@@ -552,6 +610,12 @@ int main(int argc, char **argv) {
         execl("/usr/bin/python3", "/usr/bin/python3", "-I", "-B",
               "/run/man-source-reader.py", (char *)NULL);
         fail("man guard fixed source reader exec");
+    }
+    if (source_enforced) {
+        char *const arguments[] = { MANDB, "--create", "--quiet", "/usr/share/man", NULL };
+        extern char **environ;
+        syscall(SYS_execveat, executable_fd, "", arguments, environ, AT_EMPTY_PATH);
+        fail("man guard fixed mandb descriptor exec");
     }
     execl("/usr/bin/mandb", "/usr/bin/mandb", "--create", "--quiet", "/usr/share/man", (char *)NULL);
     fail("man guard fixed mandb exec");

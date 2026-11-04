@@ -5,6 +5,70 @@ Specification docs/spec-v2.1.md SHA256:
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 A passing prototype/CI slice cannot substitute for the full version.
 
+## Executable-descriptor source candidate — native validation pending
+
+The next candidate adds --mandb-enforced-source and native guard profile v5.
+After all existing controls, the guard opens fixed /usr/bin/mandb read-only with
+NOFOLLOW/CLOEXEC, checks ordinary Root-owned nonwritable ELF bytes and a readonly
+mount, reports fstat identity, then invokes execveat on that exact descriptor.
+A failed descriptor launch exits 125; it cannot fall through to pathname exec.
+Legacy v3/v4 modes and all their controls remain available and strict.
+
+The Root controller holds its own fixed baseline mandb FD across fully drained
+restricted generation. It reads and hashes the same held object, binds bytes and
+metadata to the baseline manifest and ELF memory declarations, and compares the
+native descriptor identity with Root observations before and after generation.
+Source capture is disposable-Linux-Root only; pure comparisons and mocked tests
+run locally. No native or Root capture ran on the Mac. Complete collector,
+runtime/loader/plugin and publication authority remain false.
+
+The bounded executable packet is embedded in the existing Root report. A full
+additional 1 MiB reserve is charged inside the original 200 MB budget; named
+artifact count stays 64. Actual current mandb is 151,152 bytes; fixed-source read
+cap is 512 KiB. Existing 70-second, 256 MiB and 32-task limits remain unchanged.
+Raw worker results and executable-source captures remain in failure diagnostics.
+The independent new source gate still needs completion and native evidence before
+acceptance. Do not use the previous 44-gate acceptance alone for this v5 candidate.
+
+## Latest accepted native44 — fixed cache-generator memory controls
+
+Head f473f27b6676cdbd8b0dd2893e9ecbaadff2f063, base
+65fdfc02e3dbb18f791a92374a24690ae4e1ba87. Run 41784206329: all three jobs
+succeeded (quality 126422475118, security 126422475564, merge 126429566932).
+Quality ran 1,107 tests with one skip. Collector 89460 terminated with exit 0;
+do not restart it. Artifact 13301516282 has 49,474,744 bytes and SHA-256
+6d38f24dc1c181bf748b527da5ef125d7bcf46bd426693b7e18d483b7a61296c.
+Tested merge 8cee388187de2ca93fd60610a11177cce43e3f6d has the exact expected
+parents; 72 source files matched. All 44 independent staging checks and the prior
+54-hash/45-flag/PAM/Stop/recovery/package chain passed. No merge occurred.
+
+Actual enforced v4 generation returned 0. Temporary RX mapping was denied with
+EACCES; temporary/private RWX, anonymous RX/RWX, RW-to-RX and pkey transitions
+were denied as expected. Personality, memfd, SysV SHM, userfaultfd and uselib
+controls returned EPERM. Baseline reads/RX, temporary reads, the pre-Landlock
+trusted exec, cache writes and inherited child controls passed. The separate
+legacy diagnostic intentionally still permits anonymous mappings; the actual
+generation process is the one with the additional filter. Do not conflate them.
+
+Native guard header: 1,805 bytes. Embedded enforcement packet: 4,064 bytes within
+its full 16 KiB reserve. Original budget remains 200 MB; 64 artifacts plus all
+five reserves charge 176,397,648 bytes. Source identity packet is 9,313 bytes and
+mapping packet 3,453 bytes. All 13 native reference cases and 4,515 primary contexts
+passed, with 248 virtual/cat records excluded. Graph: 15,063,104 bytes; reference
+diagnostics: 293,856 bytes. Physical input and peak RAM remain unmeasured.
+
+Six fresh UI originals, eight crops and the contact sheet were actually viewed.
+Full 900/120 values are visible and pending/effective numeric pixels match.
+Receipt: outputs/acceptance-pr134-man-execmem-corrected/inspection.json.
+Proof: outputs/pr134-f473f27-native44-proof.json. CodeRabbit: five existing threads
+resolved, current check skipped; no claim of a new review or human approval.
+
+This accepts the observed file/syscall memory controls only. Complete runtime
+source/interpreter/ELF/loader/plugin selection, across-exec personality behavior,
+hardware nonexecution proof, protected runtime updates and independent generated
+state/publication semantics remain incomplete. The original full-version goal
+and PR security work remain active. Do not infer merge eligibility from this slice.
+
 ## Failed native44 and policy correction (fresh native run pending)
 
 Run 41778116412 at head d35b5d1849948155ede8c56ea94672867c402c91 failed.

@@ -622,3 +622,32 @@ true-copy exec positive keeps its own ix rule, combined with explicit mmap denia
 for temporary files. Cache and manual-source mappings also receive explicit
 denials. Existing native controls must demonstrate this distinction in the next
 VM run. This correction is not yet accepted as native mitigation or runtime closure.
+
+### Verified cache-generation memory controls at f473f27
+
+Run 41784206329 passed all three required jobs and the 44 independent staging
+checks, including exact tested merge parents and 72 source comparisons. The actual
+restricted generator returned zero under the enforcing AppArmor profile and v4
+seccomp guard. Temporary executable mappings and the additional executable-memory
+syscalls were denied while required read, trusted-code and cache-write controls
+still succeeded. The inherited child checks passed. The prior failed candidate
+remains failed; it was not bypassed or reclassified.
+
+Artifact 13301516282 is bound by SHA-256
+6d38f24dc1c181bf748b527da5ef125d7bcf46bd426693b7e18d483b7a61296c.
+All 64 artifacts and five full reserves charge 176,397,648 bytes against the
+original 200 MB budget. Fresh UI originals and detail crops were visually
+inspected. This proves the observed controls in the disposable VM, not complete
+runtime selection, physical input, protected updates or publication authority.
+
+### Descriptor-bound executable source candidate
+
+The new fixed v5 mode reports identity from an open readonly baseline mandb
+object and launches that same descriptor with execveat. Root independently holds
+and hashes its source FD across a fully drained generation, binds retained bytes
+to the observed baseline and ELF declarations, and compares both descriptor
+identities. The old v3/v4 schemas remain strict; failure has no pathname fallback.
+
+A bounded source packet adds a full 1 MiB reserve within the original 200 MB
+budget while retaining the 64-artifact count and worker resource limits. This is
+not yet native-accepted and does not establish complete loader or runtime closure.

@@ -6,6 +6,7 @@ run; the parser runs as man with no capabilities. Retain failures before checks.
 """
 import ast
 import base64
+import contextlib
 import hashlib
 import json
 import os
@@ -50,7 +51,7 @@ print(json.dumps(dict(state=state,config_sha256=hashlib.sha256(config).hexdigest
 
 
 def program(capture_source, *, runtime_view_source=None, runtime_origin_source=None,
-            mapping_controls=False, execmem_profile_source=None):
+            mapping_controls=False, execmem_profile_source=None, executable_source=False):
     if (type(mapping_controls) is not bool
             or (mapping_controls and runtime_origin_source is None)):
         raise ValueError('Mapping controls require the source-identity worker')
@@ -58,6 +59,9 @@ def program(capture_source, *, runtime_view_source=None, runtime_origin_source=N
             not mapping_controls or type(execmem_profile_source) is not bytes
             or not 0 < len(execmem_profile_source) <= 16384)):
         raise ValueError('Memory mode requires bounded fixed profile and mapping controls')
+    if type(executable_source) is not bool or (
+            executable_source and execmem_profile_source is None):
+        raise ValueError('Executable source mode requires memory-enforced fixed generation')
     tree = ast.parse(capture_source)
     capture = next(node for node in tree.body
                    if isinstance(node, ast.FunctionDef) and node.name == 'run_observed')
@@ -146,6 +150,11 @@ def program(capture_source, *, runtime_view_source=None, runtime_origin_source=N
             "execmem_context=(None if execmem_context is None else "
             "execmem_context.decode('ascii').rstrip('\\n')),"
             'mapping_controls_result=')
+    if executable_source:
+        marker = "['/run/man-cache-guard','--mandb-enforced']"
+        if body.count(marker) != 1:
+            raise ValueError('One fixed source-bound generation command required')
+        body = body.replace(marker, "['/run/man-cache-guard','--mandb-enforced-source']")
     data = (HEADER + view_program + origin_program
             + ast.get_source_segment(capture_source, fd_guard) + '\n'
             + ast.get_source_segment(capture_source, capture) + '\n' + body)
@@ -205,9 +214,13 @@ def sandbox(base, state_masks, empty, config_sha256, *, mode='restricted', execm
 
 
 def validate(row, host, config_sha256, *, require_input_guard=False,
-             runtime_view_source_sha256=None, require_execmem=False):
+             runtime_view_source_sha256=None, require_execmem=False,
+             require_executable_source=False):
     if type(require_execmem) is not bool or (require_execmem and not require_input_guard):
         raise ValueError('Memory enforcement requires explicit native input-guard validation')
+    if type(require_executable_source) is not bool or (
+            require_executable_source and not require_execmem):
+        raise ValueError('Executable source requires actual native memory enforcement')
     state = row['state']
     for key in ('uid', 'gid', 'groups'):
         if type(state[key]) is not list or any(type(v) is not int for v in state[key]):
@@ -246,23 +259,26 @@ def validate(row, host, config_sha256, *, require_input_guard=False,
                 json.dumps(expected_view, sort_keys=True, allow_nan=False)):
             raise ValueError('Exact bounded runtime-view proof required')
     if require_input_guard:
-        require_guard(row, execmem=require_execmem)
+        require_guard(row, execmem=require_execmem, executable_source=require_executable_source)
 
 
-def require_guard(row, *, execmem=False):
+def require_guard(row, *, execmem=False, executable_source=False):
     if row['mode'] != 'restricted':
         raise ValueError('Restricted worker mode required')
     guard = row['input_guard']
-    validate_native_guard(guard, role='mandb', execmem=execmem)
+    validate_native_guard(guard, role='mandb', execmem=execmem,
+                          executable_source=executable_source)
     raw = base64.b64decode(row['result']['stdout']['base64'], validate=True)
     first, separator, _ = raw.partition(b'\n')
     if not separator or len(first) > 4096 or json.loads(first) != guard:
         raise ValueError('Guard report must bind the captured command bytes')
 
 
-def validate_native_guard(guard, *, role, execmem=False):
+def validate_native_guard(guard, *, role, execmem=False, executable_source=False):
     if type(execmem) is not bool or (execmem and role != 'mandb'):
         raise ValueError('Memory enforcement is fixed to the actual mandb mode')
+    if type(executable_source) is not bool or (executable_source and not execmem):
+        raise ValueError('Executable source requires the fixed memory-enforced mandb mode')
     expected = {'groups_empty', 'nnp', 'all_capability_sets_zero',
         'control_read_before_allowed', 'control_write_before_allowed',
         'control_read_denied', 'control_write_denied', 'tmp_exec_before_allowed',
@@ -271,7 +287,9 @@ def validate_native_guard(guard, *, role, execmem=False):
     if (role not in {'mandb', 'source-bytes', 'source-content'} or type(guard) is not dict
             or set(guard) != expected | {'profile', 'role', 'landlock_abi', 'uid', 'gid'}
                 | ({'execmem'} if execmem else set())
-            or guard['profile'] != ('man-cache-landlock-seccomp-v4' if execmem else
+                | ({'executable_source'} if executable_source else set())
+            or guard['profile'] != ('man-cache-landlock-seccomp-v5' if executable_source else
+                                    'man-cache-landlock-seccomp-v4' if execmem else
                                     'man-cache-landlock-seccomp-v3') or guard['role'] != role
             or type(guard['landlock_abi']) is not int or not 5 <= guard['landlock_abi'] <= 4096
             or type(guard['uid']) is not int or guard['uid'] != 6
@@ -281,6 +299,9 @@ def validate_native_guard(guard, *, role, execmem=False):
     if execmem:
         from mano_runtime.package_man_execmem import inspect
         inspect(json.dumps(guard['execmem'], sort_keys=True, allow_nan=False).encode())
+    if executable_source:
+        from mano_runtime.package_man_executable_origin import checked_native
+        checked_native(guard['executable_source'])
 
 
 def unit_command(*, mode='restricted'):
@@ -361,7 +382,7 @@ def inspect_mapping_result(result):
     return inspect(streams['stdout'])
 
 
-def regenerate(base, capture_source, host, state_masks, empty, config, run):
+def regenerate(base, capture_source, host, state_masks, empty, config, run, *, baseline_tree=None):
     """Called only after the staging controller's Linux/Root/disposable guard."""
     if sys.platform != 'linux':
         raise PermissionError('Disposable Debian CI only')
@@ -372,6 +393,13 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
     recovery.root_guard()
     if base != Path('/.snapshots/.mano-staged-package-ci'):
         raise ValueError('Fixed private CI directory required')
+    if type(baseline_tree) is not dict:
+        raise ValueError('Observed fixed baseline tree required for descriptor execution')
+    from mano_runtime import package_man_executable_origin as executable_origin
+    executable_capture_source = (Path('/opt/mano-lab/src/mano_runtime') /
+                                 'package_man_executable_origin.py').read_bytes()
+    executable_elf_source = (Path('/opt/mano-lab/src/mano_runtime') /
+                             'package_man_elf_memory.py').read_bytes()
     digest = config_profile(config)
     runtime_view_source = (Path('/opt/mano-lab/src/mano_runtime') /
                            'package_man_runtime_view.py').read_text()
@@ -387,7 +415,7 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
                              'package_man_execmem.py').read_bytes()
     data = program(capture_source, runtime_view_source=runtime_view_source,
                    runtime_origin_source=runtime_origin_source, mapping_controls=True,
-                   execmem_profile_source=profile_source)
+                   execmem_profile_source=profile_source, executable_source=True)
     # Fixed repository profile, loaded only after all disposable/Root guards.
     # Never fall back to an unconfined restricted worker if this fails.
     run(['/usr/sbin/apparmor_parser', '--replace', '--skip-cache', str(profile_path)])
@@ -425,6 +453,7 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
 
     original = control_identity()
     observations, source_receipts, mapping_receipts = {}, {}, {}
+    executable_packet = None
     for mode in ('control', 'restricted'):
         role = 'man-cache-control' if mode == 'control' else 'regenerated-man-cache'
         cache = base / role
@@ -438,8 +467,18 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
                 else 'mano-man-regeneration-ci.service')
         stem = ('staged-man-regeneration-control' if mode == 'control'
                 else 'staged-man-regeneration-worker')
-        with runtime_origin.hold() as held:
+        executable_context = (executable_origin.hold(baseline_tree) if mode == 'restricted'
+                              else contextlib.nullcontext(None))
+        with runtime_origin.hold() as held, executable_context as executable_held:
             source_before = held.observe()
+            executable_before = (executable_held.observe()
+                                 if executable_held is not None else None)
+            executable_after = None
+            executable_capture = (dict(before=executable_before,
+                raw_base64=base64.b64encode(executable_held.raw).decode(),
+                raw_bytes=len(executable_held.raw),
+                raw_sha256=hashlib.sha256(executable_held.raw).hexdigest())
+                if executable_held is not None else None)
             try:
                 raw = run(unit_command(mode=mode) +
                           sandbox(base, state_masks, empty, digest, mode=mode, execmem=True),
@@ -453,7 +492,8 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
                          fresh_generation_observed=False, publication_authorized=False))
                 with (evidence / (stem + '-launch-failure.json')).open('x') as stream:
                     json.dump(dict(failed, runtime_source_before=source_before,
-                                   runtime_source_after=held.observe(), domain_drained=False),
+                                   runtime_source_after=held.observe(), domain_drained=False,
+                                   executable_source_capture=executable_capture),
                               stream, sort_keys=True)
                 raise
             # Preserve captured worker bytes before parsing or asserting success.
@@ -479,7 +519,8 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
                 row['domain_drained'] = True
                 validate(row, host, digest, require_input_guard=mode == 'restricted',
                          runtime_view_source_sha256=runtime_view_sha,
-                         require_execmem=mode == 'restricted')
+                         require_execmem=mode == 'restricted',
+                         require_executable_source=mode == 'restricted')
                 if (row['mode'] != mode or (mode == 'control' and row['input_guard'] is not None)
                         or control_identity() != original):
                     raise ValueError('Fixed comparison mode and unchanged control fixture required')
@@ -487,6 +528,15 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
                         or row.get('execmem_context') != (
                             'mano-man-cache-execmem (enforce)' if mode == 'restricted' else None)):
                     raise ValueError('Fixed profile digest and enforced worker context required')
+                if executable_held is not None:
+                    executable_after = executable_held.observe()
+                    executable_packet = executable_origin.compare(executable_held.raw,
+                        baseline_tree, executable_before, executable_after,
+                        row['input_guard']['executable_source'])
+                    executable_packet.update(domain_drained=True,
+                        generation_command_returned_zero=True,
+                        source_capture_sha256=hashlib.sha256(executable_capture_source).hexdigest(),
+                        elf_parser_source_sha256=hashlib.sha256(executable_elf_source).hexdigest())
                 source_after = held.observe()
                 source_proof = compare_source_identities(row, source_before, source_after,
                                                          origin_sha)
@@ -498,7 +548,9 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
                 with (evidence / (stem + '-launch-failure.json')).open('x') as stream:
                     json.dump(dict(stage='source-validation', error_type=type(error).__name__,
                         runtime_source_before=source_before, runtime_source_after=source_after,
-                        domain_drained=drained, worker_artifact=stem+'.json'),
+                        domain_drained=drained, worker_artifact=stem+'.json',
+                        executable_source_capture=executable_capture,
+                        executable_source_after=executable_after),
                         stream, sort_keys=True)
                 raise
     raw, row = observations['restricted']
@@ -536,4 +588,8 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
         generated_state_validated=False, changes_authorized=False, publication_authorized=False)
     if len(json.dumps(execmem_packet, sort_keys=True, allow_nan=False).encode()) > 16384:
         raise ValueError('Bounded embedded executable-memory enforcement evidence required')
-    return data, config, raw, row, source_packet, mapping_packet, execmem_packet
+    if (executable_packet is None or len(json.dumps(executable_packet, sort_keys=True,
+            allow_nan=False).encode()) > executable_origin.MAX_PACKET_BYTES):
+        raise ValueError('Bounded retained actual executable source required')
+    return (data, config, raw, row, source_packet, mapping_packet, execmem_packet,
+            executable_packet)
