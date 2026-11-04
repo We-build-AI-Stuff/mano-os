@@ -141,6 +141,17 @@ def run(native_terminal, password, register_identity, query, *, config_path=None
             action_id=observed['action_id'], path='gui-result.txt'))['artifact']
         control_request('check_artifact_contract', dict(
             action_id=observed['action_id'], artifact_id=artifact['artifact_id']))
+        # Later package fixtures reuse this task's original three-action Auto
+        # envelope. Restore it with a fresh human approval, never by editing DB
+        # state or silently broadening the Supervised result grant.
+        restored, restore_output = native_terminal('mano_prompt.mode',
+            (receipt['id'], 'auto', '--duration', '120', '--max-actions', '3',
+             '--max-timeout', '10'), actor='mano-human', answers=(
+                (b'Approve this exact operation?', 'y'),
+                (b'OS authentication password:', password)))
+        assert restored == 0 and password.encode() not in restore_output
+        restored_profile = query(dict(mode='permission_status', id=receipt['id']))['profile']
+        assert restored_profile['automatic'] and restored_profile['remaining_actions'] == 3
         (RUNTIME / 'preview-published').touch()
         wait(lambda: (RUNTIME / 'result.json').exists())
         result = json.loads((RUNTIME / 'result.json').read_text())
@@ -151,6 +162,7 @@ def run(native_terminal, password, register_identity, query, *, config_path=None
         assert result['prompt']['id'] == receipt['id']
         assert result['prompt']['task_id'] == managed['context']['task_id']
         result['tty_cancel_wrong_password_then_pam'] = True
+        result['original_auto_envelope_restored_with_native_pam'] = True
         result['rendering_profile'] = 'headless pixman / GTK cairo; full-frame redraw'
         result['artifact_sha256'] = {}
         for name in ('live-permissions-pending.png', 'live-permissions-effective.png',
