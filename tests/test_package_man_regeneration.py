@@ -51,6 +51,7 @@ class ManRegenerationTests(unittest.TestCase):
         self.assertNotEqual(os.geteuid(), 0)
         self.assertNotEqual(os.geteuid(), 6)
         for args in ([], ['--probe-child'], ['--source-bytes'], ['--source-content'],
+                     ['--mandb-enforced'], ['--probe-child-enforced'], ['--mapping-controls'],
                      ['/usr/bin/true'],
                      ['--probe-child', 'extra']):
             result = subprocess.run(['/tmp/mano-man-cache-guard', *args],

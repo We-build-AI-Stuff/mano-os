@@ -1,0 +1,18 @@
+# CI-only executable-file mapping layer for the fixed regeneration worker.
+# Fixed namespace and Landlock continue to restrict data access and execution.
+# This profile alone does not restrict anonymous executable memory or prove
+# interpreter, library/plugin selection, full runtime closure or publication.
+profile mano-man-cache-execmem flags=(mediate_deleted) {
+  /** rwlkix,
+  /usr/bin/** m,
+  /usr/lib/** m,
+  /run/man-cache-guard m,
+  network,
+  signal,
+  ptrace (readby) peer=unconfined,
+
+  # No change_profile rule: the worker cannot transition back out.
+  deny /proc/**/attr/** w,
+  deny /sys/kernel/security/** w,
+  deny /etc/apparmor.d/** wkl,
+}

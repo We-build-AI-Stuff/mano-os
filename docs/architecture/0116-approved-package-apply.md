@@ -545,7 +545,7 @@ not authenticate the interpreter that produced them. Native validation and fresh
 actual UI inspection are required; portable mocks/compilation are insufficient.
 
 
-## Pending executable mapping observations
+## Accepted executable mapping observations — mitigation incomplete
 
 Program launches, file-backed executable mappings and anonymous executable memory
 are distinct controls. A local optional native measurement mode records seven
@@ -581,3 +581,28 @@ compiled or executed on Mac. Fresh ALL CI,68source comparisons, full43-gate nati
 acceptance and actual UI inspection are mandatory. Successful observations may
 reveal allowed mappings; they are diagnostic evidence and do not authorize merge
 or establish a mitigation/full runtime closure.
+
+
+Native43 at7039597/run41773655848 passed allthree CI jobs/all43 independent gates,
+68 source comparisons and fresh actual UI. Kernel6.12.115+deb13.1-cloud-amd64,
+LandlockABI6: both workers allow postguard temporary RX/private RWX, anonymous RWX
+and RW-to-RX mappings even though temporary program launch is denied. All diagnostic
+memory is unmapped without jumping into it. This confirms an enforcement gap.
+Raw/source/binary/kernel/summary checks passed, not a mitigation. Paired summary3443B;
+64artifacts/full reserves charge176358516B withinoriginal200MB. Task proofs retain
+these negative observations and all broader flags remainfalse. The draft next
+AppArmor/syscall layer is not loaded or natively validated; actual generation,
+inherited child, source and compatibility checks remainmandatory before any claim.
+
+### Executable-memory enforcement candidate (native validation pending)
+
+The restricted regeneration worker now selects a fixed AppArmor profile after the
+complete identity/capability drop, verifies its enforcing label, and uses the new
+`--mandb-enforced` entry point. That process applies executable-memory syscall
+restrictions before launching mandb and checks inheritance through a child exec.
+The old v3 source-reader roles retain their existing behavior. A bounded witness
+records file/anonymous mappings, pkey transitions and alternate memory-route
+denials, with an additional full 16 KiB reserve inside the original 200 MB budget.
+This candidate has portable schema/wiring tests; Linux compilation, actual native
+controls and independent evidence acceptance remain pending. It does not establish
+complete interpreter/loader/plugin selection, runtime closure or publication authority.

@@ -5,6 +5,66 @@ Specification docs/spec-v2.1.md SHA256:
 6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace.
 A passing prototype/CI slice cannot substitute for the full version.
 
+## Latest accepted native43 — confirmed executable-mapping gap
+
+Head7039597ce9123c6af054dda6bdb9eeb72920e649/base65fdfc02e3dbb18f791a92374a24690ae4e1ba87.
+Run41773655848 ALL3SUCCESS: quality126388903454(1096tests/oneskip),
+security126388903597,merge126395384448. Collector46304 TERMINAL0; do not restart.
+Artifact13296643097/49502219B/SHA2abbce8d32aa93d20ed6463360ca052b77aa4eb29e7a0c75e7080e1c91602bd4.
+Testedmerged980134daa1aa87873d06e861cb4a6141b1dd4b9 exactparents/68matching sources.
+ALL43 independent gates plus previouschain PASS. Fresh sixUI originals/eightcrops
+ACTUALLY viewed; full900/120 and identical numericpixels. Proof in task outputs:
+pr134-7039597-native43-proof.json; receiptacceptance-pr134-man-mapping-controls/inspection.json.
+
+Actual kernel6.12.115+deb13.1-cloud-amd64/LandlockABI6: BOTH workers still allow
+postguard temporaryRX/privateRWX, anonymousRWX and RW-to-RX. Temporary program
+launch is denied. Seven before/after observations all succeed witherrno0; raw976B
+packetSHA1f0cec3bbc5290448ce83a04899deae40c9ef655cb769a59c260b98a3bfa4b63.
+Diagnostic mappings never jumped into; existing positive trusted true-copy exec ran.
+PairedRootsummary3443B/full16KiBreserve,64artifacts/charged176358516Bwithin200MB.
+Source identity checks and all13nativecases/4515primarycontexts stillpass;
+248virtual/catexcluded. Physicalinput/peakRAMnull; allauth/fullruntime/loader/
+generatedstate/publication flagsFALSE. Accepted DIAGNOSTIC evidence is not a fix.
+Gapreceipt pr134-native43-executable-mapping-gap.json. No CI/collector live now.
+
+## Current executable-memory enforcement implementation — NOT native-accepted
+
+New fixed --mandb-enforced mode in native/mano_man_cache_guard.c applies a second
+seccomp filter in the actual process before execl(mandb), retaining legacy v3 roles.
+New v4 guard checks exact enforcing AppArmor context before Landlock; full UID6/
+GID12/groups/caps/NNP checks remain. The fixed profile is loaded only by the guarded
+CI Root controller; aa-exec transition follows complete setpriv drop and precedes
+Python. Control worker remains baseline. No native Linux action ran on Mac.
+
+Canaries retain all seven mapping cases before/after, require temporary file mmap
+permission denials, and enforce anonymous RWX/RW-to-RX denials. Additional checks:
+baseline private RWX, anonymous RX, pkey_mprotect EXEC, personality, memfd_create,
+shmget/shmat, userfaultfd and uselib must return EPERM. Child SELF exec repeats all
+postfilter controls while the own temporary probe still exists. Diagnostic mmap
+addresses are never jumped into. Fixed mandb exec inherits filters/profile.
+package_man_execmem.py validates exact bounded witness schema, strict types,
+all positives/denials and false authority claims. Controller source-binds profile,
+checks actual worker context and actual guard header, retains raw worker evidence.
+New Root report field man_execmem_enforcement embeds profile bytes + proof <=16KiB;
+FULL additional16KiB reserve charged to ORIGINAL200MB, still64named artifacts.
+Existing 70s/256MiB/32task limits and all prior controls remain unchanged.
+
+Local focused tests:229run/4Linuxskips;10new synthetic validation/wiring groups pass.
+Full local suite interrupted during optional langchain/urllib3 import (KeyboardInterrupt;
+not a pass); log outputs/pr134-execmem-full-local-tests.log. Native compile/CI
+still require current verification. New code
+is NOT accepted as a mitigation until disposable native CI and independent44th
+reader/CLI/source-parent/budget/actual UI evidence pass. Independent readers still
+need explicit new gate: reconstruct worker execmem preflight/hash and fixed argv,
+select v4 ONLY for actual mandb, independently parse all new native controls and
+bind profile/parser/source/binary/report/budget; preserve all earlier43 gates.
+Do not run previous43 collector against new output or claim green CI is acceptance.
+
+interpreter/ELF/GNUstack/READ_IMPLIES_EXEC across exec/loader/plugin/source semantics
+and production protectedupdates remain requirements. No fullclosure claim from
+memory policy alone. Diskwarning18GiBfree/91% communicated. Three unrelated files
+with names ending ' 2' remain untracked and must not be staged or deleted.
+
 ## Latest accepted native42 — named source identities
 
 Head17c022e1fb22fe11a681b454f6ca8f05baf8b8b9/base65fdfc02e3dbb18f791a92374a24690ae4e1ba87.
@@ -75,7 +135,7 @@ flags remain false. Source identity equality alone cannot authenticate an interp
 The 17c change passed fresh native42 CI, all42 gates,66source comparisons and
 actual UI viewing as recorded above. Portable tests alone were not acceptance.
 
-## Next executable-mapping controls — integrated locally, native43 pending
+## Executable-mapping implementation — accepted diagnostic above
 
 Native optional --mapping-controls retains all v3 UID/cap/NNP/Landlock/seccomp,
 positive/negative temporary-launch and inherited-child controls. Seven before/
@@ -148,7 +208,7 @@ paid-provider/key/auth experiments.
 
 Root/Linux/native DB/staged inflation/VM operations ONLY disposable Debian CI.
 Portable unprivileged Python, metadata/byte/mock tests allowed Mac. No local VM or
-model downloads; never silently delete user data. Latest disk about19GiB free/91%
+model downloads; never silently delete user data. Latest disk about18GiB free/91%
 used: WARNING communicated. Warn<20GiB or>=90%; stop large downloads<10GiB.
 Preserve unrelated untracked duplicates, never stage/delete:
 - docs/architecture/0109-privileged-package-stop-domain 2.md

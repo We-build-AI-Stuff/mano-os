@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/prctl.h>
+#include <sys/personality.h>
+#include <sys/shm.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -151,6 +153,56 @@ static void restrict_syscalls(void) {
     seccomp_release(ctx);
 }
 
+static void restrict_execmem_syscalls(void) {
+    int initial = personality(0xffffffffUL);
+    if (initial < 0 || (initial & READ_IMPLIES_EXEC)) {
+        errno = EPERM; fail("manual memory initial personality");
+    }
+    scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_ALLOW);
+    if (!ctx || seccomp_attr_set(ctx, SCMP_FLTATR_ACT_BADARCH, SCMP_ACT_KILL_PROCESS) < 0 ||
+        seccomp_attr_set(ctx, SCMP_FLTATR_CTL_TSYNC, 1) < 0)
+        fail("manual memory seccomp context");
+    if (seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(mmap), 1,
+            SCMP_A2(SCMP_CMP_MASKED_EQ, PROT_WRITE | PROT_EXEC, PROT_WRITE | PROT_EXEC)) < 0 ||
+        seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(mmap), 2,
+            SCMP_A2(SCMP_CMP_MASKED_EQ, PROT_EXEC, PROT_EXEC),
+            SCMP_A3(SCMP_CMP_MASKED_EQ, MAP_ANONYMOUS, MAP_ANONYMOUS)) < 0 ||
+        seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(mprotect), 1,
+            SCMP_A2(SCMP_CMP_MASKED_EQ, PROT_EXEC, PROT_EXEC)) < 0)
+        fail("manual memory executable map transition rules");
+    int pkey = seccomp_syscall_resolve_name("pkey_mprotect");
+    if (pkey == __NR_SCMP_ERROR ||
+        seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), pkey, 1,
+            SCMP_A2(SCMP_CMP_MASKED_EQ, PROT_EXEC, PROT_EXEC)) < 0)
+        fail("manual memory pkey transition rule");
+    const char *denied[] = { "memfd_create", "shmget", "shmat", "userfaultfd",
+        "personality", "uselib" };
+    for (size_t n = 0; n < sizeof(denied)/sizeof(denied[0]); ++n) {
+        int number = seccomp_syscall_resolve_name(denied[n]);
+        if (number == __NR_SCMP_ERROR ||
+            seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), number, 0) < 0)
+            fail("manual memory alternate code route rule");
+    }
+    if (seccomp_load(ctx) < 0) fail("manual memory seccomp load");
+    seccomp_release(ctx);
+}
+
+/* The profile transition happens at the fixed worker exec boundary, after the
+ * identity/capability drop. Never attempt a privileged transition here. */
+static void require_execmem_profile(void) {
+    static const char expected[] = "mano-man-cache-execmem (enforce)\n";
+    char buffer[128];
+    int fd = open("/proc/self/attr/current", O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+    if (fd < 0) fail("manual memory profile open");
+    ssize_t count = read(fd, buffer, sizeof(buffer));
+    char extra;
+    ssize_t tail = count < 0 ? -1 : read(fd, &extra, 1);
+    if (close(fd) || count != (ssize_t)(sizeof(expected)-1) || tail != 0 ||
+            memcmp(buffer, expected, sizeof(expected)-1)) {
+        errno = EPERM; fail("manual memory exact enforcing profile");
+    }
+}
+
 static void allowed_open(int flags) {
     int fd = open(CONTROL, flags | O_NOFOLLOW | O_CLOEXEC);
     if (fd < 0) fail("man guard control accessible before restriction");
@@ -277,20 +329,134 @@ static void mapping_packet(const char *name, struct mapping_controls result, int
     printf("}");
 }
 
+/* These are syscall results, never function pointers or executable payloads.
+ * Keep failed outcomes bounded; only explicit permission errors prove denial. */
+struct execmem_controls {
+    struct mapping_controls mappings;
+    struct mapping_result baseline_write_exec, anonymous_exec, pkey_to_exec;
+    struct mapping_result personality, memfd_create, shmget, shmat, userfaultfd, uselib;
+};
+
+static struct mapping_result syscall_result(long result, int error) {
+    return (struct mapping_result){ result != -1, result == -1 ? error : 0 };
+}
+
+static struct mapping_result anonymous_exec(void) {
+    errno = 0;
+    void *address = mmap(NULL, 4096, PROT_READ | PROT_EXEC,
+                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    struct mapping_result result = { address != MAP_FAILED,
+                                    address == MAP_FAILED ? errno : 0 };
+    if (address != MAP_FAILED && munmap(address, 4096))
+        fail("manual memory anonymous RX cleanup");
+    return result;
+}
+
+static struct mapping_result pkey_to_exec(void) {
+    void *address = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
+                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (address == MAP_FAILED) fail("manual memory pkey RW positive control");
+    errno = 0;
+    long status = syscall(SYS_pkey_mprotect, address, 4096, PROT_READ | PROT_EXEC, -1);
+    struct mapping_result result = syscall_result(status, errno);
+    if (munmap(address, 4096)) fail("manual memory pkey cleanup");
+    return result;
+}
+
+static struct execmem_controls observe_execmem(void) {
+    struct execmem_controls result = {
+        .mappings = observe_mappings(),
+        .baseline_write_exec = map_file("/usr/bin/true", PROT_READ | PROT_WRITE | PROT_EXEC),
+        .anonymous_exec = anonymous_exec(),
+        .pkey_to_exec = pkey_to_exec()
+    };
+    errno = 0;
+    long status = personality(0xffffffffUL);
+    result.personality = syscall_result(status, errno);
+    errno = 0;
+    status = syscall(SYS_memfd_create, "mano-fixed-memory-control", 0);
+    result.memfd_create = syscall_result(status, errno);
+    if (status >= 0 && close((int)status)) fail("manual memory memfd cleanup");
+    errno = 0;
+    status = shmget(IPC_PRIVATE, 4096, IPC_CREAT | 0600);
+    result.shmget = syscall_result(status, errno);
+    if (status >= 0 && shmctl((int)status, IPC_RMID, NULL))
+        fail("manual memory shared segment cleanup");
+    errno = 0;
+    void *attached = shmat(-1, NULL, SHM_RDONLY);
+    result.shmat = (struct mapping_result){ attached != (void *)-1,
+                                           attached == (void *)-1 ? errno : 0 };
+    if (attached != (void *)-1 && shmdt(attached)) fail("manual memory shmat cleanup");
+    errno = 0;
+    status = syscall(SYS_userfaultfd, O_CLOEXEC | O_NONBLOCK);
+    result.userfaultfd = syscall_result(status, errno);
+    if (status >= 0 && close((int)status)) fail("manual memory userfaultfd cleanup");
+    errno = 0;
+    status = syscall(SYS_uselib, "/usr/bin/true");
+    result.uselib = syscall_result(status, errno);
+    return result;
+}
+
+static int permission_denied(struct mapping_result result, int seccomp_only) {
+    return !result.allowed && (result.error == EPERM ||
+                               (!seccomp_only && result.error == EACCES));
+}
+
+static void require_execmem_controls(struct execmem_controls result) {
+    if (!mapping_positives(result.mappings) ||
+            !permission_denied(result.mappings.temporary_exec, 0) ||
+            !permission_denied(result.mappings.temporary_write_exec, 1) ||
+            !permission_denied(result.mappings.anonymous_write_exec, 1) ||
+            !permission_denied(result.mappings.anonymous_to_exec, 1)) {
+        errno = EPERM; fail("manual memory mapping controls");
+    }
+    struct mapping_result denied[] = { result.baseline_write_exec, result.anonymous_exec,
+        result.pkey_to_exec, result.personality, result.memfd_create, result.shmget,
+        result.shmat, result.userfaultfd, result.uselib };
+    for (size_t n = 0; n < sizeof(denied)/sizeof(denied[0]); ++n)
+        if (!permission_denied(denied[n], 1)) {
+            errno = EPERM; fail("manual memory explicit syscall denials");
+        }
+}
+
+static void execmem_packet(struct mapping_controls before, struct execmem_controls after) {
+    printf("\"execmem\":{\"profile\":\"man-execmem-enforcement-v1\","
+           "\"apparmor_context\":\"mano-man-cache-execmem (enforce)\","
+           "\"diagnostic_mapping_bytes_executed\":false,");
+    mapping_packet("before", before, 0);
+    mapping_packet("after", after.mappings, 1);
+    printf(",\"syscalls\":{");
+    mapping_field("baseline_write_exec", after.baseline_write_exec, 0);
+    mapping_field("anonymous_exec", after.anonymous_exec, 1);
+    mapping_field("pkey_to_exec", after.pkey_to_exec, 1);
+    mapping_field("personality", after.personality, 1);
+    mapping_field("memfd_create", after.memfd_create, 1);
+    mapping_field("shmget", after.shmget, 1);
+    mapping_field("shmat", after.shmat, 1);
+    mapping_field("userfaultfd", after.userfaultfd, 1);
+    mapping_field("uselib", after.uselib, 1);
+    printf("},\"child_exec_inheritance_verified\":true,"
+           "\"complete_runtime_closure_verified\":false,\"publication_authorized\":false}");
+}
+
 int main(int argc, char **argv) {
     int source_bytes = argc == 2 && !strcmp(argv[1], "--source-bytes");
     int source_content = argc == 2 && !strcmp(argv[1], "--source-content");
     int probe_child = argc == 2 && !strcmp(argv[1], "--probe-child");
     int mapping_controls = argc == 2 && !strcmp(argv[1], "--mapping-controls");
-    if (argc != 1 && !source_bytes && !source_content && !probe_child && !mapping_controls)
+    int mandb_enforced = argc == 2 && !strcmp(argv[1], "--mandb-enforced");
+    int enforced_child = argc == 2 && !strcmp(argv[1], "--probe-child-enforced");
+    if (argc != 1 && !mandb_enforced && !enforced_child && !source_bytes && !source_content && !probe_child && !mapping_controls)
         { errno = EINVAL; fail("man guard fixed entrypoint"); }
     identity();
     if (syscall(SYS_close_range, 3U, ~0U, 0)) fail("man guard FD closure");
-    if (probe_child) {
+    if (mandb_enforced) require_execmem_profile();
+    if (probe_child || enforced_child) {
         denied_open(O_RDONLY);
         denied_open(O_WRONLY);
         syscall_checks();
         cache_write();
+        if (enforced_child) require_execmem_controls(observe_execmem());
         return 0;
     }
     allowed_open(O_RDONLY);
@@ -300,9 +466,17 @@ int main(int argc, char **argv) {
     if (before == 0) { execl(EXEC_PROBE, EXEC_PROBE, (char *)NULL); _exit(125); }
     wait_ok(before); /* Demonstrates that mount/DAC alone previously allowed this exec. */
     struct mapping_controls mapping_before = {0}, mapping_after = {0};
-    if (mapping_controls) mapping_before = observe_mappings();
+    if (mapping_controls || mandb_enforced) mapping_before = observe_mappings();
+    if (mandb_enforced && (!mapping_positives(mapping_before) ||
+            !mapping_before.anonymous_write_exec.allowed ||
+            !mapping_before.anonymous_to_exec.allowed ||
+            !permission_denied(mapping_before.temporary_exec, 0) ||
+            !permission_denied(mapping_before.temporary_write_exec, 0))) {
+        errno = EPERM; fail("manual memory pre-filter positive/profile controls");
+    }
     int abi = restrict_files(source_content ? 2 : source_bytes ? 1 : 0);
     restrict_syscalls();
+    if (mandb_enforced) restrict_execmem_syscalls();
     identity();
     denied_open(O_RDONLY);
     denied_open(O_WRONLY);
@@ -315,10 +489,16 @@ int main(int argc, char **argv) {
     }
     wait_ok(after);
     if (mapping_controls) mapping_after = observe_mappings();
-    if (unlink(EXEC_PROBE)) fail("man guard own exec probe cleanup");
+    struct execmem_controls execmem_after = {0};
+    if (mandb_enforced) {
+        execmem_after = observe_execmem();
+        require_execmem_controls(execmem_after);
+    }
+    if (!mandb_enforced && unlink(EXEC_PROBE)) fail("man guard own exec probe cleanup");
     pid_t child = fork();
-    if (child == 0) { execl(SELF, SELF, "--probe-child", (char *)NULL); _exit(125); }
+    if (child == 0) { execl(SELF, SELF, mandb_enforced ? "--probe-child-enforced" : "--probe-child", (char *)NULL); _exit(125); }
     wait_ok(child);
+    if (mandb_enforced && unlink(EXEC_PROBE)) fail("manual memory probe cleanup");
     if (mapping_controls) {
         struct utsname kernel;
         if (uname(&kernel)) fail("man guard mapping kernel release");
@@ -342,15 +522,21 @@ int main(int argc, char **argv) {
         }
         return 0;
     }
-    printf("{\"profile\":\"man-cache-landlock-seccomp-v3\",\"role\":\"%s\",\"landlock_abi\":%d,"
+    printf("{\"profile\":\"%s\",\"role\":\"%s\",\"landlock_abi\":%d,"
            "\"uid\":6,\"gid\":12,\"groups_empty\":true,\"nnp\":true,"
            "\"all_capability_sets_zero\":true,\"control_read_before_allowed\":true,"
            "\"control_write_before_allowed\":true,\"control_read_denied\":true,"
            "\"control_write_denied\":true,\"tmp_exec_before_allowed\":true,"
            "\"tmp_exec_denied\":true,\"cache_write_allowed\":true,"
            "\"namespace_change_denied\":true,\"identity_change_denied\":true,"
-           "\"child_exec_inheritance_verified\":true,\"seccomp_enforced\":true}\n",
+           "\"child_exec_inheritance_verified\":true,\"seccomp_enforced\":true",
+           mandb_enforced ? "man-cache-landlock-seccomp-v4" : "man-cache-landlock-seccomp-v3",
            source_content ? "source-content" : source_bytes ? "source-bytes" : "mandb", abi);
+    if (mandb_enforced) {
+        printf(",");
+        execmem_packet(mapping_before, execmem_after);
+    }
+    printf("}\n");
     if (fflush(stdout)) fail("man guard report flush");
     if (source_content) {
         execl("/usr/bin/python3", "/usr/bin/python3", "-I", "-B",

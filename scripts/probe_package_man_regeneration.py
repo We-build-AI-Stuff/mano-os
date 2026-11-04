@@ -50,10 +50,14 @@ print(json.dumps(dict(state=state,config_sha256=hashlib.sha256(config).hexdigest
 
 
 def program(capture_source, *, runtime_view_source=None, runtime_origin_source=None,
-            mapping_controls=False):
+            mapping_controls=False, execmem_profile_source=None):
     if (type(mapping_controls) is not bool
             or (mapping_controls and runtime_origin_source is None)):
         raise ValueError('Mapping controls require the source-identity worker')
+    if (execmem_profile_source is not None and (
+            not mapping_controls or type(execmem_profile_source) is not bytes
+            or not 0 < len(execmem_profile_source) <= 16384)):
+        raise ValueError('Memory mode requires bounded fixed profile and mapping controls')
     tree = ast.parse(capture_source)
     capture = next(node for node in tree.body
                    if isinstance(node, ast.FunctionDef) and node.name == 'run_observed')
@@ -123,6 +127,25 @@ def program(capture_source, *, runtime_view_source=None, runtime_origin_source=N
         body = body.replace('print(json.dumps(dict(runtime_source_identities=',
             'print(json.dumps(dict(mapping_controls_result=mapping_result,'
             'runtime_source_identities=')
+    if execmem_profile_source is not None:
+        marker = "config=Path('/etc/manpath.config').read_bytes()"
+        preflight = (
+            "execmem_context=None\nif sys.argv[2]=='restricted':\n"
+            "    execmem_context=Path('/proc/self/attr/current').read_bytes()\n"
+            "    if execmem_context!=b'mano-man-cache-execmem (enforce)\\n':\n"
+            "        raise ValueError('Exact enforcing manual-memory profile required')\n"
+            "execmem_profile_sha256=" + repr(hashlib.sha256(execmem_profile_source).hexdigest())
+            + "\n")
+        if body.count(marker) != 1 or body.count("['/run/man-cache-guard']") != 1:
+            raise ValueError('Fixed actual-generation insertion points required')
+        body = body.replace(marker, preflight + marker)
+        body = body.replace("['/run/man-cache-guard']",
+                            "['/run/man-cache-guard','--mandb-enforced']")
+        body = body.replace('print(json.dumps(dict(mapping_controls_result=',
+            "print(json.dumps(dict(execmem_profile_sha256=execmem_profile_sha256,"
+            "execmem_context=(None if execmem_context is None else "
+            "execmem_context.decode('ascii').rstrip('\\n')),"
+            'mapping_controls_result=')
     data = (HEADER + view_program + origin_program
             + ast.get_source_segment(capture_source, fd_guard) + '\n'
             + ast.get_source_segment(capture_source, capture) + '\n' + body)
@@ -149,8 +172,9 @@ def config_profile(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
-def sandbox(base, state_masks, empty, config_sha256, *, mode='restricted'):
-    if re.fullmatch('[a-f0-9]{64}', config_sha256) is None or mode not in {'control', 'restricted'}:
+def sandbox(base, state_masks, empty, config_sha256, *, mode='restricted', execmem=False):
+    if (type(execmem) is not bool or re.fullmatch('[a-f0-9]{64}', config_sha256) is None
+            or mode not in {'control', 'restricted'}):
         raise ValueError('Configuration digest required')
     return ['/usr/bin/bwrap', '--die-with-parent', '--new-session', '--unshare-pid',
             '--unshare-net', '--unshare-ipc', '--unshare-uts', '--unshare-cgroup',
@@ -175,11 +199,15 @@ def sandbox(base, state_masks, empty, config_sha256, *, mode='restricted'):
             '--cap-add', 'CAP_SETPCAP', '--chdir', '/',
             '/usr/bin/setpriv', '--no-new-privs', '--reuid', '6', '--regid', '12',
             '--clear-groups', '--bounding-set=-all', '--inh-caps=-all', '--ambient-caps=-all',
+            *(['/usr/bin/aa-exec', '-p', 'mano-man-cache-execmem', '--']
+              if execmem and mode == 'restricted' else []),
             '/usr/bin/python3', '-I', '-B', '/run/man-regeneration.py', config_sha256, mode]
 
 
 def validate(row, host, config_sha256, *, require_input_guard=False,
-             runtime_view_source_sha256=None):
+             runtime_view_source_sha256=None, require_execmem=False):
+    if type(require_execmem) is not bool or (require_execmem and not require_input_guard):
+        raise ValueError('Memory enforcement requires explicit native input-guard validation')
     state = row['state']
     for key in ('uid', 'gid', 'groups'):
         if type(state[key]) is not list or any(type(v) is not int for v in state[key]):
@@ -218,21 +246,23 @@ def validate(row, host, config_sha256, *, require_input_guard=False,
                 json.dumps(expected_view, sort_keys=True, allow_nan=False)):
             raise ValueError('Exact bounded runtime-view proof required')
     if require_input_guard:
-        require_guard(row)
+        require_guard(row, execmem=require_execmem)
 
 
-def require_guard(row):
+def require_guard(row, *, execmem=False):
     if row['mode'] != 'restricted':
         raise ValueError('Restricted worker mode required')
     guard = row['input_guard']
-    validate_native_guard(guard, role='mandb')
+    validate_native_guard(guard, role='mandb', execmem=execmem)
     raw = base64.b64decode(row['result']['stdout']['base64'], validate=True)
     first, separator, _ = raw.partition(b'\n')
     if not separator or len(first) > 4096 or json.loads(first) != guard:
         raise ValueError('Guard report must bind the captured command bytes')
 
 
-def validate_native_guard(guard, *, role):
+def validate_native_guard(guard, *, role, execmem=False):
+    if type(execmem) is not bool or (execmem and role != 'mandb'):
+        raise ValueError('Memory enforcement is fixed to the actual mandb mode')
     expected = {'groups_empty', 'nnp', 'all_capability_sets_zero',
         'control_read_before_allowed', 'control_write_before_allowed',
         'control_read_denied', 'control_write_denied', 'tmp_exec_before_allowed',
@@ -240,12 +270,17 @@ def validate_native_guard(guard, *, role):
         'identity_change_denied', 'child_exec_inheritance_verified', 'seccomp_enforced'}
     if (role not in {'mandb', 'source-bytes', 'source-content'} or type(guard) is not dict
             or set(guard) != expected | {'profile', 'role', 'landlock_abi', 'uid', 'gid'}
-            or guard['profile'] != 'man-cache-landlock-seccomp-v3' or guard['role'] != role
+                | ({'execmem'} if execmem else set())
+            or guard['profile'] != ('man-cache-landlock-seccomp-v4' if execmem else
+                                    'man-cache-landlock-seccomp-v3') or guard['role'] != role
             or type(guard['landlock_abi']) is not int or not 5 <= guard['landlock_abi'] <= 4096
             or type(guard['uid']) is not int or guard['uid'] != 6
             or type(guard['gid']) is not int or guard['gid'] != 12
             or any(guard[key] is not True for key in expected)):
         raise ValueError('Exact native input guard and inherited denial controls required')
+    if execmem:
+        from mano_runtime.package_man_execmem import inspect
+        inspect(json.dumps(guard['execmem'], sort_keys=True, allow_nan=False).encode())
 
 
 def unit_command(*, mode='restricted'):
@@ -345,8 +380,17 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
     runtime_origin_source = (Path('/opt/mano-lab/src/mano_runtime') /
                              'package_man_runtime_origin.py').read_text()
     origin_sha = hashlib.sha256(runtime_origin_source.encode()).hexdigest()
+    profile_path = Path('/opt/mano-lab/packaging/apparmor/mano-man-cache-execmem')
+    profile_source = profile_path.read_bytes()
+    profile_sha = hashlib.sha256(profile_source).hexdigest()
+    execmem_parser_source = (Path('/opt/mano-lab/src/mano_runtime') /
+                             'package_man_execmem.py').read_bytes()
     data = program(capture_source, runtime_view_source=runtime_view_source,
-                   runtime_origin_source=runtime_origin_source, mapping_controls=True)
+                   runtime_origin_source=runtime_origin_source, mapping_controls=True,
+                   execmem_profile_source=profile_source)
+    # Fixed repository profile, loaded only after all disposable/Root guards.
+    # Never fall back to an unconfined restricted worker if this fails.
+    run(['/usr/sbin/apparmor_parser', '--replace', '--skip-cache', str(profile_path)])
     mapping_source = (Path('/opt/mano-lab/src/mano_runtime') /
                        'package_man_mapping_controls.py').read_bytes()
     source = base / 'man-regeneration.py'
@@ -398,7 +442,8 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
             source_before = held.observe()
             try:
                 raw = run(unit_command(mode=mode) +
-                          sandbox(base, state_masks, empty, digest, mode=mode), timeout=80)
+                          sandbox(base, state_masks, empty, digest, mode=mode, execmem=True),
+                          timeout=80)
             except (subprocess.CalledProcessError, subprocess.TimeoutExpired,
                     OSError, ValueError) as error:
                 failed = (launch_failure(error) if isinstance(error, (
@@ -433,10 +478,15 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
                 row = json.loads(raw)
                 row['domain_drained'] = True
                 validate(row, host, digest, require_input_guard=mode == 'restricted',
-                         runtime_view_source_sha256=runtime_view_sha)
+                         runtime_view_source_sha256=runtime_view_sha,
+                         require_execmem=mode == 'restricted')
                 if (row['mode'] != mode or (mode == 'control' and row['input_guard'] is not None)
                         or control_identity() != original):
                     raise ValueError('Fixed comparison mode and unchanged control fixture required')
+                if (row.get('execmem_profile_sha256') != profile_sha
+                        or row.get('execmem_context') != (
+                            'mano-man-cache-execmem (enforce)' if mode == 'restricted' else None)):
+                    raise ValueError('Fixed profile digest and enforced worker context required')
                 source_after = held.observe()
                 source_proof = compare_source_identities(row, source_before, source_after,
                                                          origin_sha)
@@ -472,4 +522,18 @@ def regenerate(base, capture_source, host, state_masks, empty, config, run):
         generated_state_validated=False, changes_authorized=False, publication_authorized=False)
     if len(json.dumps(mapping_packet, sort_keys=True, allow_nan=False).encode()) > 16384:
         raise ValueError('Bounded embedded mapping controls required')
-    return data, config, raw, row, source_packet, mapping_packet
+    execmem_packet = dict(profile='man-execmem-generation-v1',
+        profile_source_base64=base64.b64encode(profile_source).decode(),
+        profile_source_sha256=profile_sha,
+        parser_source_sha256=hashlib.sha256(execmem_parser_source).hexdigest(),
+        guard_source_sha256=hashlib.sha256(native_source).hexdigest(),
+        guard_binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
+        generation_guard=row['input_guard'],
+        worker_context=row['execmem_context'],
+        control_context=observations['control'][1]['execmem_context'],
+        diagnostic_mapping_bytes_executed=False,
+        complete_runtime_closure_verified=False, loader_selection_verified=False,
+        generated_state_validated=False, changes_authorized=False, publication_authorized=False)
+    if len(json.dumps(execmem_packet, sort_keys=True, allow_nan=False).encode()) > 16384:
+        raise ValueError('Bounded embedded executable-memory enforcement evidence required')
+    return data, config, raw, row, source_packet, mapping_packet, execmem_packet
