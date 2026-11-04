@@ -105,6 +105,7 @@ The prototype has CI evidence for:
 - Native PAM approvals and an independent Stop path, including frozen-service tests.
 - Separate human and agent graphical sessions, with selected Chromium and LibreOffice workflows.
 - Persistent workflow state and deterministic mock-agent task flows.
+- Broker-backed request status and a read-only viewer for verified result snapshots.
 - Package planning and review, archive verification, interrupted package-operation handling,
   and btrfs-root recovery boots.
 - Installation, reinstallation, and removal of the prototype Debian runtime package,
@@ -125,6 +126,7 @@ The runtime package is unsigned and remains a development prototype.
 - [Runtime operations](docs/operations.md) — prototype package setup and operation.
 - [Architecture decisions](docs/architecture/) — how the system is designed and why.
 - [Delivery ledger](docs/DELIVERY.md) — original requirements, accepted scope, remaining gaps and next milestone.
+- [Workspace demonstration](docs/phase-1-workspace-evidence.md) — inspected project source, captured test logs, native result viewer and remaining acceptance gaps.
 - [Development status and handoff](docs/CONTINUATION.md) — detailed implementation progress.
 - [Engineering guide](AGENTS.md) — contribution and development workflow.
 

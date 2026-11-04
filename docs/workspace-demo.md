@@ -6,6 +6,10 @@ Four separate native PAM approvals authorize its four effects. The plans are
 recorded: this demonstrates the broker/core/executor workflow without an AI
 provider call. It does not demonstrate that a live model devised the correction.
 
+The [evidence index](phase-1-workspace-evidence.md) links the inspected main/PR
+downloads, records their hashes and maps coverage to all eight original Phase 1
+items. It distinguishes the accepted demonstration from remaining phase gates.
+
 ## Get a run's result
 
 Open the repository's **Actions → CI** and select a completed run for the revision

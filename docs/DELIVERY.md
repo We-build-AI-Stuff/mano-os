@@ -18,7 +18,8 @@ None alone closes a phase or proves the requested version complete.
 
 | Track | Visible state | Completion boundary |
 | --- | --- | --- |
-| Main | `65fdfc02e3dbb18f791a92374a24690ae4e1ba87` at audit time | Merged prototype; full version incomplete |
+| Audited runtime baseline | `7f255805d3b1d6c1f7b5485f1b2ea4e6db7a79f6`, including merged PR148 | Native result viewer and recorded-project download verified at their indexed revisions; full version incomplete |
+| Workspace evidence | [Published evidence index](phase-1-workspace-evidence.md), [run 41871350554](https://github.com/We-build-AI-Stuff/mano-os/actions/runs/41871350554) | Downloaded source/log hashes and action/artifact bindings checked; whole-workspace change inventory and aggregate metrics remain open |
 | Package apply | [PR #134](https://github.com/We-build-AI-Stuff/mano-os/pull/134), 191 changed files and 28,977 additions at audit time | Unmerged; source/runtime and publication integrity still incomplete |
 | Latest package lab evidence | [Run 41794862656](https://github.com/We-build-AI-Stuff/mano-os/actions/runs/41794862656), head `9d8c491` | All three CI jobs and 46 external staging checks passed; specific held-file evidence, not phase completion |
 | Unpushed package experiments | Kernel-event collector/parser drafts remain in the original local checkout | Not included in main or the accepted CI head |
@@ -35,6 +36,13 @@ correction diff and identity/hash manifest. See [the workspace demonstration](wo
 for download, inspection and disposable-runner reproduction. Native acceptance of
 the export must be checked on the revision being reviewed; source presence alone
 does not close this milestone.
+
+The [published Phase 1 evidence index](phase-1-workspace-evidence.md) now records
+the inspected main `63da53f` download and PR148 native viewer, with their exact CI
+runs, archive hashes, original actions and eight-item requirement audit. It separates
+the mock-agent addition project from the later recorded correction fixture. The
+download contains a one-file correction diff; a complete task/workspace change
+inventory and appropriately scoped resource/task metrics remain outstanding.
 
 Completion evidence for this milestone must include:
 
@@ -92,7 +100,8 @@ Architecture GO for Phase 1 development; physical acceptance remains open. [Exis
 
 ### Phase 1 — Trusted broker, sandbox runner and minimal agent
 
-Implemented prototype components; complete phase gate not accepted. [Existing implementation notes](architecture/0095-recorded-developer-workflow.md).
+Native mock/recorded demonstrations inspected; complete phase acceptance remains
+open. [Evidence and eight-item audit](phase-1-workspace-evidence.md).
 
 | ID | Original build/test requirement | Current evidence or remaining gap |
 | --- | --- | --- |
@@ -100,9 +109,9 @@ Implemented prototype components; complete phase gate not accepted. [Existing im
 | P1-2 | Implement broker-owned policy, secure grants and action journal (`intent → executing → done/failed/unknown`). | Broker grants, approvals and action journal exist; full product acceptance remains open. |
 | P1-3 | Implement per-task bubblewrap sandbox with filesystem restrictions, no inherited IPC, cgroup and seccomp/Landlock tests. | Native sandbox, cgroups and filesystem/syscall/IPC negative fixtures exist. |
 | P1-4 | Build supervised, Auto and Full Access policy **profiles** (initial small scope, then expand later). | Workspace permission profiles and native PAM/GUI permission proposal flow exist. |
-| P1-5 | Implement isolated terminal adapter and minimal model adapter / LangGraph `AgentRuntime`. | Isolated execution, model routing and LangGraph core exist; accepted live-agent journey missing. |
-| P1-6 | Implement prompt bar and broker-driven approval UI. | GTK prompt and broker status/permissions exist; prompt submission alone does not execute a task. |
-| P1-7 | Build golden-task tests, mock model, recorded traces/replay, malicious shell attempts and CI gating. | Mock/recorded workflow and replay tests exist; publish a single reproducible milestone demonstration. |
+| P1-5 | Implement isolated terminal adapter and minimal model adapter / LangGraph `AgentRuntime`. | Native LangGraph mock-project and installed planner/core fixtures inspected; live-provider acceptance is a separate product gap. |
+| P1-6 | Implement prompt bar and broker-driven approval UI. | Native prompt, broker status/permissions and verified-snapshot viewer have CI evidence; submission alone does not execute a task. |
+| P1-7 | Build golden-task tests, mock model, recorded traces/replay, malicious shell attempts and CI gating. | Reproducible source/log/action evidence published; whole-workspace trace and broader task/corpus metrics remain open. |
 | P1-8 | Implement stop/revoke end-to-end and verify unknown-effect recovery. | Native Stop/revoke and unknown-state handling exist; integrated phase exit evidence remains open. |
 
 ### Phase 2 — Developer tool workflows and independent coding adapters
@@ -187,7 +196,7 @@ Development runtime package; signed installable distribution not accepted. [Exis
 | Phase | Required exit | Acceptance today |
 | --- | --- | --- |
 | 0 | Isolation, approval protection, trusted Stop, headless GUI; revise architecture if they fail | Lab GO for Phase 1 development, using the documented OS-authenticated fallback; no production or physical guarantee |
-| 1 | Agent creates/tests a workspace project; protected policy/host writes fail at OS boundary | Native recorded journey already exercised; consolidate its evidence and audit all eight Phase 1 requirements |
+| 1 | Agent creates/tests a workspace project; protected policy/host writes fail at OS boundary | Native mock-project and protected-policy negatives indexed; whole-workspace trace and aggregate evidence still incomplete |
 | 2 | Coding job → tests → correction → verified result; malicious delegate leaves policy/settings unchanged | Recorded correction and offline adapter fixtures; authenticated delegate gate remains open |
 | 3 | Build website → tests → Chromium verification → summary, plus Writer; approval/user-session attacks fail | Individual browser/Writer/runtime fixtures; integrated MVP gate remains open |
 | 4 | Restart core without repeating completed effects; reconcile unknown effects; show accurate status | Components/fixtures present; full multi-app restart gate remains open |
