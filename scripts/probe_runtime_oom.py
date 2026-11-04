@@ -26,6 +26,15 @@ def events(raw):
     return result
 
 
+def validate_oom_outcome(outcome):
+    # memory.oom.group kills the in-group report-producing supervisor as well
+    # as its payload. No complete child report means unknown, never a fabricated
+    # terminal exit status or permission to repeat the interrupted action.
+    if (outcome['state'] != 'unknown' or outcome['exit_code'] is not None
+            or type(outcome['verified']) is not int or outcome['verified'] != 0):
+        raise AssertionError('Group OOM must preserve unverified unknown outcome')
+
+
 def services():
     result = {}
     for unit in SERVICES:
@@ -72,7 +81,7 @@ def run(rpc, human, identity, password, task, prompt_id):
         action = rpc('request', dict(schema_version='1.0', operation='propose',
             body=proposal | dict(grant_id=grant['grant_id'])), actor=identity.name)
         assert action['ok'] and action['fresh']
-        return action['action']['id']
+        return action['action']['id'], proposal | dict(grant_id=grant['grant_id'])
 
     def status(action_id):
         return rpc('request', dict(schema_version='1.0', operation='status', body=dict(
@@ -81,7 +90,7 @@ def run(rpc, human, identity, password, task, prompt_id):
     started = time.monotonic()
     # The configured task ceiling remains unchanged; the allocation occurs
     # through the production launcher, never in this Root observer process.
-    oom_action = submit('a=bytearray(2*1024**3)', 'allocation')
+    oom_action, original_request = submit('a=bytearray(2*1024**3)', 'allocation')
     observed_oom = None
     deadline = time.monotonic() + 40
     while time.monotonic() < deadline:
@@ -94,16 +103,25 @@ def run(rpc, human, identity, password, task, prompt_id):
             break
         time.sleep(.02)
     assert observed_oom is not None, 'No kernel-confirmed OOM kill'
-    assert outcome['state'] == 'failed', outcome
+    validate_oom_outcome(outcome)
     assert not list(GROUP.glob('task-*')), 'OOM task descendants remain'
     after = events((GROUP / 'memory.events').read_text())
     assert after['oom_kill'] > before['oom_kill'] and after['oom'] > before['oom']
     assert services() == before_services
+    missing = rpc('request', dict(schema_version='1.0', operation='terminal_output', body=dict(
+        task_id=task['task_id'], action_id=oom_action)), actor=identity.name)
+    assert missing['ok'] and missing['output'] is None
+    replay = rpc('request', dict(schema_version='1.0', operation='propose',
+        body=original_request), actor=identity.name)
+    assert replay['ok'] and replay['fresh'] is False
+    assert replay['action']['id'] == oom_action
+    validate_oom_outcome(replay['action'])
+    assert not list(GROUP.glob('task-*')), 'Unknown OOM action was replayed'
     human_status = human(dict(mode='task_status', id=prompt_id))
     assert human_status['snapshot']['prompt']['task_id'] == task['task_id']
     responsive = time.monotonic()
     nonce = secrets.token_hex(16)
-    follow_action = submit('print(' + repr(nonce) + ')', 'follow-up')
+    follow_action, _ = submit('print(' + repr(nonce) + ')', 'follow-up')
     deadline = time.monotonic() + 40
     while time.monotonic() < deadline:
         follow = status(follow_action)
@@ -128,13 +146,16 @@ def run(rpc, human, identity, password, task, prompt_id):
     assert services() == before_services
     finished = time.monotonic()
     return dict(scope='single approved installed-runtime task OOM in disposable VM',
-        task_id=task['task_id'], oom_action_id=oom_action, follow_action_id=follow_action,
+        task_id=task['task_id'], oom_action_id=oom_action, oom_outcome=outcome,
+        replay_no_execution=True, no_terminal_output_fabricated=True,
+        follow_action_id=follow_action,
         native_pam_approval_ids=approvals, memory_events_before=before, memory_events_after=after,
         services_before=before_services, services_after=services(),
         first_kernel_oom_observed_seconds=observed_oom-started,
-        broker_and_human_transport_response_seconds=responsive-observed_oom,
+        post_oom_readiness_verified_seconds=responsive-observed_oom,
         approved_follow_up_complete_seconds=finished-observed_oom,
         timing='monotonic; OOM time is first observation, not exact kernel event time; '
+               'readiness includes service/custody/replay/human status checks; '
                'follow-up includes synthetic CI PAM interaction',
         follow_up_output=metadata, follow_up_stdout=nonce + '\n',
         service_restart=False, trials=1,

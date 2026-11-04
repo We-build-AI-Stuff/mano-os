@@ -27,3 +27,11 @@ class RuntimeOOMTests(unittest.TestCase):
                 probe.run(None, None, None, None, None, None)
             read.assert_not_called()
             command.assert_not_called()
+
+    def test_group_oom_preserves_unknown_without_inventing_exit_or_verification(self):
+        outcome = dict(state='unknown', exit_code=None, verified=0)
+        probe.validate_oom_outcome(outcome)
+        for change in (dict(state='done'), dict(state='failed'), dict(exit_code=-9),
+                       dict(verified=1), dict(verified=False)):
+            with self.subTest(change=change), self.assertRaises(AssertionError):
+                probe.validate_oom_outcome(outcome | change)

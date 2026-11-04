@@ -8,7 +8,10 @@ trial runs only in the disposable QEMU Linux guest; native acceptance is pending
 
 The observer requires no other task groups under the launcher, records its
 hierarchical kernel memory events, and rejects an unexpected concurrent group.
-A failed command alone is insufficient: `oom` and `oom_kill` must both increase.
+An interrupted command alone is insufficient: `oom` and `oom_kill` must both increase.
+The group OOM also kills the in-group report-producing supervisor, so the journal
+must preserve an unverified `unknown` action with no fabricated exit/output.
+Submitting that same request must return the same action without executing it.
 Broker, launcher, native approval and independent Stop must retain their process
 IDs, process start times and restart counts. The native human task-status request
 must still work. A separate PAM-approved terminal command must then finish with
@@ -17,7 +20,8 @@ the exact expected captured stdout and empty stderr. No model is connected.
 `broker-service.json` includes `terminal_execution.installed_runtime_oom`, with the
 task/action/approval identities, before/after kernel counters, surviving services,
 and three monotonic durations. OOM time means the observer's first detection, not
-the exact kernel event timestamp. The transport response duration starts there;
+the exact kernel event timestamp. Readiness verification starts there and includes service, custody, replay and
+native human-status checks;
 follow-up completion includes the additional synthetic CI PAM interaction and
 command. These are one-trial VM observations, not statistical latency bounds.
 
