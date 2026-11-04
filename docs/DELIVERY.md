@@ -30,6 +30,12 @@ broker, sandbox, prompt, recorded developer workflow and journal before expandin
 later-phase package experiments. A deterministic run is labeled recorded/mock;
 it does not establish live-model or authenticated delegate success.
 
+The lab now exports the finished recorded project, original captured test logs,
+correction diff and identity/hash manifest. See [the workspace demonstration](workspace-demo.md)
+for download, inspection and disposable-runner reproduction. Native acceptance of
+the export must be checked on the revision being reviewed; source presence alone
+does not close this milestone.
+
 Completion evidence for this milestone must include:
 
 - One documented invocation in the disposable Debian CI environment, linked from GitHub.
