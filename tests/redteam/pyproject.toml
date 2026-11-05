@@ -1,0 +1,4 @@
+[project]
+name = "reqeusts"
+version = "0.0.0+ci"
+description = "Synthetic local deceptive dependency fixture; never publish or fetch"

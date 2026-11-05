@@ -1,3 +1,36 @@
+# Current: report collection verified; named Phase 2 corpus in development
+
+Main `56d47fb34c17726a001d219a8598e0b9bfe8cf04` contains PR #155. Its PR run
+`42039635626` and main run `42039796310` passed all three required jobs. Downloaded
+artifact `13422956087` includes phase1-measurements.json; source hashes and a fresh
+calculation from the original reports matched exactly. ZIP SHA-256:
+`88f7ac0b3b3e15fbfb87b341a6af8e48838c105db8337279ca281167b6d69fa3`.
+The selected one-workflow/14-denial/RAM/OOM observations are established for that
+run; phase-wide rates, billing and full-phase acceptance remain unknown.
+
+The current branch adds a four-case Phase 2 corpus through existing grants and
+sandboxes. Three static terminal fixtures share one newly approved action; the
+fourth reuses the existing native MCP discovery witness. Protected host snapshots,
+original stdout custody, workspace positive controls and a synthetic host canary
+are checked. Source hashes bind the declaration and actual installed MCP fixture.
+No live model, real deceptive package download, new grant/capability or authority
+from a repository instruction is introduced. Four portable tests, lint, shell
+syntax and diff checks pass. Changed-revision native execution is not yet accepted. The first corpus run
+failed before attack execution because Git archive exported Root-owned source as
+0664. Source transfer now sets tar.umask=0022, yielding 0644 files/0755 directories
+and preserving the strict non-group-writable fixture check. Portable tar metadata
+inspection confirmed the corrected modes; a new native run is still required.
+
+Full v2.1 remains incomplete. Physical and authenticated coding gates remain open;
+keep the original phase order and 53 requirements. The cross-app browser/report
+MVP is still missing, not a new Phase 1 prerequisite. Keep parked PR #134 work
+untouched. No proactive agents, human review requests, paid/auth experiments or
+Linux/Root/VM execution on this Mac. Disk reached 91% and about 20 GiB free; user
+warned. Large downloads/builds stay in CI; no user data deletion.
+Live head/run/artifact handles are maintained in outputs/CONTINUATION.md.
+
+## Historical notes (superseded where above differs)
+
 # Current: measured runtime evidence and scoped Phase 1 report
 
 Main `9922e998e49fbded4383cd653e30062a4867e90e` contains merged PRs #151–#153.
