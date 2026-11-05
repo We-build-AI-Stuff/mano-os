@@ -64,7 +64,8 @@ physical input and concurrent human-desktop focus checks remain unproven.
 
 The `writer` command opens an existing workspace ODT in the approved desktop.
 It launches LibreOffice Writer through GTK Wayland with a fresh profile in the
-desktop runtime directory. The SDK can focus the resulting window, type an edit,
+desktop runtime directory. The sandbox provides Debian's pristine Writer registry
+from the read-only package tree. The SDK can focus the resulting window, type an edit,
 save with Control+S and capture the canvas. The VM fixture verifies the saved
 paragraphs independently and exports the ODT and screenshot for inspection.
 Native CI acceptance for this extension is pending.

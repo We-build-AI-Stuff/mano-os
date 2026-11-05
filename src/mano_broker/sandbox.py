@@ -136,6 +136,11 @@ def command(workspace_fd, cwd_fd, argv, *, task_pty=False, home=None, read_only=
         *(["--size", str(64 * 1024**2), "--tmpfs", "/dev/shm"] if desktop else []),
         "--dir",
         "/etc",
+        # Debian's Writer registry symlink points into /etc. Supply the package
+        # template from the read-only /usr tree inside the sandbox's empty /etc.
+        *(["--dir", "/etc/libreoffice/registry",
+           "--symlink", "/usr/lib/libreoffice/share/.registry/main.xcd",
+           "/etc/libreoffice/registry/main.xcd"] if desktop else []),
         "--dir",
         "/run",
         "--dir",
