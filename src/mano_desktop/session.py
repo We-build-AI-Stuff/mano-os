@@ -27,8 +27,11 @@ def require_task_context():
     for name, identity in (('uid_map', os.geteuid()), ('gid_map', os.getegid())):
         rows = [list(map(int, line.split()))
                 for line in Path('/proc/self', name).read_text().splitlines()]
-        if rows != [[identity, identity, 1]]:
-            raise PermissionError('Private single-identity task user namespace required')
+        # Bubblewrap --dev maps the Task UID/GID to 0 in its setup namespace
+        # for devpts, then maps back to the unprivileged task IDs in a child.
+        # Self reads show the immediate parent's IDs, where 0 is the task.
+        if rows != [[identity, 0, 1]]:
+            raise PermissionError(f'Private single-identity task {name} required')
     guard = Path('/task-guard').lstat()
     if (not stat.S_ISREG(guard.st_mode) or guard.st_uid == os.geteuid()
             or guard.st_mode & 0o022):
