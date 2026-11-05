@@ -10,7 +10,7 @@ MEMORY_MAX = 512 * 1024**2
 PIDS_MAX = 96
 CPU_MAX = 50
 KEYS = {'Return', 'Escape', 'Tab', 'BackSpace', 'Delete', 'Left', 'Right', 'Up', 'Down',
-        'Home', 'End', 'PageUp', 'PageDown'}
+        'Home', 'End', 'PageUp', 'PageDown', 's'}
 MODIFIERS = {'ctrl', 'alt', 'shift', 'logo'}
 
 
@@ -62,7 +62,7 @@ def control(command, args, *, width, height):
         raise ValueError('Expected desktop control object')
     fields = {
         'status': set(), 'close': set(), 'terminal': {'title'}, 'type': {'text'},
-        'key': {'key', 'modifiers'}, 'pointer': {'x', 'y', 'button'},
+        'writer': {'path'}, 'key': {'key', 'modifiers'}, 'pointer': {'x', 'y', 'button'},
         'focus': {'window_id'}, 'screenshot': {'path'},
     }
     if not isinstance(command, str) or command not in fields or set(args) != fields[command]:
@@ -86,12 +86,13 @@ def control(command, args, *, width, height):
             raise ValueError('Unknown desktop pointer button')
     elif command == 'focus':
         integer(args['window_id'], 1, (1 << 63) - 1)
-    elif command == 'screenshot':
+    elif command in {'writer', 'screenshot'}:
+        suffix = '.odt' if command == 'writer' else '.png'
         path = text(args['path'], 256)
         parsed = PurePosixPath(path)
         if (parsed.is_absolute() or '..' in parsed.parts or str(parsed) != path
-                or parsed.suffix != '.png' or any(part.startswith('.') for part in parsed.parts)):
-            raise ValueError('Expected a workspace-relative PNG path')
+                or parsed.suffix != suffix or any(part.startswith('.') for part in parsed.parts)):
+            raise ValueError('Expected a workspace-relative ' + suffix + ' path')
     return dict(args)
 
 

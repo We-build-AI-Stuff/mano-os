@@ -42,3 +42,12 @@ the screenshot checksum, replay behavior and descendant drainage after close.
 This revision is awaiting that native result. It has no accepted browser or Writer
 integration, frozen-desktop Stop witness, physical input test or complete MVP
 claim. Those remain part of the original version's delivery scope.
+
+## Writer
+
+The `writer` command opens an existing workspace ODT in the approved desktop.
+It launches LibreOffice Writer through GTK Wayland with a fresh profile in the
+desktop runtime directory. The SDK can focus the resulting window, type an edit,
+save with Control+S and capture the canvas. The VM fixture verifies the saved
+paragraphs independently and exports the ODT and screenshot for inspection.
+Native CI acceptance for this extension is pending.
