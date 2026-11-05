@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 
 MAX_REPORT_BYTES = 2 * 1024**2
+MAX_REPORT_DEPTH = 64
 
 
 def load(directory, name):
@@ -35,6 +36,14 @@ def load(directory, name):
                            parse_float=finite_float)
         if type(value) is not dict:
             return None, 'invalid report object'
+        pending = [(value, 1)]
+        while pending:
+            node, depth = pending.pop()
+            if depth > MAX_REPORT_DEPTH:
+                return None, 'report nesting limit exceeded'
+            children = node.values() if isinstance(node, dict) else node
+            pending.extend((child, depth + 1) for child in children
+                           if isinstance(child, (dict, list)))
         return value, hashlib.sha256(raw).hexdigest()
     except FileNotFoundError:
         return None, 'not collected'

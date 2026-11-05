@@ -86,3 +86,13 @@ class DeliverySummaryTests(unittest.TestCase):
             path.write_bytes(prefix+b'0.5}')
             self.assertIsNotNone(summary.load(root, path.name)[0])
             self.assertEqual(summary.render(root, 'a'*40).count('| Reported by fixture |'), 1)
+
+    def test_explicit_nesting_bound_does_not_depend_on_python_decoder_recursion(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / 'runtime-package.json'
+            for depth, accepted in ((summary.MAX_REPORT_DEPTH - 1, True),
+                                    (summary.MAX_REPORT_DEPTH, False)):
+                path.write_text('{"extra":' + '[' * depth + '0' + ']' * depth + '}')
+                value, _ = summary.load(root, path.name)
+                self.assertEqual(value is not None, accepted)
