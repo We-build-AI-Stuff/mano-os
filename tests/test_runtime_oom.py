@@ -3,6 +3,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from mano_broker.service import Admission
+
 SPEC = importlib.util.spec_from_file_location('probe_runtime_oom',
     Path(__file__).resolve().parents[1] / 'scripts/probe_runtime_oom.py')
 probe = importlib.util.module_from_spec(SPEC)
@@ -10,6 +12,37 @@ SPEC.loader.exec_module(probe)
 
 
 class RuntimeOOMTests(unittest.TestCase):
+    def test_fast_status_callbacks_cannot_flood_public_admission_or_retry_a_lost_read(self):
+        fast_admission = Admission(0)
+        self.assertFalse(all(fast_admission.admit(index * .02) for index in range(40)))
+        current = [0.0]
+        calls = []
+        admission = Admission(0)
+
+        def sleep(delay):
+            current[0] += delay
+
+        def rpc(channel, body, *, actor):
+            self.assertEqual(channel, 'request')
+            self.assertEqual(body['operation'], 'status')
+            self.assertEqual(body['body'], dict(task_id='task', action_id='action'))
+            self.assertEqual(actor, 'owner')
+            self.assertTrue(admission.admit(current[0]))
+            calls.append(current[0])
+            if len(calls) == 30:
+                raise ConnectionResetError('lost read')
+            return dict(action=dict(state='executing'))
+
+        read = probe.status_reader(rpc, task_id='task', actor='owner',
+                                   clock=lambda: current[0], sleep=sleep)
+        for _ in range(29):
+            self.assertEqual(read('action'), dict(state='executing'))
+        with self.assertRaises(ConnectionResetError):
+            read('action')
+        self.assertEqual(len(calls), 30)
+        pairs = zip(calls, calls[1:], strict=False)
+        self.assertTrue(all(right - left >= .149 for left, right in pairs))
+
     def test_kernel_event_counters_require_distinct_unsigned_oom_fields(self):
         self.assertEqual(probe.events('low 0\noom 2\noom_kill 1\n'),
                          dict(low=0, oom=2, oom_kill=1))
