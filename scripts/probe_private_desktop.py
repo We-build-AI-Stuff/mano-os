@@ -11,6 +11,7 @@ from pathlib import Path
 
 
 def run(*, rpc, human, password, identity, task, workspace):
+    """Exercise and independently verify the private desktop in the disposable VM."""
     if sys.platform != 'linux' or os.geteuid() != 0:
         raise PermissionError('Disposable Linux Root coordinator required')
     if Path('/etc/mano-lab-disposable').read_text().strip() != 'mano-phase0-ci':

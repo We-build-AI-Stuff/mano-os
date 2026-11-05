@@ -1,3 +1,5 @@
+import importlib.util
+import io
 import json
 import tempfile
 import unittest
@@ -117,9 +119,6 @@ class DesktopAuthorityTests(unittest.TestCase):
         self.assertEqual(protocol.decode(raw)['args']['text'], '☃' * 680)
 
     def test_root_probe_refuses_mac_before_any_reads_or_processes(self):
-        import importlib.util
-        from pathlib import Path
-
         path = Path(__file__).resolve().parents[1] / 'scripts/probe_private_desktop.py'
         spec = importlib.util.spec_from_file_location('private_desktop_probe', path)
         module = importlib.util.module_from_spec(spec)
@@ -132,3 +131,22 @@ class DesktopAuthorityTests(unittest.TestCase):
                            task=None, workspace=None)
             read.assert_not_called()
             process.assert_not_called()
+
+    def test_failed_gui_exercise_cancels_the_owned_action_and_keeps_original_error(self):
+        path = Path(__file__).resolve().parents[1] / 'scripts/probe_private_desktop_client.py'
+        spec = importlib.util.spec_from_file_location('private_desktop_client', path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        desktop = Mock()
+        desktop.wait_ready.side_effect = ValueError('original desktop failure')
+        desktop.stop.side_effect = ConnectionResetError('lost cancellation acknowledgement')
+        with (patch.object(module.sys, 'platform', 'linux'),
+              patch.object(module.os, 'geteuid', return_value=1004),
+              patch.object(module.Path, 'read_text', return_value='mano-phase0-ci'),
+              patch.object(module.sys, 'stdin', io.StringIO('{"proposal":{},"grant_id":"id"}')),
+              patch.object(module, 'BrokerClient') as client,
+              patch.object(module.DesktopSession, 'open', return_value=desktop)):
+            with self.assertRaisesRegex(ValueError, 'original desktop failure'):
+                module.main()
+        desktop.stop.assert_called_once_with()
+        client.return_value.close.assert_called_once_with()

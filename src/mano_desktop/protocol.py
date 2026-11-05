@@ -15,12 +15,14 @@ MODIFIERS = {'ctrl', 'alt', 'shift', 'logo'}
 
 
 def integer(value, low, high):
+    """Reject booleans and values outside the declared integer interval."""
     if type(value) is not int or not low <= value <= high:
         raise ValueError('Desktop integer outside its fixed bounds')
     return value
 
 
 def text(value, maximum, *, empty=False):
+    """Validate printable UTF-8 data before it reaches the compositor or filesystem."""
     if (not isinstance(value, str) or (not value and not empty)
             or len(value.encode()) > maximum
             or any(ord(c) < 32 or ord(c) == 127 for c in value)):
@@ -29,6 +31,7 @@ def text(value, maximum, *, empty=False):
 
 
 def opening(value):
+    """Validate the exact native approval shape, with no executable or display selector."""
     if not isinstance(value, dict) or set(value) != {
             'width', 'height', 'cwd', 'timeout_seconds', 'input_limit_bytes',
             'memory_bytes', 'pids', 'cpu_percent'}:
@@ -46,6 +49,7 @@ def opening(value):
 
 
 def launch_arguments(value):
+    """Translate the approved configuration into fixed worker arguments."""
     value = opening(value)
     return dict(argv=['/usr/bin/python3', '-I', WORKER, json.dumps(value, sort_keys=True)],
         cwd='.', timeout_seconds=value['timeout_seconds'], rows=24, columns=80,
@@ -53,6 +57,7 @@ def launch_arguments(value):
 
 
 def control(command, args, *, width, height):
+    """Validate one operation against the private canvas and closed argument sets."""
     if not isinstance(args, dict):
         raise ValueError('Expected desktop control object')
     fields = {
@@ -91,6 +96,7 @@ def control(command, args, *, width, height):
 
 
 def decode(raw):
+    """Accept one complete bounded JSON frame with unique keys and finite values."""
     if not isinstance(raw, bytes) or not 1 <= len(raw) <= MAX_FRAME or not raw.endswith(b'\n'):
         raise ValueError('Expected a bounded complete desktop frame')
 
@@ -112,6 +118,7 @@ def decode(raw):
 
 
 def request(identifier, command, args, *, width, height):
+    """Create one UTF-8 control line that fits the canonical PTY input limit."""
     if not isinstance(identifier, str) or not re.fullmatch('[0-9a-f]{32}', identifier):
         raise ValueError('Expected desktop request identity')
     args = control(command, args, width=width, height=height)

@@ -14,6 +14,7 @@ from pathlib import Path
 
 
 def require_task_context():
+    """Fail before worker startup without the enforced unprivileged task context."""
     if sys.platform != 'linux' or os.geteuid() == 0:
         raise PermissionError('Unprivileged Linux task desktop required')
     fields = dict(line.split(':', 1) for line in Path('/proc/self/status').read_text().splitlines()
@@ -35,6 +36,7 @@ def require_task_context():
 
 
 def wire():
+    """Load the installed sibling protocol from the worker directory under Python -I."""
     spec = importlib.util.spec_from_file_location('_mano_desktop_protocol',
                                                  Path(__file__).with_name('protocol.py'))
     module = importlib.util.module_from_spec(spec)
@@ -92,6 +94,7 @@ class Desktop:
             raise RuntimeError('Private desktop startup failed: ' + diagnostic) from error
 
     def start(self):
+        """Start Sway with only private sockets, configuration and a fixed headless output."""
         width, height = self.config['width'], self.config['height']
         config = self.runtime / 'sway.conf'
         config.write_text(f'output HEADLESS-1 mode {width}x{height}\n'
@@ -128,6 +131,7 @@ class Desktop:
         raise TimeoutError('Private compositor did not become ready')
 
     def ipc(self, kind, command=None):
+        """Send a bounded internal request to the compositor belonging to this desktop."""
         argv = ['/usr/bin/swaymsg', '--socket', str(self.ipc_path), '--raw', '--type', kind]
         if command is not None:
             argv.append(command)
@@ -140,6 +144,7 @@ class Desktop:
         return value
 
     def canvas(self):
+        """Require the actual compositor output to match the approved pixel geometry."""
         outputs = self.ipc('get_outputs')
         if len(outputs) != 1 or outputs[0]['name'] != 'HEADLESS-1':
             raise RuntimeError('Desktop output set changed')
@@ -150,6 +155,7 @@ class Desktop:
         return dict(rect)
 
     def windows(self):
+        """Return bounded untrusted window observations from the private compositor tree."""
         pending, result = [self.ipc('get_tree')], []
         while pending:
             node = pending.pop()
@@ -161,6 +167,7 @@ class Desktop:
         return dict(windows=result[:8], total_windows=len(result), truncated=len(result) > 8)
 
     def dispatch(self, command, args):
+        """Perform one validated control using only the owned desktop environment."""
         args = self.protocol.control(command, args, width=self.config['width'],
                                      height=self.config['height'])
         self.canvas()
@@ -229,6 +236,7 @@ class Desktop:
         raise ValueError('Unknown desktop command')
 
     def close(self):
+        """Terminate the session-owned processes and remove its private runtime directory."""
         for child in [*reversed(self.applications), self.compositor]:
             if child is None or child.poll() is not None:
                 continue
@@ -244,6 +252,7 @@ class Desktop:
 
 
 def emit(identifier, command, *, result=None, error=None):
+    """Return an untrusted observation without claiming verification of its effect."""
     value = dict(schema_version='1.0', id=identifier, command=command,
                  ok=error is None, untrusted=True, effect_verified=False,
                  result=result, error=error)
@@ -256,6 +265,7 @@ def emit(identifier, command, *, result=None, error=None):
 
 
 def main():
+    """Run the framed worker loop with bounded operation history and no effect replay."""
     require_task_context()
     if len(sys.argv) != 2:
         raise ValueError('Expected fixed approved desktop configuration')

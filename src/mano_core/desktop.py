@@ -12,6 +12,7 @@ from .pty import PTYSession
 def proposal(*, task_id, resource_id, key, reason, width=1024, height=720,
              timeout_seconds=120, input_limit_bytes=65536,
              memory_bytes=protocol.MEMORY_MAX, pids=protocol.PIDS_MAX, cpu_percent=50):
+    """Build the exact request that must be shown through native approval."""
     value = dict(schema_version='1.0', task_id=task_id, resource_id=resource_id,
                  capability='desktop.open', idempotency_key=key, reason=reason,
                  args=dict(width=width, height=height, cwd='.', timeout_seconds=timeout_seconds,
@@ -41,6 +42,7 @@ class DesktopSession:
 
     @staticmethod
     def request(client, **kwargs):
+        """Request approval without acquiring authority or opening a desktop."""
         value = proposal(**kwargs)
         response = client(dict(schema_version='1.0', operation='request_approval', body=value))
         if response.get('schema_version') != '1.0' or response.get('ok') is not True:
@@ -49,6 +51,7 @@ class DesktopSession:
 
     @classmethod
     def open(cls, client, *, proposal, grant_id):
+        """Submit the exact approved proposal and bind the transport to its owned action."""
         request = ActionRequest.parse(canonical(proposal | dict(grant_id=grant_id)).encode())
         if request.capability != 'desktop.open':
             raise ValueError('Expected exact approved desktop proposal')
@@ -61,6 +64,7 @@ class DesktopSession:
         return cls(transport, proposal['args'])
 
     def frame(self, identifier, command, deadline):
+        """Read one correlated observation without resending any control input."""
         while time.monotonic() < deadline:
             if b'\n' in self.pending:
                 line, _, tail = self.pending.partition(b'\n')
@@ -97,6 +101,7 @@ class DesktopSession:
         raise TimeoutError('Desktop response uncertain; input must not be repeated')
 
     def wait_ready(self, *, timeout=15):
+        """Require the worker to report the approved dimensions before sending input."""
         if self.closed or self.uncertain:
             raise ValueError('Desktop session unavailable')
         if not self.ready:
@@ -111,6 +116,7 @@ class DesktopSession:
 
     def command(self, command, *, timeout=5, **args):
         # Validation happens before any effect or uncertainty latch.
+        """Send a single validated operation and fail closed on uncertain delivery."""
         identifier = secrets.token_hex(16)
         raw = protocol.request(identifier, command, args,
                                width=self.config['width'], height=self.config['height'])

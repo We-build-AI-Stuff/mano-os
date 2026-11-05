@@ -11,12 +11,14 @@ from mano_core.desktop import DesktopSession
 
 
 def main():
+    """Exercise the private GUI as its Task UID and stop the action on a failed step."""
     if sys.platform != 'linux' or os.geteuid() == 0:
         raise PermissionError('Unprivileged disposable Linux client required')
     if Path('/etc/mano-lab-disposable').read_text().strip() != 'mano-phase0-ci':
         raise PermissionError('Disposable CI marker required')
     body = json.load(sys.stdin)
     client = BrokerClient()
+    desktop = None
     try:
         desktop = DesktopSession.open(client, proposal=body['proposal'], grant_id=body['grant_id'])
         desktop.wait_ready()
@@ -50,6 +52,13 @@ def main():
         print(json.dumps(dict(action_id=desktop.transport.action_id, windows=windows,
             screenshot=image, outcome=result['outcome'], input_effect_verified=False,
             physical_test=False, human_desktop_unchanged=None)))
+    except BaseException:
+        if desktop is not None:
+            try:
+                desktop.stop()
+            except (OSError, ValueError, KeyError, TypeError):
+                pass  # Preserve the original failure; the Root fixture also tears down units.
+        raise
     finally:
         client.close()
 
