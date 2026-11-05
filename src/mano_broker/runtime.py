@@ -154,7 +154,8 @@ class Runtime:
                     {Capability.RUN, Capability.MCP, Capability.PACKAGE}
                     and self.executor):
                 self.pending.append(row["id"])
-            if prepared is not None and request.capability == Capability.PTY and self.ptys:
+            if (prepared is not None and request.capability in
+                    {Capability.PTY, Capability.DESKTOP} and self.ptys):
                 self.pty_pending.append(row["id"])
             if prepared is not None and request.capability == Capability.RESTORE:
                 self.restore_pending.append(row["id"])

@@ -1,4 +1,4 @@
-"""Trusted kernel ceilings; never part of a public action proposal."""
+"""Trusted per-capability ceilings; desktop requests disclose their exact budget."""
 
 from dataclasses import dataclass
 
@@ -29,3 +29,31 @@ class Limits:
         if any(type(budget.get(k)) is not int or budget[k] <= 0 for k in ceilings):
             raise Denied("Invalid approved resource budget")
         return cls.parse({k: min(budget[k], maximum) for k, maximum in ceilings.items()})
+
+
+@dataclass(frozen=True)
+class DesktopLimits(Limits):
+    """Separate ceiling selected only by the exact desktop capability."""
+
+    memory_bytes: int = 512 * 1024**2
+    pids: int = 96
+    cpu_percent: int = 50
+
+
+def limit_type(capability):
+    from .protocol import Capability
+
+    return DesktopLimits if capability == Capability.DESKTOP else Limits
+
+
+def approved_limits(request, budget):
+    limits = limit_type(request.capability).approved(budget)
+    from .protocol import Capability
+
+    if request.capability == Capability.DESKTOP:
+        import json
+
+        args = json.loads(request.args_json)
+        if any(args[key] != value for key, value in limits.body().items()):
+            raise Denied("Desktop resources must match the approved visible budget")
+    return limits

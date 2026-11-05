@@ -10,7 +10,7 @@ import time
 
 from mano_protocol.terminal_output import REASONS, STREAM_LIMIT
 
-from .limits import Limits
+from .limits import approved_limits
 from .protocol import ActionRequest, Capability, canonical, identifier
 from .state import Denied
 from .terminal_output import capacity, persist
@@ -44,7 +44,7 @@ class Executor:
             or canonical(json.loads(request.args_json)) != row["approved_args_json"]
         ):
             raise Denied("Terminal authority no longer live")
-        Limits.approved(json.loads(row["budget_json"]))
+        approved_limits(request, json.loads(row["budget_json"]))
         if request.capability == Capability.PACKAGE:
             from .package_catalog import load
 
@@ -89,7 +89,7 @@ class Executor:
             response = self.client.exchange("prepare", dict(
                 schema_version="1.0", operation="launch_task", body=dict(
                     action_id=action_id, caller_uid=row["caller_uid"], request=request.body(),
-                    limits=Limits.approved(json.loads(row["budget_json"])).body()
+                    limits=approved_limits(request, json.loads(row["budget_json"])).body()
                 )
             ), (resource.workspace.fd, prepared.descriptors["cwd"].fd))
             if (response.get("ok") is not True or response.get("action_id") != action_id

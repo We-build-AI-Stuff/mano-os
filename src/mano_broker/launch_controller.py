@@ -58,7 +58,8 @@ class Controller:
         try:
             if select.select([owner_fd], [], [], 0)[0]:
                 raise Denied("Preparing broker already exited")
-            child_type = PTYChild if admission.request.capability == Capability.PTY else Child
+            child_type = (PTYChild if admission.request.capability in
+                          {Capability.PTY, Capability.DESKTOP} else Child)
             child = child_type(self.manager, admission)
             self.stop_check()  # Stop may have tripped while the child was being prepared.
         except BaseException:

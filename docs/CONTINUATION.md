@@ -1,3 +1,21 @@
+# Active: private desktop capability
+
+Branch feat/task-private-desktop is based on main c5cbf083 (merged PR156).
+New desktop.open requests require exact human approval; Auto/Full workspace
+profiles do not include this capability. Fixed private Sway/Foot worker, bounded
+Core SDK and separate kernel budget are wired into the existing PTY lifecycle.
+See private-desktop.md for the exact current verification boundary.
+Portable desktop tests (12), existing approval/PTY/scheduler/executor/protocol/
+limits checks and Ruff passed locally. No Linux/Root/VM execution on this Mac.
+Native GUI CI acceptance, frozen-desktop Stop, packaged stock GUI/reboot acceptance,
+browser/Writer and the integrated MVP are still open. Do not claim completion.
+PR156 required CI passed before merge; its main run42059236970 was still running
+at the previous check. Current Mac disk19GiB/91%; no large local downloads.
+Latest user authorization permits conflict-free CLI-test overrides; record every
+bypassed/pending/failed check honestly and fix genuine defects before merging.
+
+--- Previous context ---
+
 # Current: report collection verified; named Phase 2 corpus in development
 
 Main `56d47fb34c17726a001d219a8598e0b9bfe8cf04` contains PR #155. Its PR run

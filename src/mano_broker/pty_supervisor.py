@@ -124,7 +124,12 @@ class PTYChild:
         self.outcome = self.ack = None
         self.pid = None
         self.connection = None
-        self.timeout = json.loads(admission.request.args_json)["timeout_seconds"]
+        args = json.loads(admission.request.args_json)
+        if admission.request.capability == "desktop.open":
+            from mano_desktop.protocol import launch_arguments
+
+            args = launch_arguments(args)
+        self.timeout = args["timeout_seconds"]
         placement_r = placement_w = -1
         parent = os.getpid()
         child = None
@@ -163,7 +168,7 @@ class PTYChild:
                         child,
                         admission.workspace_fd,
                         admission.cwd_fd,
-                        json.loads(admission.request.args_json),
+                        args,
                     )
                     os._exit(0)
                 except BaseException:
