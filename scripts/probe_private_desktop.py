@@ -19,6 +19,21 @@ def require_guest():
         'qemu', 'kvm'}
 
 
+def resolve_task_pid(statuses, namespace_pid, uid):
+    """Resolve a namespace PID using independently captured kernel status fields."""
+    matches = []
+    for pid, source in statuses.items():
+        fields = dict(line.split(':', 1) for line in source.splitlines() if ':' in line)
+        identifiers = [int(value) for value in fields.get('NSpid', '').split()]
+        owners = [int(value) for value in fields.get('Uid', '').split()]
+        if (len(identifiers) >= 2 and identifiers[0] == pid
+                and identifiers[-1] == namespace_pid and owners == [uid] * 4):
+            matches.append(pid)
+    if len(matches) != 1:
+        raise ValueError('Expected one owned child in the private PID namespace')
+    return matches[0]
+
+
 def run(*, rpc, human, password, identity, task, workspace):
     require_guest()
     from mano_core.desktop import proposal
@@ -121,12 +136,15 @@ def start_for_stop(*, rpc, human, password, identity, task, workspace):
         time.sleep(.1)
     info = marker.lstat()
     assert stat.S_ISREG(info.st_mode) and info.st_uid == identity.uid and info.st_nlink == 1
-    detached_pid = int(marker.read_text())
+    namespace_pid = int(marker.read_text())
     pids = [int(pid) for pid in (group / 'cgroup.procs').read_text().split()]
-    assert len(pids) >= 6 and detached_pid in pids
+    assert len(pids) >= 6
+    statuses = {pid: Path(f'/proc/{pid}/status').read_text() for pid in pids}
+    detached_pid = resolve_task_pid(statuses, namespace_pid, identity.uid)
     assert os.getsid(detached_pid) == detached_pid
     processes = {str(pid): Path(f'/proc/{pid}/comm').read_text().strip() for pid in pids}
     assert 'sway' in processes.values() and 'foot' in processes.values()
     return report | dict(cgroup=str(group), pids=pids, processes=processes,
-                         detached_pid=detached_pid, detached_child_in_owned_cgroup=True,
+                         detached_pid=detached_pid, namespace_pid=namespace_pid,
+                         detached_child_in_owned_cgroup=True,
                          native_pam_required=True, capability=value['capability'])
