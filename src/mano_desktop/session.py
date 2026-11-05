@@ -81,6 +81,7 @@ class Desktop:
         self.compositor = None
         self.applications = []
         self.images = 0
+        self.writer_started = False
         try:
             self.start()
         except BaseException as error:
@@ -173,13 +174,27 @@ class Desktop:
         self.canvas()
         if command == 'status':
             return dict(canvas=self.canvas(), **self.windows())
-        if command == 'terminal':
+        if command in {'terminal', 'writer'}:
             if len(self.applications) >= 4:
                 raise ValueError('Desktop application quota exhausted')
-            child = subprocess.Popen(['/usr/bin/foot', '--config=/dev/null',
-                '--app-id=mano-agent', '--title=' + args['title'], '/bin/sh'],
-                stdin=subprocess.DEVNULL, stdout=self.log, stderr=subprocess.STDOUT,
-                env=self.environment, close_fds=True)
+            env = self.environment
+            if command == 'terminal':
+                argv = ['/usr/bin/foot', '--config=/dev/null', '--app-id=mano-agent',
+                        '--title=' + args['title'], '/bin/sh']
+            else:
+                if self.writer_started:
+                    raise ValueError('Only one Writer launch is allowed per desktop')
+                document = Path('/workspace') / args['path']
+                resolved = document.resolve(strict=True)
+                if resolved != document or not resolved.is_file():
+                    raise ValueError('Writer requires a regular workspace document')
+                profile = (self.runtime / 'writer-profile').as_uri()
+                argv = ['/usr/bin/libreoffice', '--writer', '--nologo', '--norestore',
+                        '-env:UserInstallation=' + profile, str(document)]
+                env = env | dict(GDK_BACKEND='wayland', SAL_USE_VCLPLUGIN='gtk3')
+                self.writer_started = True
+            child = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=self.log,
+                                     stderr=subprocess.STDOUT, env=env, close_fds=True)
             self.applications.append(child)
             return dict(submitted=True)
         if command == 'type':

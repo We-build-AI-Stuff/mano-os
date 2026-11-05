@@ -6,10 +6,45 @@ import shlex
 import stat
 import sys
 import time
+import zipfile
 from pathlib import Path
 
 from mano_core.broker import BrokerClient
 from mano_core.desktop import DesktopSession
+
+
+def exercise_writer(desktop, document):
+    """Save a keyboard edit and capture the mapped Writer window."""
+    desktop.command('writer', path='private-writer.odt')
+    deadline = time.monotonic() + 20
+    writer = None
+    while time.monotonic() < deadline:
+        windows_now = desktop.command('status')['result']['windows']
+        writer = next((window for window in windows_now
+                       if 'libreoffice' in window['app_id'].lower()
+                       and 'private-writer' in window['title']), None)
+        if writer is not None:
+            break
+        time.sleep(.3)
+    assert writer is not None, 'Writer did not map the approved document'
+    desktop.command('focus', window_id=writer['id'])
+    desktop.command('key', key='End', modifiers=['ctrl'])
+    desktop.command('key', key='Return', modifiers=[])
+    desktop.command('type', text='Saved through the private Wayland session')
+    desktop.command('key', key='s', modifiers=['ctrl'])
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        try:
+            with zipfile.ZipFile(document) as archive:
+                if b'Saved through the private Wayland session' in archive.read('content.xml'):
+                    break
+        except (FileNotFoundError, zipfile.BadZipFile):
+            pass
+        time.sleep(.2)
+    else:
+        raise AssertionError('Writer did not save the keyboard edit')
+    writer_image = desktop.command('screenshot', path='private-writer.png')['result']
+    return dict(writer_window=writer, writer_image=writer_image)
 
 
 def main():
@@ -54,6 +89,9 @@ def main():
         desktop.command('pointer', x=100, y=100, button=None)
         time.sleep(.5)
         image = desktop.command('screenshot', path='private-desktop.png')['result']
+        writer_result = {}
+        if 'writer_fixture_path' in body:
+            writer_result = exercise_writer(desktop, Path(body['writer_fixture_path']))
         desktop.command('close')
         deadline = time.monotonic() + 8
         while time.monotonic() < deadline:
@@ -65,7 +103,8 @@ def main():
         assert result['outcome']['reason'] == 'exited', result
         assert result['outcome']['return_code'] == 0, result
         print(json.dumps(dict(action_id=desktop.transport.action_id, windows=windows,
-            screenshot=image, outcome=result['outcome'], input_effect_verified=False,
+            screenshot=image, **writer_result,
+            outcome=result['outcome'], input_effect_verified=False,
             physical_test=False, human_desktop_unchanged=None)))
     except BaseException:
         if desktop is not None:
