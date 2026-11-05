@@ -51,6 +51,22 @@ def services():
     return result
 
 
+def status_reader(rpc, *, task_id, actor, clock=time.monotonic, sleep=time.sleep):
+    """Pace read-only observations below the public ten-connections/second budget."""
+    next_request = 0.0
+
+    def read(action_id):
+        nonlocal next_request
+        delay = next_request - clock()
+        if delay > 0:
+            sleep(delay)
+        next_request = clock() + .15
+        return rpc('request', dict(schema_version='1.0', operation='status', body=dict(
+            task_id=task_id, action_id=action_id)), actor=actor)['action']
+
+    return read
+
+
 def run(rpc, human, identity, password, task, prompt_id):
     if sys.platform != 'linux' or os.geteuid() != 0:
         raise PermissionError('Disposable Linux Root harness required')
@@ -83,9 +99,7 @@ def run(rpc, human, identity, password, task, prompt_id):
         assert action['ok'] and action['fresh']
         return action['action']['id'], proposal | dict(grant_id=grant['grant_id'])
 
-    def status(action_id):
-        return rpc('request', dict(schema_version='1.0', operation='status', body=dict(
-            task_id=task['task_id'], action_id=action_id)), actor=identity.name)['action']
+    status = status_reader(rpc, task_id=task['task_id'], actor=identity.name)
 
     started = time.monotonic()
     # The configured task ceiling remains unchanged; the allocation occurs

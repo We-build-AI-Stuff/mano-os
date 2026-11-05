@@ -17,7 +17,7 @@ import threading
 from dataclasses import dataclass
 
 from .ipc import CREDENTIALS, Peer
-from .limits import Limits
+from .limits import Limits, limit_type
 from .protocol import MAX_PACKET, ActionRequest, Capability, canonical, identifier, unique_object
 from .resources import Workspace
 from .state import Denied
@@ -94,12 +94,17 @@ def admit(packet, descriptors, *, peer):
     required = {"action_id", "caller_uid", "request"}
     if set(body) not in (required, required | {"limits"}):
         raise Denied("Unknown launch fields")
-    limits = Limits.parse(body["limits"]) if "limits" in body else Limits()
     action = identifier(body["action_id"])
     account = task_account(body["caller_uid"])
     request = ActionRequest.parse(canonical(body["request"]).encode())
+    kind = limit_type(request.capability)
+    limits = kind.parse(body["limits"]) if "limits" in body else kind()
+    if request.capability == Capability.DESKTOP:
+        args = json.loads(request.args_json)
+        if limits.body() != {key: args[key] for key in limits.body()}:
+            raise Denied("Desktop admission budget does not match its request")
     if (request.capability not in
-            {Capability.RUN, Capability.PTY, Capability.MCP, Capability.PACKAGE}
+            {Capability.RUN, Capability.PTY, Capability.DESKTOP, Capability.MCP, Capability.PACKAGE}
             or len(descriptors) != 2):
         raise Denied("Terminal request and exactly two descriptors required")
     infos = []

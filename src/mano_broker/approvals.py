@@ -186,6 +186,12 @@ class Approvals:
                 or self.state.meta("epoch") != view["epoch"]
             ):
                 raise Denied("Approval binding expired or revoked")
+            budget = dict(memory_bytes=256 * 1024**2, pids=32, cpu_percent=20)
+            if view["capability"] == "desktop.open":
+                from mano_desktop.protocol import opening
+
+                args = opening(view["args"])
+                budget = {key: args[key] for key in budget}
             grant = self.state.issue_grant(
                 view["task_id"],
                 approved_human_uid=authenticated_human_uid,
@@ -194,9 +200,7 @@ class Approvals:
                 resource_id=view["resource_id"],
                 expires=view["expires"],
                 max_count=1,
-                memory_bytes=256 * 1024**2,
-                pids=32,
-                cpu_percent=20,
+                **budget,
                 max_timeout_seconds=300,
             )
             if view['capability'] == 'policy.set_profile':

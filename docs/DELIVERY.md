@@ -1,9 +1,14 @@
 # Delivery ledger — mano-OS v2.1
 
-Updated 2026-11-04. This is the delivery status against the unchanged
+Updated 2026-11-05. This is the delivery status against the unchanged
 [original specification](spec-v2.1.md), not a new or reduced project scope.
 The specification is byte-identical to the supplied README; SHA-256:
 `6d320e79ad62a44afea04fcf305432ec56dcdc5061e6cfcef55d113b7101eace`.
+
+Private desktop integration is under development on `feat/task-private-desktop`.
+Its [capability and verification boundary](private-desktop.md) distinguish local
+contract checks from the pending native GUI exercise. Browser, Writer and full
+MVP acceptance remain open.
 
 ## What is delivered today
 

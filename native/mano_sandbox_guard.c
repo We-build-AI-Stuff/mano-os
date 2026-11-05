@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/landlock.h>
+#include <linux/magic.h>
 #include <net/if.h>
 #include <sched.h>
 #include <seccomp.h>
@@ -14,6 +15,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
+#include <sys/vfs.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -48,7 +50,28 @@ static void hosts_rule(int ruleset) {
     close(fd);
 }
 
-static void landlock(int loopback) {
+static void desktop_shm_rule(int ruleset) {
+    int fd = open("/dev/shm", O_PATH | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+    struct stat mount_info, dev_info;
+    struct statfs filesystem;
+    if (fd < 0 || fstat(fd, &mount_info) || stat("/dev", &dev_info) ||
+        fstatfs(fd, &filesystem)) fail("guard desktop shared memory");
+    if (filesystem.f_type != TMPFS_MAGIC || mount_info.st_dev == dev_info.st_dev) {
+        errno = EPERM;
+        fail("guard desktop shared memory requires a dedicated tmpfs");
+    }
+    struct landlock_path_beneath_attr rule = {
+        .allowed_access = LANDLOCK_ACCESS_FS_READ_DIR | LANDLOCK_ACCESS_FS_READ_FILE |
+            LANDLOCK_ACCESS_FS_WRITE_FILE | LANDLOCK_ACCESS_FS_MAKE_REG |
+            LANDLOCK_ACCESS_FS_REMOVE_FILE | LANDLOCK_ACCESS_FS_TRUNCATE,
+        .parent_fd = fd
+    };
+    if (syscall(SYS_landlock_add_rule, ruleset, LANDLOCK_RULE_PATH_BENEATH, &rule, 0))
+        fail("guard desktop shared memory rule");
+    close(fd);
+}
+
+static void landlock(int loopback, int desktop_shm) {
     int abi = syscall(SYS_landlock_create_ruleset, NULL, 0, LANDLOCK_CREATE_RULESET_VERSION);
     if (abi < 5) { errno = ENOTSUP; fail("guard requires Landlock ABI 5"); }
     uint64_t read = LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_READ_DIR;
@@ -66,6 +89,7 @@ static void landlock(int loopback) {
     int ruleset = syscall(SYS_landlock_create_ruleset, &attr, sizeof(attr), 0);
     if (ruleset < 0) fail("guard Landlock ruleset");
     if (loopback) hosts_rule(ruleset);
+    if (desktop_shm) desktop_shm_rule(ruleset);
     path_rule(ruleset, "/usr", execute);
     path_rule(ruleset, "/proc", read);
     path_rule(ruleset, "/dev", read | LANDLOCK_ACCESS_FS_WRITE_FILE | LANDLOCK_ACCESS_FS_IOCTL_DEV);
@@ -192,8 +216,13 @@ int main(int argc, char **argv) {
             fail("guard PTY controlling session");
         first = 2;
     }
+    int desktop_shm = 0;
+    if (first == 2 && first < argc && !strcmp(argv[first], "--desktop-shm")) {
+        desktop_shm = 1;
+        first++;
+    }
     int loopback = 0;
-    if (first < argc && !strcmp(argv[first], "--private-loopback")) {
+    if (!desktop_shm && first < argc && !strcmp(argv[first], "--private-loopback")) {
         if (argc <= first + 3) { errno = EINVAL; fail("guard loopback arguments"); }
         private_loopback(argv[first + 1], argv[first + 2]);
         first += 3;
@@ -201,7 +230,7 @@ int main(int argc, char **argv) {
     }
     if (first >= argc || strcmp(argv[first], "--") || ++first >= argc)
         { errno = EINVAL; fail("guard explicit application separator required"); }
-    landlock(loopback);
+    landlock(loopback, desktop_shm);
     filter(loopback);
     execvp(argv[first], &argv[first]);
     fail("guard task exec");

@@ -76,6 +76,7 @@ assert subprocess.check_output(["systemd-detect-virt", "--vm"], text=True).strip
 }
 assert all(
     not p.exists() for p in (STATE, CODE, WORK, LIBRARY, NATIVE, POLICY, PAM, GUARD, BASE,
+                           Path("/usr/lib/mano-desktop"),
                            CONTROLLER_POLICY, EGRESS_POLICY,
                            LOCK, STOP_NATIVE, STOP_CLIENT, STOP_STATE, *SOCKETS.values())
 )
@@ -279,13 +280,19 @@ try:
     joined = True
     CODE.mkdir(mode=0o755)
     for package in ("mano_broker", "mano_prompt", "mano_lab", "mano_core", "mano_protocol",
-                    "mano_provider", "mano_egress", "mano_runtime"):
+                    "mano_provider", "mano_egress", "mano_runtime", "mano_desktop"):
         shutil.copytree(
             ROOT / "src" / package, CODE / package, ignore=shutil.ignore_patterns("__pycache__")
         )
         for file in (CODE / package).rglob("*.py"):
             file.chmod(0o444)
         (CODE / package).chmod(0o555)
+    desktop_worker = Path('/usr/lib/mano-desktop')
+    assert not desktop_worker.exists()
+    desktop_worker.mkdir(mode=0o755)
+    for name in ('session.py', 'protocol.py'):
+        shutil.copyfile(ROOT / 'src/mano_desktop' / name, desktop_worker / name)
+        (desktop_worker / name).chmod(0o444)
     GUARD.parent.mkdir(mode=0o755, exist_ok=True)
     subprocess.run(["cc", "-std=c11", "-O2", "-Wall", "-Wextra", "-Werror",
         "-fstack-protector-strong", "-D_FORTIFY_SOURCE=2",
@@ -1870,6 +1877,11 @@ print('END:%d'%count,flush=True)
     assert rpc("request", public_pty_open, actor=identity.name)["fresh"] is False
     terminal_report["public_broker_pty_pam_sdk_replay_geometry_eof"] = True
     terminal_report["public_broker_pty_native_caller_scope"] = True
+    from probe_private_desktop import run as private_desktop
+
+    terminal_report['private_desktop'] = private_desktop(
+        rpc=rpc, human=human, password=password, identity=identity,
+        task=terminal_task, workspace=terminal_workspace)
     pty_unit = "mano-pty-probe-" + secrets.token_hex(6)
     authorization = os.open(terminal_workspace / ".pty-ci-authorized",
         os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o640)
@@ -2819,7 +2831,8 @@ finally:
         check=False,
         capture_output=True,
     )
-    for directory in (STATE, CODE, WORK, BASE, STOP_STATE, PROVIDER_SECRETS):
+    for directory in (STATE, CODE, WORK, BASE, STOP_STATE, PROVIDER_SECRETS,
+                      Path("/usr/lib/mano-desktop")):
         if directory.exists():
             shutil.rmtree(directory)
     STATE.parent.chmod(old_mode)

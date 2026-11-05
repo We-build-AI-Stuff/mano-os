@@ -30,9 +30,11 @@ def guard():
 
 
 def command(workspace_fd, cwd_fd, argv, *, task_pty=False, home=None, read_only=False,
-            package_catalog_id=None):
+            package_catalog_id=None, desktop=False):
     if type(task_pty) is not bool or type(read_only) is not bool:
         raise ValueError('Explicit task PTY mode required')
+    if type(desktop) is not bool or (desktop and (not task_pty or read_only)):
+        raise ValueError('Private shared memory requires the desktop PTY profile')
     if sys.platform != "linux" or os.geteuid() == 0:
         raise PermissionError("Unprivileged Linux task identity required")
     account = pwd.getpwuid(os.geteuid())
@@ -130,6 +132,8 @@ def command(workspace_fd, cwd_fd, argv, *, task_pty=False, home=None, read_only=
         "/dev",
         "--tmpfs",
         "/tmp",
+        # Provide a dedicated mount for desktop buffers. Never bind host shm.
+        *(["--size", str(64 * 1024**2), "--tmpfs", "/dev/shm"] if desktop else []),
         "--dir",
         "/etc",
         "--dir",
@@ -164,6 +168,7 @@ def command(workspace_fd, cwd_fd, argv, *, task_pty=False, home=None, read_only=
         "--",
         "/task-guard",
         *(["--task-pty"] if task_pty else []),
+        *(["--desktop-shm"] if desktop else []),
         *(home.guard_fragment() if home is not None else []),
         "--",
         *argv,

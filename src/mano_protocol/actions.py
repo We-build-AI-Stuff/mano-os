@@ -20,6 +20,7 @@ class Capability(StrEnum):
     PACKAGE = "packages.plan_install"
     RUN = "terminal.run"
     PTY = "terminal.open_pty"
+    DESKTOP = "desktop.open"
     PLAN = "model.plan"
     BUDGET = "model.set_budget"
     PROFILE = "policy.set_profile"
@@ -152,6 +153,10 @@ class ActionRequest:
             for key, maximum in (('money_micro_usd', 10**12), ('tokens', 10**9)):
                 if type(args[key]) is not int or not 1 <= args[key] <= maximum:
                     raise ValueError('Invalid bounded model budget')
+        elif capability == Capability.DESKTOP:
+            from mano_desktop.protocol import opening
+
+            opening(args)
         elif capability == Capability.PLAN:
             if set(args) not in ({'provider', 'model', 'prompt', 'max_output_tokens'},
                                  {'provider', 'model', 'prompt', 'max_output_tokens', 'feedback'}):

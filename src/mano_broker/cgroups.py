@@ -10,7 +10,7 @@ import sys
 import time
 from pathlib import Path
 
-from .limits import Limits
+from .limits import DesktopLimits, Limits
 from .protocol import identifier
 from .state import Denied
 
@@ -115,12 +115,18 @@ class Manager:
             limits = Limits()
         if not isinstance(limits, Limits):
             raise Denied("Typed kernel limits required")
-        limits = Limits.parse(limits.body())
+        if type(limits) not in {Limits, DesktopLimits}:
+            raise Denied("Unknown kernel limit profile")
+        limits = type(limits).parse(limits.body())
+        if isinstance(limits, DesktopLimits) and any(
+                isinstance(job.limits, DesktopLimits) for job in self.jobs.values()):
+            raise Denied("Only one private desktop may be active")
         identifier(action_id)
         if self.closed or len(self.jobs) >= 2 or len(self.seen) >= 64 or action_id in self.seen:
             raise Denied("Task group quota or one-shot action exhausted")
         self.seen.add(action_id)  # Failed creation also cannot replay this ID.
         task = TaskGroup(self, action_id)
+        task.limits = limits
         task.path.mkdir(mode=0o700)
         try:
             write(task.path / "memory.max", str(limits.memory_bytes))

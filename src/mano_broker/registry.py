@@ -114,7 +114,8 @@ class Registry:
                         prepared.descriptors["target"] = parent.pin(path.name)
                 except FileNotFoundError:
                     prepared.create_name = path.name
-            elif request.capability in {Capability.RUN, Capability.PTY, Capability.MCP,
+            elif request.capability in {Capability.RUN, Capability.PTY, Capability.DESKTOP,
+                                         Capability.MCP,
                                          Capability.PACKAGE}:
                 prepared.descriptors["cwd"] = resource.workspace.pin(
                     "." if request.capability == Capability.PACKAGE else args["cwd"],

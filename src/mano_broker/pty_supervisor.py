@@ -41,9 +41,9 @@ def receive(connection):
     return value
 
 
-def worker(connection, workspace, cwd, args):
+def worker(connection, workspace, cwd, args, *, desktop=False):
     with Home(args["argv"]) as home:
-        command(workspace, cwd, args["argv"], task_pty=True, home=home)
+        command(workspace, cwd, args["argv"], task_pty=True, home=home, desktop=desktop)
     send(connection, dict(kind="ready"))
     if receive(connection) != dict(kind="start"):
         raise Denied("One-shot PTY start required")
@@ -57,6 +57,7 @@ def worker(connection, workspace, cwd, args):
         rows=args["rows"],
         columns=args["columns"],
         revoked=lambda: False,
+        desktop=desktop,
     ) as pty:
         offset = 0
         seen = set()
@@ -124,7 +125,13 @@ class PTYChild:
         self.outcome = self.ack = None
         self.pid = None
         self.connection = None
-        self.timeout = json.loads(admission.request.args_json)["timeout_seconds"]
+        args = json.loads(admission.request.args_json)
+        desktop = admission.request.capability == "desktop.open"
+        if desktop:
+            from mano_desktop.protocol import launch_arguments
+
+            args = launch_arguments(args)
+        self.timeout = args["timeout_seconds"]
         placement_r = placement_w = -1
         parent = os.getpid()
         child = None
@@ -163,7 +170,8 @@ class PTYChild:
                         child,
                         admission.workspace_fd,
                         admission.cwd_fd,
-                        json.loads(admission.request.args_json),
+                        args,
+                        desktop=desktop,
                     )
                     os._exit(0)
                 except BaseException:
