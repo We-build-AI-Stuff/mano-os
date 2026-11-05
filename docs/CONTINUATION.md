@@ -15,7 +15,11 @@ original stdout custody, workspace positive controls and a synthetic host canary
 are checked. Source hashes bind the declaration and actual installed MCP fixture.
 No live model, real deceptive package download, new grant/capability or authority
 from a repository instruction is introduced. Four portable tests, lint, shell
-syntax and diff checks pass. Changed-revision native execution is not yet accepted.
+syntax and diff checks pass. Changed-revision native execution is not yet accepted. The first corpus run
+failed before attack execution because Git archive exported Root-owned source as
+0664. Source transfer now sets tar.umask=0022, yielding 0644 files/0755 directories
+and preserving the strict non-group-writable fixture check. Portable tar metadata
+inspection confirmed the corrected modes; a new native run is still required.
 
 Full v2.1 remains incomplete. Physical and authenticated coding gates remain open;
 keep the original phase order and 53 requirements. The cross-app browser/report

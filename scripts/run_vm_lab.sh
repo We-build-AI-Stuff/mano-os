@@ -93,7 +93,8 @@ wait_ssh() {
 wait_ssh
 ssh "${ssh_opts[@]}" lab@127.0.0.1 'sudo cloud-init status --wait'
 # Transfer only the tracked checkout; never CI credentials or host home.
-git -C "$repo_root" archive HEAD | ssh "${ssh_opts[@]}" lab@127.0.0.1 \
+# Git archive defaults to group-writable entries; export source without those bits.
+git -C "$repo_root" -c tar.umask=0022 archive HEAD | ssh "${ssh_opts[@]}" lab@127.0.0.1 \
   'sudo mkdir -p /opt/mano-lab; sudo tar -xf - -C /opt/mano-lab'
 source_revision=$(git -C "$repo_root" rev-parse HEAD)
 source_epoch=$(git -C "$repo_root" show -s --format=%ct HEAD)
