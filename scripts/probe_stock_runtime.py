@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import pwd
+import re
 import secrets
 import sqlite3
 import stat
@@ -328,6 +329,57 @@ def mock_effect(managed, filename):
     return result
 
 
+def packaged_private_desktop(managed, password, label, boot, approvals):
+    """Exercise the installed worker through the real approval and Task UID paths."""
+    worker = Path('/usr/lib/mano-desktop/session.py')
+    protocol = worker.with_name('protocol.py')
+    installed = {}
+    for path in (worker, protocol):
+        info = path.lstat()
+        assert stat.S_ISREG(info.st_mode) and info.st_uid == 0 and not info.st_mode & 0o022
+        assert command('dpkg-query', '-S', str(path)).stdout.strip() == f'mano-runtime: {path}'
+        installed[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
+    actor = managed['caller_name']
+    proposed = python(
+        """import json,sys
+from mano_core.desktop import proposal
+context=json.load(sys.stdin)
+print(json.dumps(proposal(task_id=context['task_id'],resource_id=context['resource_id'],
+ key='stock-private-desktop',reason='Exercise the packaged private desktop')))
+""", managed['context'], actor)
+    grant, view = approvals.approval(managed, proposed, password)
+    assert view['boot_id'] == boot
+    result = command('/usr/sbin/runuser', '-u', actor, '--', 'env', '-i',
+        'PATH=/usr/bin:/bin', 'LANG=C.UTF-8', 'PYTHONPATH=/usr/lib/mano-os',
+        'PYTHONDONTWRITEBYTECODE=1', '/usr/bin/python3', '-P',
+        str(ROOT / 'scripts/probe_private_desktop_client.py'),
+        input=json.dumps(dict(proposal=proposed, grant_id=grant)), timeout=60)
+    report = json.loads(result.stdout)
+    action = report['action_id']
+    assert re.fullmatch(r'[0-9a-f]{32}', action)
+    workspace = Path(managed['workspace'])
+    uid = pwd.getpwnam(actor).pw_uid
+    paths = (workspace / 'desktop-input.txt', workspace / 'private-desktop.png')
+    for path, maximum in zip(paths, (64, 4 * 1024**2), strict=True):
+        info = path.lstat()
+        assert stat.S_ISREG(info.st_mode) and info.st_uid == uid and info.st_nlink == 1
+        assert 0 < info.st_size <= maximum
+    assert paths[0].read_bytes() == b'private-wayland-input\n'
+    image = paths[1].read_bytes()
+    assert image.startswith(b'\x89PNG\r\n\x1a\n')
+    assert len(image) == report['screenshot']['bytes']
+    assert hashlib.sha256(image).hexdigest() == report['screenshot']['sha256']
+    group = Path('/sys/fs/cgroup/system.slice/mano-launcher.service') / ('task-' + action)
+    wait(lambda: not group.exists(), timeout=8)
+    target = 'stock-private-desktop-' + label
+    (OUT / (target + '.png')).write_bytes(image)
+    report.update(boot_id=boot, installed_worker_hashes=installed,
+                  input_independently_verified=True, descendants_drained=True,
+                  native_tty_pam=True, package_owned_worker=True)
+    (OUT / (target + '.json')).write_text(json.dumps(report, indent=2) + '\n')
+    return report
+
+
 def phase(after_reboot):
     if not after_reboot:
         denied_code, denied_output = native_terminal("mano_runtime.recovery", ("create",))
@@ -469,6 +521,7 @@ except PermissionError:
             live_model_connected=False),indent=2)+'\n')
         if not after_reboot:
             saved_source = restoration.before(managed, password)
+            packaged_private_desktop(managed, password, label, boot, restoration)
             proposal = dict(
                 schema_version="1.0",
                 task_id=managed["context"]["task_id"],
@@ -497,6 +550,12 @@ except PermissionError:
                 os.fsync(stream.fileno())
         else:
             recovered_source = restoration.after(previous, managed, password)
+            after_desktop = packaged_private_desktop(managed, password, label, boot, restoration)
+            before_desktop = json.loads((OUT / 'stock-private-desktop-before.json').read_text())
+            assert before_desktop['boot_id'] == original['boot_id']
+            assert (before_desktop['installed_worker_hashes']
+                    == after_desktop['installed_worker_hashes'])
+            assert before_desktop['action_id'] != after_desktop['action_id']
             from probe_root_package_stop import human_client
             from probe_root_package_stop import run as stop_root_package
 
@@ -526,6 +585,7 @@ print(json.dumps(dict(generation=value.generation,latched=value.latched)))
                 runtime_started_on_boot_without_setup=True,
                 generic_login_without_mano_human_account=True,
                 unmodified_packaged_gui_before_and_after_boot=True,
+                package_owned_private_desktop_before_and_after_boot=True,
                 app_observer_injected=False,
                 native_pam_before_and_after_boot=True,
                 package_owned_mock_effect_before_and_after_boot=True,
