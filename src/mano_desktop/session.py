@@ -266,18 +266,18 @@ def emit(identifier, command, *, result=None, error=None):
 
 def main():
     """Run the framed worker loop with bounded operation history and no effect replay."""
-    require_task_context()
-    if len(sys.argv) != 2:
-        raise ValueError('Expected fixed approved desktop configuration')
-    protocol = wire()
-    config = protocol.opening(json.loads(sys.argv[1]))
-    seen = {}
     try:
+        require_task_context()
+        if len(sys.argv) != 2:
+            raise ValueError('Expected fixed approved desktop configuration')
+        protocol = wire()
+        config = protocol.opening(json.loads(sys.argv[1]))
         desktop = Desktop(config)
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
         emit('0' * 32, 'ready', error='startup-failed',
              result=dict(diagnostic=str(error)[-2048:]))
         return 1
+    seen = {}
     try:
         emit('0' * 32, 'ready', result=dict(width=config['width'], height=config['height']))
         while True:

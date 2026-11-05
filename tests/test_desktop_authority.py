@@ -140,6 +140,7 @@ class DesktopAuthorityTests(unittest.TestCase):
         spec.loader.exec_module(module)
         desktop = Mock()
         desktop.wait_ready.side_effect = ValueError('original desktop failure')
+        desktop.transport.output = b'worker failed\n'
         desktop.stop.side_effect = ConnectionResetError('lost cancellation acknowledgement')
         with (patch.object(module.sys, 'platform', 'linux'),
               patch.object(module.os, 'geteuid', return_value=1004),
@@ -147,9 +148,11 @@ class DesktopAuthorityTests(unittest.TestCase):
                   st_mode=module.stat.S_IFREG | 0o600, st_uid=0)),
               patch.object(module.Path, 'read_text', side_effect=PermissionError('root only')),
               patch.object(module.sys, 'stdin', io.StringIO('{"proposal":{},"grant_id":"id"}')),
+              patch.object(module.sys, 'stderr', io.StringIO()) as diagnostic,
               patch.object(module, 'BrokerClient') as client,
               patch.object(module.DesktopSession, 'open', return_value=desktop)):
             with self.assertRaisesRegex(ValueError, 'original desktop failure'):
                 module.main()
+        self.assertIn(repr(b'worker failed\n'), diagnostic.getvalue())
         desktop.stop.assert_called_once_with()
         client.return_value.close.assert_called_once_with()

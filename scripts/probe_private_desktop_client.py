@@ -25,7 +25,13 @@ def main():
     desktop = None
     try:
         desktop = DesktopSession.open(client, proposal=body['proposal'], grant_id=body['grant_id'])
-        desktop.wait_ready()
+        try:
+            desktop.wait_ready()
+        except (ValueError, OSError, TimeoutError):
+            # This fixture handles synthetic content only. repr escapes terminal controls.
+            startup = bytes(desktop.transport.output[-2048:])
+            print(f'Private desktop PTY startup tail: {startup!r}', file=sys.stderr)
+            raise
         desktop.command('terminal', title='mano private task desktop')
         deadline = time.monotonic() + 8
         windows = []
