@@ -2,6 +2,7 @@
 
 import json
 import os
+import stat
 import sys
 import time
 from pathlib import Path
@@ -14,8 +15,11 @@ def main():
     """Exercise the private GUI as its Task UID and stop the action on a failed step."""
     if sys.platform != 'linux' or os.geteuid() == 0:
         raise PermissionError('Unprivileged disposable Linux client required')
-    if Path('/etc/mano-lab-disposable').read_text().strip() != 'mano-phase0-ci':
-        raise PermissionError('Disposable CI marker required')
+    # The Root coordinator verifies the marker contents before dropping privileges.
+    marker = Path('/etc/mano-lab-disposable').lstat()
+    if (not stat.S_ISREG(marker.st_mode) or marker.st_uid != 0
+            or stat.S_IMODE(marker.st_mode) != 0o600):
+        raise PermissionError('Protected disposable CI marker required')
     body = json.load(sys.stdin)
     client = BrokerClient()
     desktop = None

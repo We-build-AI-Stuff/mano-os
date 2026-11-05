@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from mano_broker.limits import DesktopLimits, Limits, approved_limits, limit_type
@@ -142,7 +143,9 @@ class DesktopAuthorityTests(unittest.TestCase):
         desktop.stop.side_effect = ConnectionResetError('lost cancellation acknowledgement')
         with (patch.object(module.sys, 'platform', 'linux'),
               patch.object(module.os, 'geteuid', return_value=1004),
-              patch.object(module.Path, 'read_text', return_value='mano-phase0-ci'),
+              patch.object(module.Path, 'lstat', return_value=SimpleNamespace(
+                  st_mode=module.stat.S_IFREG | 0o600, st_uid=0)),
+              patch.object(module.Path, 'read_text', side_effect=PermissionError('root only')),
               patch.object(module.sys, 'stdin', io.StringIO('{"proposal":{},"grant_id":"id"}')),
               patch.object(module, 'BrokerClient') as client,
               patch.object(module.DesktopSession, 'open', return_value=desktop)):
