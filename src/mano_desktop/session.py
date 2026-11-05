@@ -98,8 +98,6 @@ class Desktop:
 
     def start(self):
         """Start Sway with only private sockets, configuration and a fixed headless output."""
-        if Path('/dev/shm').resolve(strict=True) != Path('/tmp/.mano-shm'):
-            raise PermissionError('Desktop shared memory must use its private tmpfs')
         width, height = self.config['width'], self.config['height']
         config = self.runtime / 'sway.conf'
         config.write_text(f'output HEADLESS-1 mode {width}x{height}\n'

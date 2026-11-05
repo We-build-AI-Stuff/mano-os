@@ -132,10 +132,8 @@ def command(workspace_fd, cwd_fd, argv, *, task_pty=False, home=None, read_only=
         "/dev",
         "--tmpfs",
         "/tmp",
-        # POSIX shm_open uses /dev/shm. Resolve it into the already writable
-        # private tmpfs instead of exposing a host mount or expanding Landlock.
-        *(["--dir", "/tmp/.mano-shm", "--symlink", "/tmp/.mano-shm", "/dev/shm"]
-          if desktop else []),
+        # Provide a dedicated mount for desktop buffers. Never bind host shm.
+        *(["--size", str(64 * 1024**2), "--tmpfs", "/dev/shm"] if desktop else []),
         "--dir",
         "/etc",
         "--dir",
@@ -170,6 +168,7 @@ def command(workspace_fd, cwd_fd, argv, *, task_pty=False, home=None, read_only=
         "--",
         "/task-guard",
         *(["--task-pty"] if task_pty else []),
+        *(["--desktop-shm"] if desktop else []),
         *(home.guard_fragment() if home is not None else []),
         "--",
         *argv,
