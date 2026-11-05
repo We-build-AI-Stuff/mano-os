@@ -30,9 +30,11 @@ def guard():
 
 
 def command(workspace_fd, cwd_fd, argv, *, task_pty=False, home=None, read_only=False,
-            package_catalog_id=None):
+            package_catalog_id=None, desktop=False):
     if type(task_pty) is not bool or type(read_only) is not bool:
         raise ValueError('Explicit task PTY mode required')
+    if type(desktop) is not bool or (desktop and (not task_pty or read_only)):
+        raise ValueError('Private shared memory requires the desktop PTY profile')
     if sys.platform != "linux" or os.geteuid() == 0:
         raise PermissionError("Unprivileged Linux task identity required")
     account = pwd.getpwuid(os.geteuid())
@@ -130,6 +132,10 @@ def command(workspace_fd, cwd_fd, argv, *, task_pty=False, home=None, read_only=
         "/dev",
         "--tmpfs",
         "/tmp",
+        # POSIX shm_open uses /dev/shm. Resolve it into the already writable
+        # private tmpfs instead of exposing a host mount or expanding Landlock.
+        *(["--dir", "/tmp/.mano-shm", "--symlink", "/tmp/.mano-shm", "/dev/shm"]
+          if desktop else []),
         "--dir",
         "/etc",
         "--dir",
