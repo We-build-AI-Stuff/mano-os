@@ -16,6 +16,13 @@ class SandboxProfileGuards(unittest.TestCase):
                 with self.assertRaises(PermissionError):
                     guard()
 
+    def test_private_shared_memory_requires_explicit_desktop_pty(self):
+        for options in (dict(desktop=True), dict(desktop='true', task_pty=True),
+                        dict(desktop=True, task_pty=True, read_only=True)):
+            with self.subTest(options=options), self.assertRaisesRegex(
+                    ValueError, 'desktop PTY profile'):
+                command(3, 4, ['true'], **options)
+
     def test_root_or_nonlinux_never_compiles_or_checks_package(self):
         for platform, uid in (("darwin", 1004), ("linux", 0)):
             with (

@@ -114,9 +114,11 @@ class DesktopSession:
                 self.uncertain = True
                 raise
 
-    def command(self, command, *, timeout=5, **args):
-        # Validation happens before any effect or uncertainty latch.
+    def command(self, command, *, timeout=None, **args):
         """Send a single validated operation and fail closed on uncertain delivery."""
+        if timeout is None:
+            timeout = 8 if command == 'type' else 5
+        # Validation happens before any effect or uncertainty latch.
         identifier = secrets.token_hex(16)
         raw = protocol.request(identifier, command, args,
                                width=self.config['width'], height=self.config['height'])

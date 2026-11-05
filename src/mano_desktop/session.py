@@ -95,7 +95,7 @@ class Desktop:
                     source.seek(max(0, log.stat().st_size - 2048))
                     diagnostic = source.read(2048).decode('utf8', 'replace')
             self.close()
-            raise RuntimeError('Private desktop startup failed: ' + diagnostic) from error
+            raise RuntimeError(f'Private desktop startup failed ({error}): {diagnostic}') from error
 
     def start(self):
         """Start Sway with only private sockets, configuration and a fixed headless output."""
@@ -201,8 +201,9 @@ class Desktop:
             self.applications.append(child)
             return dict(submitted=True)
         if command == 'type':
-            subprocess.run(['/usr/bin/wtype', '-d', '0', '-'], input=args['text'],
-                text=True, capture_output=True, check=True, env=self.environment, timeout=3)
+            # wtype 0.4 defaults to zero delay but rejects an explicit -d 0.
+            subprocess.run(['/usr/bin/wtype', '-'], input=args['text'],
+                text=True, capture_output=True, check=True, env=self.environment, timeout=6)
             return dict(submitted=True)
         if command == 'key':
             argv = ['/usr/bin/wtype']
@@ -322,8 +323,15 @@ def main():
             try:
                 result = desktop.dispatch(value['command'], value['args'])
                 response = emit(value['id'], value['command'], result=result)
-            except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+            except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+                diagnostic = type(error).__name__
+                if isinstance(error, subprocess.CalledProcessError):
+                    stderr = error.stderr or ''
+                    if isinstance(stderr, bytes):
+                        stderr = stderr[:512].decode('utf8', errors='replace')
+                    diagnostic = f'exit {error.returncode}: {stderr[:512]}'
                 response = emit(value['id'], value['command'],
+                                result=dict(diagnostic=diagnostic),
                                 error='operation-failed-or-uncertain')
             seen[value['id']] = (canonical, response)
             if value['command'] == 'close':

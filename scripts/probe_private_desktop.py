@@ -89,12 +89,18 @@ def run(*, rpc, human, password, identity, task, workspace):
     assert rpc('request', query) == denied
     group = Path('/sys/fs/cgroup/system.slice/mano-launcher.service') / ('task-' + action)
     deadline = time.monotonic() + 8
-    while not group.exists() and time.monotonic() < deadline:
-        time.sleep(.1)
-    limits = dict(memory_bytes=int((group / 'memory.max').read_text()),
-                  pids=int((group / 'pids.max').read_text()),
-                  cpu_percent=int((group / 'cpu.max').read_text().split()[0]) // 1000)
-    assert limits == {key: value['args'][key] for key in limits}
+    limits = None
+    while time.monotonic() < deadline:
+        try:
+            limits = dict(memory_bytes=int((group / 'memory.max').read_text()),
+                          pids=int((group / 'pids.max').read_text()),
+                          cpu_percent=int((group / 'cpu.max').read_text().split()[0]) // 1000)
+        except FileNotFoundError:
+            # A startup failure can drain the cgroup before we sample it.
+            # Still run the owning client below to collect the PTY failure.
+            time.sleep(.1)
+        else:
+            break
     writer_path = workspace / 'private-writer.odt'
     seed_writer_document(writer_path, identity.uid)
     # The Task UID opens the original proposal through the real production SDK.
@@ -105,6 +111,8 @@ def run(*, rpc, human, password, identity, task, workspace):
                               writer_fixture_path=str(writer_path))),
         capture_output=True, text=True, timeout=80)
     assert result.returncode == 0, (result.stdout[-8192:], result.stderr[-8192:])
+    assert limits is not None, 'Desktop cgroup vanished before kernel limit evidence'
+    assert limits == {key: value['args'][key] for key in limits}
     report = json.loads(result.stdout)
     assert report['action_id'] == action
     report['kernel_limits'] = limits
