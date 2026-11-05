@@ -1974,6 +1974,10 @@ finally:client.close()
     terminal_report["mcp_discovery_official_sdk_native_pam_and_hostile_peers"] = True
     terminal_report["mcp_discovery_witness"] = mcp_records
     (ROOT / "evidence/mcp-discovery.json").write_text(json.dumps(mcp_records, indent=2) + "\n")
+    from probe_redteam_corpus import run as probe_redteam_corpus
+
+    terminal_report['redteam_corpus'] = probe_redteam_corpus(
+        rpc, human, identity, password, terminal_task, terminal_workspace, mcp_records)
     from probe_package_plans import run as probe_package_plans
 
     package_records = probe_package_plans(rpc,human,identity,password)

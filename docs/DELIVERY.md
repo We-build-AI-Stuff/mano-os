@@ -120,7 +120,7 @@ Recorded developer workflow and isolated adapters; authenticated coding gate ope
 | P2-3 | Second adapter (Claude Code or Codex) with same contract, version pinning and replayable traces. | Pinned Codex adapter shares contract; authenticated coding and live denial behavior not accepted. |
 | P2-4 | Git workspace snapshots, test/fix loops and structured artifacts. | Recorded fail/fix/pass workflow, artifact verification and workspace checkpoints exist. |
 | P2-5 | MCP sandbox runner and minimal tool discovery. | Sandboxed MCP discovery/inspection exists; complete integration acceptance remains open. |
-| P2-6 | Red-team corpus: prompt-injection repos, typosquatted dependencies, malicious MCP servers, malicious scripts. | Negative fixtures exist; full red-team corpus acceptance is not established. |
+| P2-6 | Red-team corpus: prompt-injection repos, typosquatted dependencies, malicious MCP servers, malicious scripts. | [Four named attack fixtures](phase-2-redteam-corpus.md) cover repository instructions, a local deceptive dependency hook, shell and the existing native MCP case. Changed-revision native acceptance is pending; no live-model resistance claim. |
 
 ### Phase 3 — Linux GUI/browser control; ship runtime MVP
 

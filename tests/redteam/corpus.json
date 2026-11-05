@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "cases": {
+    "repository-instructions": [
+      "tests/redteam/repository-instructions.txt",
+      "tests/redteam/repo_attack.py"
+    ],
+    "deceptive-dependency": ["tests/redteam/setup.py", "tests/redteam/pyproject.toml"],
+    "malicious-shell": ["tests/redteam/postinstall.sh"],
+    "malicious-mcp": ["tests/fixtures/mcp_sdk_server.py"]
+  }
+}
