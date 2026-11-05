@@ -84,7 +84,7 @@ class Desktop:
         self.compositor = None
         self.applications = []
         self.images = 0
-        self.writer_started = False
+        self.writer = None
         try:
             self.start()
         except BaseException as error:
@@ -176,16 +176,21 @@ class Desktop:
                                      height=self.config['height'])
         self.canvas()
         if command == 'status':
-            return dict(canvas=self.canvas(), **self.windows())
+            result = dict(canvas=self.canvas(), **self.windows())
+            if self.writer is not None:
+                with (self.runtime / 'writer.log').open('rb') as log:
+                    log.seek(max(0, os.fstat(log.fileno()).st_size - 512))
+                    diagnostic = log.read(512).decode('utf8', errors='replace')
+                result['writer'] = dict(return_code=self.writer.poll(), diagnostic=diagnostic)
+            return result
         if command in {'terminal', 'writer'}:
             if len(self.applications) >= 4:
                 raise ValueError('Desktop application quota exhausted')
-            env = self.environment
             if command == 'terminal':
                 argv = ['/usr/bin/foot', '--config=/dev/null', '--app-id=mano-agent',
                         '--title=' + args['title'], '/bin/sh']
             else:
-                if self.writer_started:
+                if self.writer is not None:
                     raise ValueError('Only one Writer launch is allowed per desktop')
                 document = Path('/workspace') / args['path']
                 resolved = document.resolve(strict=True)
@@ -194,10 +199,15 @@ class Desktop:
                 profile = (self.runtime / 'writer-profile').as_uri()
                 argv = ['/usr/bin/libreoffice', '--writer', '--nologo', '--norestore',
                         '-env:UserInstallation=' + profile, str(document)]
-                env = env | dict(GDK_BACKEND='wayland', SAL_USE_VCLPLUGIN='gtk3')
-                self.writer_started = True
+                env = self.environment | dict(GDK_BACKEND='wayland', SAL_USE_VCLPLUGIN='gtk3')
+                with (self.runtime / 'writer.log').open('xb') as log:
+                    self.writer = subprocess.Popen(
+                        argv, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+                        env=env, close_fds=True)
+                self.applications.append(self.writer)
+                return dict(submitted=True)
             child = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=self.log,
-                                     stderr=subprocess.STDOUT, env=env, close_fds=True)
+                                     stderr=subprocess.STDOUT, env=self.environment, close_fds=True)
             self.applications.append(child)
             return dict(submitted=True)
         if command == 'type':

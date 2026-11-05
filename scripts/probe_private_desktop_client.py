@@ -18,15 +18,18 @@ def exercise_writer(desktop, document):
     desktop.command('writer', path='private-writer.odt')
     deadline = time.monotonic() + 20
     writer = None
+    observation = {}
     while time.monotonic() < deadline:
-        windows_now = desktop.command('status')['result']['windows']
+        status = desktop.command('status')['result']
+        windows_now = status['windows']
+        observation = status.get('writer', {})
         writer = next((window for window in windows_now
                        if 'libreoffice' in window['app_id'].lower()
                        and 'private-writer' in window['title']), None)
-        if writer is not None:
+        if writer is not None or observation.get('return_code') is not None:
             break
         time.sleep(.3)
-    assert writer is not None, 'Writer did not map the approved document'
+    assert writer is not None, f'Writer did not map the approved document: {observation!r}'
     desktop.command('focus', window_id=writer['id'])
     desktop.command('key', key='End', modifiers=['ctrl'])
     desktop.command('key', key='Return', modifiers=[])
