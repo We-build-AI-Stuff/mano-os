@@ -2,6 +2,7 @@
 
 import json
 import os
+import shlex
 import stat
 import sys
 import time
@@ -37,6 +38,16 @@ def main():
             time.sleep(.2)
         assert len(windows) == 1 and windows[0]['app_id'] == 'mano-agent', status
         desktop.command('focus', window_id=windows[0]['id'])
+        if body.get('hold_for_stop') is True:
+            child = ("import os,time;from pathlib import Path;pid=os.fork();"
+                     "os._exit(0) if pid else None;os.setsid();"
+                     "Path('/workspace/private-desktop-stop').write_text(str(os.getpid()));"
+                     "time.sleep(120)")
+            desktop.command('type', text='python3 -c ' + shlex.quote(child) + ' &')
+            desktop.command('key', key='Return', modifiers=[])
+            print(json.dumps(dict(action_id=desktop.transport.action_id, windows=windows,
+                                  held_for_native_stop=True, effect_verified=False)))
+            return  # Keep the approved GUI action live; closing this client is not Stop.
         # Real virtual keyboard delivery to the mapped shell, not a direct exec witness.
         desktop.command('type', text="printf 'private-wayland-input\\n' > desktop-input.txt")
         desktop.command('key', key='Return', modifiers=[])

@@ -42,3 +42,20 @@ the screenshot checksum, replay behavior and descendant drainage after close.
 This revision is awaiting that native result. It has no accepted browser or Writer
 integration, frozen-desktop Stop witness, physical input test or complete MVP
 claim. Those remain part of the original version's delivery scope.
+
+
+## Frozen desktop Stop exercise under development
+
+The follow-up fixture places the private GUI in the existing public interactive
+Stop slot beside the long-running ordinary task. It keeps the two-job launcher
+limit intact. Through the mapped Foot terminal, virtual keyboard input starts a
+forked child that becomes a new session leader. Root independently checks the
+workspace PID marker, process ownership/cgroup membership and session ID.
+
+The coordinator records the Sway, Foot and other task process IDs and freezes all
+of them before freezing the broker and launcher. The real native human Stop client
+must drain the task cgroups despite those freezes. New input must be denied, the
+desktop action must remain unknown/unverified, and restart plus human rearm must
+not resurrect its input authority. The existing standalone frozen task-PTY worker
+exercise also remains. This is CI preparation, not an accepted frozen-GUI result;
+physical input and concurrent human-desktop focus checks remain unproven.

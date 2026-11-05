@@ -10,14 +10,34 @@ import time
 from pathlib import Path
 
 
-def run(*, rpc, human, password, identity, task, workspace):
-    """Exercise and independently verify the private desktop in the disposable VM."""
+def require_guest():
+    """Require the protected marker and a disposable Linux VM."""
     if sys.platform != 'linux' or os.geteuid() != 0:
         raise PermissionError('Disposable Linux Root coordinator required')
     if Path('/etc/mano-lab-disposable').read_text().strip() != 'mano-phase0-ci':
         raise PermissionError('Disposable CI marker required')
     assert subprocess.check_output(['systemd-detect-virt', '--vm'], text=True).strip() in {
         'qemu', 'kvm'}
+
+
+def resolve_task_pid(statuses, namespace_pid, uid):
+    """Resolve a namespace PID using independently captured kernel status fields."""
+    matches = []
+    for pid, source in statuses.items():
+        fields = dict(line.split(':', 1) for line in source.splitlines() if ':' in line)
+        identifiers = [int(value) for value in fields.get('NSpid', '').split()]
+        owners = [int(value) for value in fields.get('Uid', '').split()]
+        if (len(identifiers) >= 2 and identifiers[0] == pid
+                and identifiers[-1] == namespace_pid and owners == [uid] * 4):
+            matches.append(pid)
+    if len(matches) != 1:
+        raise ValueError('Expected one owned child in the private PID namespace')
+    return matches[0]
+
+
+def run(*, rpc, human, password, identity, task, workspace):
+    """Exercise and independently verify the private desktop in the disposable VM."""
+    require_guest()
     from mano_core.desktop import proposal
 
     value = proposal(task_id=task['task_id'], resource_id=task['resource_id'],
@@ -84,3 +104,49 @@ def run(*, rpc, human, password, identity, task, workspace):
         workspace_input_independently_observed=True, screenshot_independently_hashed=True,
         replay_did_not_relaunch=True, descendants_drained=True,
         browser_implemented=False, writer_implemented=False, full_mvp_accepted=False)
+
+
+def start_for_stop(*, rpc, human, password, identity, task, workspace):
+    require_guest()
+    from mano_core.desktop import proposal
+
+    value = proposal(task_id=task['task_id'], resource_id=task['resource_id'],
+        key='private-desktop-stop', reason='Approve private GUI for frozen native Stop exercise')
+    approval = rpc('request', dict(schema_version='1.0', operation='request_approval', body=value),
+                   actor=identity.name)['approval']
+    assert approval['state'] == 'pending'
+    view = human(dict(mode='view', id=approval['approval_id']))['view']
+    assert view['args'] == value['args']
+    grant = human(dict(mode='confirm', view=view, password=password))
+    assert grant['ok'] is True
+    result = subprocess.run(['/usr/sbin/runuser', '-u', identity.name, '--', 'env',
+        'PYTHONPATH=/usr/lib/mano-os', 'PYTHONDONTWRITEBYTECODE=1', '/usr/bin/python3',
+        '/opt/mano-lab/scripts/probe_private_desktop_client.py'],
+        input=json.dumps(dict(proposal=value, grant_id=grant['grant_id'], hold_for_stop=True)),
+        capture_output=True, text=True, timeout=40)
+    assert result.returncode == 0, (result.stdout[-8192:], result.stderr[-8192:])
+    report = json.loads(result.stdout)
+    assert report['held_for_native_stop'] is True
+    action = report['action_id']
+    from mano_protocol.actions import identifier
+
+    identifier(action)
+    group = Path('/sys/fs/cgroup/system.slice/mano-launcher.service') / ('task-' + action)
+    marker = workspace / 'private-desktop-stop'
+    deadline = time.monotonic() + 5
+    while not marker.exists() and time.monotonic() < deadline:
+        time.sleep(.1)
+    info = marker.lstat()
+    assert stat.S_ISREG(info.st_mode) and info.st_uid == identity.uid and info.st_nlink == 1
+    namespace_pid = int(marker.read_text())
+    pids = [int(pid) for pid in (group / 'cgroup.procs').read_text().split()]
+    assert len(pids) >= 6
+    statuses = {pid: Path(f'/proc/{pid}/status').read_text() for pid in pids}
+    detached_pid = resolve_task_pid(statuses, namespace_pid, identity.uid)
+    assert os.getsid(detached_pid) == detached_pid
+    processes = {str(pid): Path(f'/proc/{pid}/comm').read_text().strip() for pid in pids}
+    assert 'sway' in processes.values() and 'foot' in processes.values()
+    return report | dict(cgroup=str(group), pids=pids, processes=processes,
+                         detached_pid=detached_pid, namespace_pid=namespace_pid,
+                         detached_child_in_owned_cgroup=True,
+                         native_pam_required=True, capability=value['capability'])

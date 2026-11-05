@@ -2186,28 +2186,14 @@ else:raise AssertionError('task reached native Stop')
     core_group = Path("/sys/fs/cgroup/mano.slice/mano-core.slice")
     core_child_group = core_group / core_unit
     deadline = time.monotonic() + 3
-    stop_pty_proposal = public_pty_proposal | dict(idempotency_key="public-pty-stop",
-        args=public_pty_proposal["args"] | dict(timeout_seconds=60, argv=["/usr/bin/python3", "-c",
-            "from pathlib import Path;import time;"
-            "ready=Path('/workspace/public-pty-stop');pending=ready.with_suffix('.tmp');"
-            "pending.write_text('ready');pending.replace(ready);time.sleep(60)"]))
-    stop_pty_pending = rpc("request", dict(schema_version="1.0", operation="request_approval",
-        body=stop_pty_proposal), actor=identity.name)["approval"]
-    assert stop_pty_pending["state"] == "pending"
-    stop_pty_view = human(dict(mode="view", id=stop_pty_pending["approval_id"]))["view"]
-    stop_pty_grant = human(dict(mode="confirm", view=stop_pty_view, password=password))
-    assert stop_pty_grant["ok"]
-    stop_pty_action = rpc("request", dict(schema_version="1.0", operation="propose",
-        body=stop_pty_proposal | dict(grant_id=stop_pty_grant["grant_id"])),
-        actor=identity.name)["action"]["id"]
-    stop_pty_group = Path("/sys/fs/cgroup/system.slice/mano-launcher.service") / (
-        "task-" + stop_pty_action)
-    deadline = time.monotonic() + 10
-    while time.monotonic() < deadline and not (terminal_workspace / "public-pty-stop").exists():
-        time.sleep(0.1)
-    assert (terminal_workspace / "public-pty-stop").read_text() == "ready"
-    stop_pty_pids = [int(pid) for pid in (stop_pty_group / "cgroup.procs").read_text().split()]
-    assert len(stop_pty_pids) >= 3
+    from probe_private_desktop import start_for_stop as start_desktop_for_stop
+
+    desktop_stop = start_desktop_for_stop(rpc=rpc, human=human, password=password,
+        identity=identity, task=terminal_task, workspace=terminal_workspace)
+    stop_pty_action = desktop_stop['action_id']
+    stop_pty_group = Path(desktop_stop['cgroup'])
+    stop_pty_pids = desktop_stop['pids']
+    terminal_report['private_desktop_stop'] = desktop_stop
     stop_pty_write = dict(schema_version="1.0", operation="pty_write", body=dict(
         task_id=terminal_task["task_id"], action_id=stop_pty_action, key="after-stop",
         data=base64.b64encode(b"must-not-arrive\n").decode()))
@@ -2273,6 +2259,10 @@ print(json.dumps(dict(generation=state.generation,latched=state.latched)))
     restore_stop = start_restore_for_stop(rpc,human,identity,password,restore_context,broker_pid)
     terminal_report["source_restore_stop_witness"] = restore_stop
     subprocess.run(["kill", "-STOP", *(str(pid) for pid in core_pids)], check=True)
+    for pid in stop_pty_pids:
+        assert 'T' in next(line for line in Path(f'/proc/{pid}/status').read_text().splitlines()
+                           if line.startswith('State:'))
+    desktop_stop['all_gui_processes_frozen_before_stop'] = True
     subprocess.run(["kill", "-STOP", str(broker_pid), str(launcher_pid)], check=True)
     try:
         native_stopped = subprocess.run(["/usr/sbin/runuser", "-u", "mano-human", "--",
@@ -2326,6 +2316,17 @@ print(json.dumps(dict(generation=state.generation,latched=state.latched)))
         stop_pty_group / "cgroup.events").read_text()
     assert rpc("request", stop_pty_write, actor=identity.name) == denied
     terminal_report["public_broker_pty_frozen_native_stop_drained"] = True
+    desktop_stop['all_gui_descendants_drained'] = all(core_exited(pid) for pid in stop_pty_pids)
+    assert desktop_stop['all_gui_descendants_drained']
+    desktop_stop['new_input_after_stop_denied'] = True
+    desktop_stop['physical_test'] = False
+    desktop_stop['human_desktop_unchanged'] = None
+    stopped_desktop = rpc('request', dict(schema_version='1.0', operation='status',
+        body=dict(task_id=terminal_task['task_id'], action_id=stop_pty_action)),
+        actor=identity.name)['action']
+    assert stopped_desktop['state'] == 'unknown' and stopped_desktop['verified'] == 0
+    assert stopped_desktop['exit_code'] is None
+    desktop_stop['stopped_action'] = stopped_desktop
     terminal_report["installed_broker_disabled_price_policy"] = True
     terminal_report["loaded_broker_price_policy_immutable_snapshot"] = True
     terminal_report["installed_provider_credential_health"] = True
@@ -2492,6 +2493,9 @@ finally:
     terminal_report["recorded_developer_native_stop_restart_no_follow_on_effect"] = True
     assert rpc("request", stop_pty_write, actor=identity.name) == denied
     terminal_report["public_broker_pty_restart_stop_rearm_no_input_resurrection"] = True
+    desktop_stop['restart_and_rearm_did_not_resurrect_input'] = True
+    assert not stop_pty_group.exists() or 'populated 0' in (
+        stop_pty_group / 'cgroup.events').read_text()
 
 
     grant_observer = """import sqlite3,sys
