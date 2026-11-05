@@ -1,5 +1,6 @@
 import json
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from mano_desktop import protocol, session
@@ -58,6 +59,27 @@ class DesktopProtocolTests(unittest.TestCase):
                     b'x'*(protocol.MAX_FRAME+1)):
             with self.assertRaises(ValueError):
                 protocol.decode(bad)
+
+    def test_worker_requires_bubblewrap_private_devpts_mapping(self):
+        status = 'NoNewPrivs: 1\nSeccomp: 2\nCapEff: 0\nCapBnd: 0\nCapAmb: 0\n'
+        files = {'status': status, 'uid_map': '1004 0 1\n', 'gid_map': '1005 0 1\n'}
+
+        def read(path):
+            return files[path.name]
+
+        with (patch.object(session.sys, 'platform', 'linux'),
+              patch.object(session.os, 'geteuid', return_value=1004),
+              patch.object(session.os, 'getegid', return_value=1005),
+              patch.object(session.Path, 'read_text', autospec=True, side_effect=read),
+              patch.object(session.Path, 'lstat', return_value=SimpleNamespace(
+                  st_mode=session.stat.S_IFREG | 0o555, st_uid=65534))):
+            session.require_task_context()
+            for mapping in ('0 0 4294967295\n', '1004 0 2\n', '1004 1004 1\n',
+                            '1004 0 1\n1005 1 1\n'):
+                files['uid_map'] = mapping
+                with self.subTest(mapping=mapping), self.assertRaisesRegex(
+                        PermissionError, 'uid_map'):
+                    session.require_task_context()
 
     def test_mac_worker_refuses_before_configuration_reads_or_process_creation(self):
         with (patch.object(session.sys, 'platform', 'darwin'),
