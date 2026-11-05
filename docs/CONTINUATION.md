@@ -1,3 +1,34 @@
+# Current: measured runtime evidence and scoped Phase 1 report
+
+Main `9922e998e49fbded4383cd653e30062a4867e90e` contains merged PRs #151–#153.
+PR #152's inspected native artifact records warm/scoped sampled memory and its
+original project/log hashes. PR #153's corrected native run `41892893831` and main
+run `41893461422` both passed quality, security-lab and merge-gate. The downloaded
+PR artifact confirms one group OOM, four task processes killed, unchanged service
+identities/restart counts, unverified unknown/no replay and exact follow-up output.
+The initial test's failed-outcome expectation was wrong because group OOM also
+kills its report producer; retain that failed run separately. See the memory/OOM
+observation docs for exact artifact IDs, hashes, scopes and timings.
+
+PR #155 adds `phase1-measurements.json` before CI evidence upload. It publishes
+one recorded workflow, a fixed 14-case access-denial cohort, raw-consistent RAM
+and bound OOM observations. Missing/stale/partial data stays unknown; this report
+does not establish phase-wide success/bypass, billing, regression or phase acceptance.
+The shared loader has an explicit 64-level nesting bound after Python 3.14 exposed
+an old test's reliance on decoder recursion limits. Seven loader and four report
+tests plus local lint pass. The new revision's CI report generation/collection
+still requires verification. Exact live handles remain in outputs/CONTINUATION.md.
+
+Full v2.1 remains incomplete. Preserve the original phase boundaries and all 53
+numbered requirements. The first cross-app browser/report MVP, broader benchmark,
+authenticated coding, package apply, hardware and signed OS gates remain open.
+Do not restart accepted fixtures solely for activity. Keep the original PR #134
+checkout/drafts parked. No proactive agents, human review requests, paid/auth/key
+experiments or Linux/Root/VM execution on the Mac. Disk reached about 20 GiB free
+and 90% usage; user warned. Avoid large local downloads/builds and never delete data.
+
+## Historical notes (superseded where above differs)
+
 # Current: CI-owned VM image lifecycle
 
 Main `bc75fded4bb82c441511c995cbe846bdbec88785` run `41879330858` failed the
