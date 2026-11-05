@@ -126,3 +126,11 @@ that bundle. Do not rebuild the accepted fixture solely to create activity. Live
 authenticated coding delegates, integrated browser/Writer workflows, full recovery/
 autonomy, package apply, hardware, physical 8 GB testing and signed installation
 retain their original acceptance gates.
+
+
+Subsequent inspected measurements are documented in [runtime memory observations](runtime-memory-observations.md)
+and [installed-runtime OOM observations](runtime-oom-observations.md). PR #152
+measured warm/scoped sampled RAM; PR #153 measured one group OOM, service survival
+and an approved follow-up. These do not replace the unknown whole-product peak
+or establish the remaining phase-wide metrics. New CI artifacts publish selected
+cohorts and denominators in [phase1-measurements.json](phase-1-measurements.md).

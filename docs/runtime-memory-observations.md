@@ -3,8 +3,8 @@
 The disposable Linux CI harness observes the installed runtime while the existing
 recorded project registers, publishes its source, fails a test, corrects the source
 and verifies the passing test's artifact. It changes no grant, sandbox, service
-limit or execution endpoint. Native collection is pending until the changed
-revision runs successfully and its downloaded evidence is inspected.
+limit or execution endpoint. Native collection was inspected after [PR #152 CI](https://github.com/We-build-AI-Stuff/mano-os/actions/runs/41888272498)
+passed. This is one recorded workflow, not phase-wide or physical acceptance.
 
 The service hierarchy is not one common runtime cgroup. The observer reads five
 fixed, nonoverlapping groups and verifies their actual systemd unit placement:
@@ -44,3 +44,15 @@ It rejects changed cgroup identity, invalid counters, missing placement and an
 incomplete observation. Portable tests exercise parsing and summary semantics,
 not Linux execution. No runtime collector runs on the Mac. These VM observations
 do not establish physical 8 GB performance or complete Phase 1/v2.1 acceptance.
+
+
+## Inspected native run
+
+[PR #152 artifact 13354775818](https://github.com/We-build-AI-Stuff/mano-os/actions/runs/41888272498/artifacts/13354775818)
+contains 10 pre-workflow and 796 workflow samples. The warm pre-workflow component
+sum was 344,395,776 bytes (328.4 MiB); the maximum sampled sequential component
+sum was 420,040,704 bytes (400.6 MiB). All nine project file hashes and the raw
+summary/manifest/broker bindings were checked. The ZIP SHA-256 is
+`a59d6e24eea716559b3b0b5049e457a32a24e5c1ed4ddf12e9c1099260cb10d9`.
+These figures apply to that run, whose workflow elapsed time was 39.8687 seconds.
+They do not replace the unknown unqualified whole-product peak.

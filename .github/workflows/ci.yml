@@ -52,6 +52,9 @@ jobs:
         env:
           MANO_DISPOSABLE_CI: '1'
         run: bash scripts/run_vm_lab.sh
+      - name: Publish scoped Phase 1 measurements
+        if: always()
+        run: python3 scripts/phase1_measurements.py --evidence evidence --revision '${{ github.sha }}' --output evidence/phase1-measurements.json
       - name: Upload real evidence, even on failure
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
