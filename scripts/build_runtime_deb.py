@@ -239,7 +239,7 @@ def build(wheelhouse, output, *, revision=None, epoch=None):
             "libjson-c5, libsystemd0, libseccomp2, "
             "bubblewrap (>= 0.12.0-1~deb13u1), xdg-dbus-proxy (>= 0.1.6-1+deb13u3), "
             "acl, passwd, util-linux, dbus-user-session, at-spi2-core, sway, foot, grim, wtype, "
-            "fonts-dejavu-core, ca-certificates\n"
+            "libreoffice-writer, libreoffice-gtk3, fonts-dejavu-core, ca-certificates\n"
             "Description: mano prototype trusted broker, prompt and isolated runtime\n"
             " Disabled cloud/controller defaults; explicit Root human enrollment required.\n"
         )

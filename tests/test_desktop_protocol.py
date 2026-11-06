@@ -31,6 +31,11 @@ class DesktopProtocolTests(unittest.TestCase):
                 ('pointer', dict(x=1024, y=0, button=None)),
                 ('key', dict(key='Return', modifiers=['ctrl', 'ctrl'])),
                 ('key', dict(key='Return; exec sh', modifiers=[])),
+                ('writer', dict(path='/home/human/document.odt')),
+                ('writer', dict(path='https://example.org/document.odt')),
+                ('writer', dict(path='docs/../document.odt')),
+                ('writer', dict(path='docs/document.docm')),
+                ('writer', dict(path='document.odt', flags=['--headless'])),
                 ('screenshot', dict(path='/home/human/shot.png')),
                 ('screenshot', dict(path='../shot.png')),
                 ('screenshot', dict(path='a/../shot.png')),
@@ -41,6 +46,8 @@ class DesktopProtocolTests(unittest.TestCase):
                 protocol.control(command, args, width=1024, height=720)
         self.assertEqual(protocol.control('screenshot', dict(path='images/shot.png'),
                                           width=1024, height=720), dict(path='images/shot.png'))
+        self.assertEqual(protocol.control('writer', dict(path='docs/report.odt'),
+                                          width=1024, height=720), dict(path='docs/report.odt'))
 
     def test_framing_is_complete_bounded_unique_and_round_trips_data(self):
         raw = protocol.request('a'*32, 'type', dict(text='quoted "text" ☃'),

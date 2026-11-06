@@ -84,6 +84,7 @@ class Desktop:
         self.compositor = None
         self.applications = []
         self.images = 0
+        self.writer = None
         try:
             self.start()
         except BaseException as error:
@@ -175,26 +176,54 @@ class Desktop:
                                      height=self.config['height'])
         self.canvas()
         if command == 'status':
-            return dict(canvas=self.canvas(), **self.windows())
-        if command == 'terminal':
+            result = dict(canvas=self.canvas(), **self.windows())
+            if self.writer is not None:
+                with (self.runtime / 'writer.log').open('rb') as log:
+                    log.seek(max(0, os.fstat(log.fileno()).st_size - 512))
+                    diagnostic = log.read(512).decode('utf8', errors='replace')
+                result['writer'] = dict(return_code=self.writer.poll(), diagnostic=diagnostic)
+            return result
+        if command in {'terminal', 'writer'}:
             if len(self.applications) >= 4:
                 raise ValueError('Desktop application quota exhausted')
-            child = subprocess.Popen(['/usr/bin/foot', '--config=/dev/null',
-                '--app-id=mano-agent', '--title=' + args['title'], '/bin/sh'],
-                stdin=subprocess.DEVNULL, stdout=self.log, stderr=subprocess.STDOUT,
-                env=self.environment, close_fds=True)
+            if command == 'terminal':
+                argv = ['/usr/bin/foot', '--config=/dev/null', '--app-id=mano-agent',
+                        '--title=' + args['title'], '/bin/sh']
+            else:
+                if self.writer is not None:
+                    raise ValueError('Only one Writer launch is allowed per desktop')
+                document = Path('/workspace') / args['path']
+                resolved = document.resolve(strict=True)
+                if resolved != document or not resolved.is_file():
+                    raise ValueError('Writer requires a regular workspace document')
+                profile = (self.runtime / 'writer-profile').as_uri()
+                argv = ['/usr/bin/libreoffice', '--writer', '--nologo', '--norestore',
+                        '-env:UserInstallation=' + profile, str(document)]
+                env = self.environment | dict(GDK_BACKEND='wayland', SAL_USE_VCLPLUGIN='gtk3')
+                with (self.runtime / 'writer.log').open('xb') as log:
+                    self.writer = subprocess.Popen(
+                        argv, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+                        env=env, close_fds=True)
+                self.applications.append(self.writer)
+                return dict(submitted=True)
+            child = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=self.log,
+                                     stderr=subprocess.STDOUT, env=self.environment, close_fds=True)
             self.applications.append(child)
             return dict(submitted=True)
         if command == 'type':
-            # wtype 0.4 defaults to zero delay but rejects an explicit -d 0.
+            # wtype 0.4 rejects -d 0 and sleeps 4 ms per character even by default.
+            # The maximum 2048 ASCII characters therefore take over eight seconds.
             subprocess.run(['/usr/bin/wtype', '-'], input=args['text'],
-                text=True, capture_output=True, check=True, env=self.environment, timeout=6)
+                text=True, capture_output=True, check=True, env=self.environment, timeout=13)
             return dict(submitted=True)
         if command == 'key':
-            argv = ['/usr/bin/wtype']
+            # wtype creates a new virtual keyboard and keymap for each invocation.
+            # Give the compositor time to publish that map and both key transitions
+            # before the device or its modifier state goes away.
+            argv = ['/usr/bin/wtype', '-s', '60']
             for modifier in args['modifiers']:
                 argv += ['-M', modifier]
-            argv += ['-P', args['key'], '-p', args['key']]
+            argv += ['-s', '60', '-P', args['key'], '-s', '60', '-p', args['key'], '-s', '60']
             for modifier in reversed(args['modifiers']):
                 argv += ['-m', modifier]
             subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, check=True,

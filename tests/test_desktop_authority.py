@@ -127,8 +127,9 @@ class DesktopAuthorityTests(unittest.TestCase):
         with (patch.object(module.sys, 'platform', 'darwin'),
               patch.object(module.Path, 'read_text') as read,
               patch.object(module.subprocess, 'check_output') as process):
-            with self.assertRaises(PermissionError):
-                module.run(rpc=None, human=None, password=None, identity=None,
+            for method in (module.run, module.start_for_stop):
+                with self.assertRaises(PermissionError):
+                    method(rpc=None, human=None, password=None, identity=None,
                            task=None, workspace=None)
             read.assert_not_called()
             process.assert_not_called()
