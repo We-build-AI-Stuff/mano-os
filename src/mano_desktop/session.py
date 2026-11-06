@@ -211,9 +211,10 @@ class Desktop:
             self.applications.append(child)
             return dict(submitted=True)
         if command == 'type':
-            # wtype 0.4 defaults to zero delay but rejects an explicit -d 0.
+            # wtype 0.4 rejects -d 0 and sleeps 4 ms per character even by default.
+            # The maximum 2048 ASCII characters therefore take over eight seconds.
             subprocess.run(['/usr/bin/wtype', '-'], input=args['text'],
-                text=True, capture_output=True, check=True, env=self.environment, timeout=6)
+                text=True, capture_output=True, check=True, env=self.environment, timeout=13)
             return dict(submitted=True)
         if command == 'key':
             argv = ['/usr/bin/wtype']

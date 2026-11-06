@@ -31,6 +31,10 @@ def exercise_writer(desktop, document):
         time.sleep(.3)
     assert writer is not None, f'Writer did not map the approved document: {observation!r}'
     desktop.command('focus', window_id=writer['id'])
+    # A mapped window can still be finishing its initial document load.
+    time.sleep(.5)
+    status = desktop.command('status')['result']
+    assert any(w['id'] == writer['id'] and w['focused'] for w in status['windows']), status
     desktop.command('key', key='End', modifiers=['ctrl'])
     desktop.command('key', key='Return', modifiers=[])
     desktop.command('type', text='Saved through the private Wayland session')

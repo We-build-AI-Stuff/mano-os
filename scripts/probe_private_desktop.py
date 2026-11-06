@@ -147,7 +147,7 @@ def run(*, rpc, human, password, identity, task, workspace):
     tag = '{urn:oasis:names:tc:opendocument:xmlns:text:1.0}p'
     paragraphs = [''.join(node.itertext()) for node in ET.fromstring(content).iter(tag)]
     assert paragraphs == ['Original private Writer document',
-                          'Saved through the private Wayland session']
+                          'Saved through the private Wayland session'], repr(paragraphs)[:512]
     writer_image = workspace / 'private-writer.png'
     info = writer_image.lstat()
     assert stat.S_ISREG(info.st_mode) and info.st_uid == identity.uid and info.st_nlink == 1
