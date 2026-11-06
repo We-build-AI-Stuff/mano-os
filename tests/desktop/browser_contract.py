@@ -39,6 +39,7 @@ def browser_processes():
                 "pid": int(entry.name),
                 "args": [a for a in args if a],
                 "seccomp": fields.get("Seccomp", "").strip(),
+                "seccomp_filters": int(fields["Seccomp_filters"]),
                 "no_new_privs": fields.get("NoNewPrivs", "").strip(),
             }
         )
@@ -79,7 +80,11 @@ Verify action</button><p id="result">waiting</p></body></html>""")
             for proc in processes:
                 assert "--no-sandbox" not in proc["args"], proc
                 assert not any(a.startswith("--remote-debugging-port") for a in proc["args"]), proc
-            assert any("--remote-debugging-pipe" in proc["args"] for proc in processes), processes
+            browser_processes_with_pipe = [
+                proc for proc in processes if "--remote-debugging-pipe" in proc["args"]
+            ]
+            assert len(browser_processes_with_pipe) == 1, processes
+            browser_filter_count = browser_processes_with_pipe[0]["seccomp_filters"]
             session = await browser.new_browser_cdp_session()
             reported = (await session.send("SystemInfo.getProcessInfo"))["processInfo"]
             renderers = []
@@ -94,6 +99,7 @@ Verify action</button><p id="result">waiting</p></body></html>""")
                         "pid": pid,
                         "name": fields.get("Name", "").strip(),
                         "seccomp": fields.get("Seccomp", "").strip(),
+                        "seccomp_filters": int(fields["Seccomp_filters"]),
                         "no_new_privs": fields.get("NoNewPrivs", "").strip(),
                     }
                 )
@@ -101,13 +107,20 @@ Verify action</button><p id="result">waiting</p></body></html>""")
                 json.dumps(
                     {
                         "reported": reported,
+                        "browser_filter_count": browser_filter_count,
                         "kernel_status": renderers,
                     },
                     indent=2,
                 )
                 + "\n"
             )
-            assert renderers and all(proc["seccomp"] == "2" for proc in renderers), renderers
+            # Filter mode alone can be inherited from the task or VM supervisor.
+            assert renderers and all(
+                proc["seccomp"] == "2"
+                and proc["no_new_privs"] == "1"
+                and proc["seccomp_filters"] > browser_filter_count
+                for proc in renderers
+            ), (browser_filter_count, renderers)
             assert not listeners(), "Unexpected TCP listener, including exposed CDP"
             await page.screenshot(path=str(ROOT / "browser-page.png"))
             report = {
@@ -128,6 +141,7 @@ Verify action</button><p id="result">waiting</p></body></html>""")
                 "processes": processes,
                 "tcp_listeners": listeners(),
                 "renderer_seccomp_enforced": True,
+                "browser_filter_count": browser_filter_count,
                 "renderer_kernel_status": renderers,
                 "human_display_access": False,
             }
