@@ -88,9 +88,12 @@ while True:
             while worker.poll() is None and time.monotonic() < deadline:
                 time.sleep(0.02)
             assert worker.return_code == 0
-        interrupt = """print('READY',flush=True)
-try:input()
-except KeyboardInterrupt:print('INTERRUPTED',flush=True)
+        interrupt = """
+try:
+ print('READY',flush=True)
+ input()
+except KeyboardInterrupt:
+ print('INTERRUPTED',flush=True)
 """
         with TaskPTY(workspace, cwd, ['/usr/bin/python3', '-u', '-c', interrupt],
                      timeout=10, revoked=lambda: False) as worker:
