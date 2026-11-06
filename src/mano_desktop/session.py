@@ -217,10 +217,13 @@ class Desktop:
                 text=True, capture_output=True, check=True, env=self.environment, timeout=13)
             return dict(submitted=True)
         if command == 'key':
-            argv = ['/usr/bin/wtype']
+            # wtype creates a new virtual keyboard and keymap for each invocation.
+            # Give the compositor time to publish that map and both key transitions
+            # before the device or its modifier state goes away.
+            argv = ['/usr/bin/wtype', '-s', '60']
             for modifier in args['modifiers']:
                 argv += ['-M', modifier]
-            argv += ['-P', args['key'], '-p', args['key']]
+            argv += ['-s', '60', '-P', args['key'], '-s', '60', '-p', args['key'], '-s', '60']
             for modifier in reversed(args['modifiers']):
                 argv += ['-m', modifier]
             subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, check=True,
