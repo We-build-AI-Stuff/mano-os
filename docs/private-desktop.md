@@ -7,8 +7,8 @@ this capability. Opening does not accept an executable, environment, host displa
 socket, bus address or arbitrary compositor command.
 
 The Core SDK in `mano_core.desktop` supports readiness, window inspection, opening
-a terminal, focusing a session window, text input, named keys, pointer input,
-workspace PNG screenshots and closing. Input uses the existing approved PTY
+a terminal or a workspace ODT in Writer, focusing a session window, text input,
+named keys, pointer input, workspace PNG screenshots and closing. Input uses the existing approved PTY
 transport and its durable input journal. A lost or partial acknowledgement makes
 the SDK refuse further desktop input; it never automatically repeats a command.
 Native Stop remains independent of this SDK and kills the owned task cgroup.
@@ -21,8 +21,8 @@ groups remains. Ordinary terminal ceilings remain 128 MiB, 24 processes and
 to accommodate one desktop, one ordinary task and its control process.
 
 The runtime package installs the fixed worker and protocol read-only under
-`/usr/lib/mano-desktop` and depends on Sway, Foot, grim and wtype. Worker startup
-requires an unprivileged Linux user namespace, no capabilities, NoNewPrivileges,
+`/usr/lib/mano-desktop` and depends on Sway, Foot, grim, wtype,
+`libreoffice-writer` and `libreoffice-gtk3`. Worker startup requires an unprivileged Linux user namespace, no capabilities, NoNewPrivileges,
 seccomp and the externally owned task guard. It uses the existing task sandbox;
 it adds no network, host bus, host display, device or nested namespace exception.
 Every control response remains untrusted and reports `effect_verified: false`.
@@ -39,12 +39,12 @@ arguments and wrong callers, opens a mapped Foot terminal through the production
 SDK, types a workspace marker through the virtual keyboard, checks the marker
 independently and exports `private-desktop.png`. It also checks the kernel limits,
 the screenshot checksum, replay behavior and descendant drainage after close.
-This revision is awaiting that native result. It has no accepted browser or Writer
-integration, frozen-desktop Stop witness, physical input test or complete MVP
-claim. Those remain part of the original version's delivery scope.
+The [native integration run](https://github.com/We-build-AI-Stuff/mano-os/actions/runs/42090441676)
+also verified the installed private desktop on stock Debian before and after a
+real reboot. Browser integration, physical input and concurrent human-desktop
+focus checks remain open.
 
-
-## Frozen desktop Stop exercise under development
+## Frozen desktop Stop
 
 The follow-up fixture places the private GUI in the existing public interactive
 Stop slot beside the long-running ordinary task. It keeps the two-job launcher
@@ -53,12 +53,10 @@ forked child that becomes a new session leader. Root independently checks the
 workspace PID marker, process ownership/cgroup membership and session ID.
 
 The coordinator records the Sway, Foot and other task process IDs and freezes all
-of them before freezing the broker and launcher. The real native human Stop client
-must drain the task cgroups despite those freezes. New input must be denied, the
-desktop action must remain unknown/unverified, and restart plus human rearm must
-not resurrect its input authority. The existing standalone frozen task-PTY worker
-exercise also remains. This is CI preparation, not an accepted frozen-GUI result;
-physical input and concurrent human-desktop focus checks remain unproven.
+of them before freezing the broker and launcher. The native integration run
+verified that the human Stop client drained the task cgroups despite those
+freezes and denied new input. The desktop action remained unknown and unverified.
+Restart plus human rearm did not restore the old input authority.
 
 ## Writer
 
@@ -68,4 +66,4 @@ desktop runtime directory. The sandbox provides Debian's pristine Writer registr
 from the read-only package tree. The SDK can focus the resulting window, type an edit,
 save with Control+S and capture the canvas. The VM fixture verifies the saved
 paragraphs independently and exports the ODT and screenshot for inspection.
-Native CI acceptance for this extension is pending.
+The native integration run verified both saved paragraphs in the exported ODT.
