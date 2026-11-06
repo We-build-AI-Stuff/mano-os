@@ -213,6 +213,25 @@ def main():
             "/usr/bin/mano-prompt",
             "--help",
         )
+        driver = VENDOR / "playwright/driver/node"
+        assert stat.S_IMODE(driver.stat().st_mode) == 0o555
+        browser_driver = installed_python(
+            """import json
+from importlib.metadata import version
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+assert Path('/usr/bin/chromium').is_file()
+with sync_playwright() as client:
+    assert client.chromium.name == 'chromium'
+print(json.dumps(dict(playwright=version('playwright'), driver_pipe_started=True)))
+""",
+            actor="mano-human",
+        )
+        assert browser_driver["playwright"] == "1.63.0"
+        browser_driver["chromium_package"] = command(
+            "dpkg-query", "-W", "-f=${Version}", "chromium"
+        ).stdout.strip()
+
         import secrets
 
         password = secrets.token_hex(24)
@@ -316,6 +335,7 @@ print(json.dumps(control_request('prompt_context',dict(prompt_id=json.load(sys.s
             root_tty_enrollment_and_conflicting_binding_denial=True,
             package_owned_production_gui_pam_profile=True,
             package_owned_langgraph_mock_effect=True,
+            packaged_browser_driver=browser_driver,
             package_owned_root_recovery_snapshot=True,
             effect_verified=False,
             policy_data_preserved_on_reinstall=True,
