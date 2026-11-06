@@ -35,7 +35,8 @@ def exercise_writer(desktop, document):
     time.sleep(.5)
     status = desktop.command('status')['result']
     assert any(w['id'] == writer['id'] and w['focused'] for w in status['windows']), status
-    desktop.command('key', key='End', modifiers=['ctrl'])
+    # The seeded document has one line. End moves within that line.
+    desktop.command('key', key='End', modifiers=[])
     desktop.command('key', key='Return', modifiers=[])
     desktop.command('type', text='Saved through the private Wayland session')
     desktop.command('key', key='s', modifiers=['ctrl'])
