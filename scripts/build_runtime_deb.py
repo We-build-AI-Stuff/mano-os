@@ -18,6 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = "0.1.0~prototype2"
 VENDOR = "/usr/lib/mano-runtime/vendor"
+PLAYWRIGHT_DRIVER = "playwright/driver/node"
 
 
 def run(*argv, **kwargs):
@@ -212,11 +213,14 @@ def build(wheelhouse, output, *, revision=None, epoch=None):
             + "\n"
         )
         # Normalize ownership through dpkg-deb and timestamps/modes here. Nothing is setuid.
+        driver = vendor / PLAYWRIGHT_DRIVER
+        if not driver.is_file() or driver.is_symlink():
+            raise ValueError("Expected the pinned Playwright driver binary")
         for path in stage.rglob("*"):
             if path.is_dir():
                 path.chmod(0o755)
             elif str(path).startswith(str(vendor) + "/"):
-                path.chmod(0o444)
+                path.chmod(0o555 if path == driver else 0o444)
             os.utime(path, (epoch, epoch), follow_symlinks=False)
         manifest = {
             str(path.relative_to(stage)): hashlib.sha256(path.read_bytes()).hexdigest()
@@ -239,7 +243,7 @@ def build(wheelhouse, output, *, revision=None, epoch=None):
             "libjson-c5, libsystemd0, libseccomp2, "
             "bubblewrap (>= 0.12.0-1~deb13u1), xdg-dbus-proxy (>= 0.1.6-1+deb13u3), "
             "acl, passwd, util-linux, dbus-user-session, at-spi2-core, sway, foot, grim, wtype, "
-            "libreoffice-writer, libreoffice-gtk3, fonts-dejavu-core, ca-certificates\n"
+            "chromium, libreoffice-writer, libreoffice-gtk3, fonts-dejavu-core, ca-certificates\n"
             "Description: mano prototype trusted broker, prompt and isolated runtime\n"
             " Disabled cloud/controller defaults; explicit Root human enrollment required.\n"
         )
