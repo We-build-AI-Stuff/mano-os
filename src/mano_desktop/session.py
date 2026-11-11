@@ -4,12 +4,14 @@ import hashlib
 import importlib.util
 import json
 import os
+import signal
 import stat
 import struct
 import subprocess
 import sys
 import tempfile
 import time
+from contextlib import suppress
 from pathlib import Path
 
 
@@ -183,8 +185,20 @@ class Desktop:
             argv = ['/usr/bin/libreoffice', '--headless', '--nologo', '--norestore',
                     '-env:UserInstallation=' + (output / 'profile').as_uri(),
                     '--convert-to', 'pdf:writer_pdf_Export', '--outdir', directory, str(document)]
-            subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, check=True,
-                           env=self.environment, timeout=15)
+            with (output / 'converter.log').open('w+b') as log:
+                converter = subprocess.Popen(argv, stdin=subprocess.DEVNULL,
+                    stdout=log, stderr=subprocess.STDOUT, env=self.environment,
+                    start_new_session=True)
+                try:
+                    code = converter.wait(timeout=15)
+                except subprocess.TimeoutExpired:
+                    with suppress(ProcessLookupError):
+                        os.killpg(converter.pid, signal.SIGKILL)
+                    converter.wait(timeout=2)
+                    raise
+                if code:
+                    log.seek(max(0, os.fstat(log.fileno()).st_size - 512))
+                    raise subprocess.CalledProcessError(code, argv, stderr=log.read(512))
             pdf = output / (document.stem + '.pdf')
             if not stat.S_ISREG(pdf.lstat().st_mode):
                 raise ValueError('Writer did not produce a regular PDF')

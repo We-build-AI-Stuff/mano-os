@@ -1,7 +1,9 @@
 import json
+import tempfile
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from mano_desktop import protocol, session
 
@@ -65,6 +67,24 @@ class DesktopProtocolTests(unittest.TestCase):
                     b'x'*(protocol.MAX_FRAME+1)):
             with self.assertRaises(ValueError):
                 protocol.decode(bad)
+
+    def test_writer_export_kills_converter_process_group_on_timeout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Path(directory).resolve()
+            document = runtime / 'report.odt'
+            document.touch()
+            desktop = SimpleNamespace(writer_document=document, runtime=runtime, environment={})
+            converter = Mock(pid=1234)
+            converter.wait.side_effect = (session.subprocess.TimeoutExpired('libreoffice', 15), -9)
+            with (patch.object(session.subprocess, 'Popen', return_value=converter) as launch,
+                  patch.object(session.os, 'killpg') as kill,
+                  patch.object(session, 'save_artifact') as save):
+                with self.assertRaises(session.subprocess.TimeoutExpired):
+                    session.Desktop.export_writer_pdf(desktop, 'report.pdf')
+                self.assertIs(launch.call_args.kwargs['start_new_session'], True)
+                kill.assert_called_once_with(1234, session.signal.SIGKILL)
+                self.assertEqual(converter.wait.call_count, 2)
+                save.assert_not_called()
 
     def test_worker_requires_bubblewrap_private_devpts_mapping(self):
         status = 'NoNewPrivs: 1\nSeccomp: 2\nCapEff: 0\nCapBnd: 0\nCapAmb: 0\n'
