@@ -70,7 +70,7 @@ class DesktopProtocolTests(unittest.TestCase):
 
     def test_accessibility_snapshot_bounds_untrusted_names_and_tree_size(self):
         child = Mock(name='child')
-        child.name = '😀' * 400
+        child.name = 'entry'
         child.getRoleName.return_value = 'label'
         child.childCount = 0
         root = Mock(name='root')
@@ -84,8 +84,12 @@ class DesktopProtocolTests(unittest.TestCase):
         self.assertTrue(result['truncated'])
         self.assertEqual(len(result['nodes']), 16)
         self.assertEqual(root.getChildAtIndex.call_count, 15)
+        child.name = '😀' * 400
+        result = accessibility.snapshot(registry)
+        self.assertTrue(result['truncated'])
+        self.assertLess(len(result['nodes']), 16)
         self.assertEqual(result['nodes'][-1], dict(name='😀' * 64, role='label'))
-        self.assertLess(len(json.dumps(result, ensure_ascii=False).encode()), 7000)
+        self.assertLess(len(json.dumps(result).encode()), 7000)
         child.queryText.assert_not_called()
 
     def test_writer_export_kills_converter_process_group_on_timeout(self):

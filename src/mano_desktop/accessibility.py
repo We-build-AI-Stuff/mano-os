@@ -11,12 +11,17 @@ def snapshot(registry):
     queue = deque([desktop])
     nodes = []
     truncated = False
+    used = 0
     while queue and len(nodes) < 16:
         node = queue.popleft()
         if node is None:
             continue
-        nodes.append(dict(name=str(node.name or '')[:64],
-                          role=str(node.getRoleName())[:32]))
+        item = dict(name=str(node.name or '')[:64], role=str(node.getRoleName())[:32])
+        used += len(json.dumps(item, separators=(',', ':'))) + 1
+        if used > 6500:
+            truncated = True
+            break
+        nodes.append(item)
         remaining = 16 - len(nodes) - len(queue)
         children = node.childCount
         count = min(children, max(0, remaining))
