@@ -415,10 +415,11 @@ print('website tests passed')
     actions = {}
     for step, program, marker in (('build', build, 'website built'),
                                   ('test', test, 'website tests passed')):
+        # Exceed this fixture's Auto profile limit to exercise exact native approval.
         proposal = dict(schema_version='1.0', task_id=context['task_id'],
                         resource_id=context['resource_id'], capability='terminal.run',
                         args=dict(argv=['/usr/bin/python3', '-I', '-c', program],
-                                  cwd='.', timeout_seconds=10),
+                                  cwd='.', timeout_seconds=15),
                         idempotency_key='stock-private-site-' + step,
                         reason=step.capitalize() + ' the private browser website')
         grant, view = approvals.approval(managed, proposal, password)
