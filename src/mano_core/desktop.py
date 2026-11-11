@@ -123,9 +123,10 @@ class DesktopSession:
             timeout = 15 if command == 'type' else 5
         # Validation happens before any effect or uncertainty latch.
         identifier = secrets.token_hex(16)
-        raw = protocol.request(identifier, command, args,
-                               width=self.config['width'], height=self.config['height'])
-        self.wait_ready(timeout=40 if 'browser_path' in self.config else 15)
+        browser = 'browser_path' in self.config
+        raw = protocol.request(identifier, command, args, width=self.config['width'],
+                               height=self.config['height'], browser=browser)
+        self.wait_ready(timeout=40 if browser else 15)
         try:
             acknowledgement = self.transport.write(raw, key=identifier)
             if (acknowledgement.get('state') != 'acknowledged'

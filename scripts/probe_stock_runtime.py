@@ -401,6 +401,9 @@ print(json.dumps(proposal(task_id=context['task_id'],resource_id=context['resour
     grant, view = approvals.approval(managed, proposed, password)
     assert view['boot_id'] == boot
     assert view['args']['browser_path'] == 'private-browser.html'
+    changed = proposed | dict(grant_id=grant, args=proposed['args'] |
+                              dict(browser_path='different.html'))
+    assert public('propose', changed, actor)['ok'] is False
     report = python(
         """import json,sys,time
 from mano_core.broker import BrokerClient
@@ -418,7 +421,10 @@ try:
         time.sleep(.2)
     else:
         raise AssertionError('Chromium window was not mapped')
-    assert status['browser']['renderer_filters_verified'] is True
+    browser=status['browser']
+    assert browser['renderer_filters_verified'] is True and browser['local_pipe'] is True
+    assert browser['renderer_filter_counts'] and all(
+        count>browser['browser_filter_count'] for count in browser['renderer_filter_counts'])
     assert desktop.command('browser_text', test_id='result')['result']['text']=='waiting'
     desktop.command('browser_click', name='Verify')
     assert desktop.command('browser_text', test_id='result')['result']['text']=='42'
@@ -441,6 +447,7 @@ finally:
     launcher = Path('/sys/fs/cgroup/system.slice/mano-launcher.service')
     group = launcher / ('task-' + report['action_id'])
     wait(lambda: not group.exists(), timeout=8)
+    report.update(changed_page_denied=True, descendants_drained=True)
     (OUT / 'stock-private-browser.png').write_bytes(pixels)
     (OUT / 'stock-private-browser.json').write_text(json.dumps(report, indent=2) + '\n')
 

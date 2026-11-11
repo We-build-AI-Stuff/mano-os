@@ -69,7 +69,7 @@ def launch_arguments(value):
         input_limit_bytes=value['input_limit_bytes'])
 
 
-def control(command, args, *, width, height):
+def control(command, args, *, width, height, browser=False):
     """Validate one operation against the private canvas and closed argument sets."""
     if not isinstance(args, dict):
         raise ValueError('Expected desktop control object')
@@ -81,7 +81,12 @@ def control(command, args, *, width, height):
     }
     if not isinstance(command, str) or command not in fields or set(args) != fields[command]:
         raise ValueError('Unexpected desktop control fields')
-    if command in {'browser_click', 'browser_text'}:
+    browser_commands = {'browser_click', 'browser_text'}
+    if browser and command not in browser_commands | {'status', 'screenshot', 'close'}:
+        raise ValueError('Browser mode only allows semantic input and observation')
+    if not browser and command in browser_commands:
+        raise ValueError('Browser controls require an approved browser document')
+    if command in browser_commands:
         text(next(iter(args.values())), 128)
     elif command == 'terminal':
         text(args['title'], 80)
@@ -130,11 +135,11 @@ def decode(raw):
     return value
 
 
-def request(identifier, command, args, *, width, height):
+def request(identifier, command, args, *, width, height, browser=False):
     """Create one UTF-8 control line that fits the canonical PTY input limit."""
     if not isinstance(identifier, str) or not re.fullmatch('[0-9a-f]{32}', identifier):
         raise ValueError('Expected desktop request identity')
-    args = control(command, args, width=width, height=height)
+    args = control(command, args, width=width, height=height, browser=browser)
     raw = (json.dumps(dict(schema_version='1.0', id=identifier, command=command, args=args),
                       sort_keys=True, separators=(',', ':'), allow_nan=False,
                       ensure_ascii=False) + '\n').encode()

@@ -190,7 +190,9 @@ class Desktop:
                 or any(mode != 2 or nnp != 1 or count <= browser_status[2]
                        for mode, nnp, count in renderers)):
             raise PermissionError('Chromium renderer sandbox filters could not be verified')
-        self.browser_report = dict(version=browser.version, renderers=len(renderers),
+        self.browser_report = dict(version=browser.version,
+                                   browser_filter_count=browser_status[2],
+                                   renderer_filter_counts=[count for _, _, count in renderers],
                                    renderer_filters_verified=True, local_pipe=True)
 
     def browser_control(self, command, args):
@@ -246,15 +248,11 @@ class Desktop:
     def dispatch(self, command, args):
         """Perform one validated control using only the owned desktop environment."""
         args = self.protocol.control(command, args, width=self.config['width'],
-                                     height=self.config['height'])
+                                     height=self.config['height'],
+                                     browser='browser_path' in self.config)
         self.canvas()
-        if 'browser_path' in self.config:
-            if command in {'browser_click', 'browser_text'}:
-                return self.browser_control(command, args)
-            if command not in {'status', 'screenshot', 'close'}:
-                raise ValueError('Browser mode only allows semantic input and observation')
-        elif command in {'browser_click', 'browser_text'}:
-            raise ValueError('Browser controls require an approved browser document')
+        if command in {'browser_click', 'browser_text'}:
+            return self.browser_control(command, args)
         if command == 'status':
             result = dict(canvas=self.canvas(), **self.windows())
             if 'browser_path' in self.config:
@@ -412,7 +410,8 @@ def main():
             if value['schema_version'] != '1.0':
                 raise ValueError('Unsupported desktop protocol')
             canonical = protocol.request(value['id'], value['command'], value['args'],
-                                         width=config['width'], height=config['height'])
+                                         width=config['width'], height=config['height'],
+                                         browser='browser_path' in config)
             old = seen.get(value['id'])
             if old is not None:
                 if old[0] != canonical:

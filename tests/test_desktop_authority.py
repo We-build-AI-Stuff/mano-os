@@ -95,6 +95,20 @@ class DesktopAuthorityTests(unittest.TestCase):
             with self.subTest(path=path), self.assertRaises(ValueError):
                 proposal(**args, browser_path=path)
 
+    def test_controls_reject_wrong_desktop_mode_before_delivery(self):
+        for config, command, args in (
+            (json.loads(request().args_json), 'browser_text', dict(test_id='result')),
+            (json.loads(request().args_json) | dict(browser_path='page.html'),
+             'terminal', dict(title='shell')),
+        ):
+            with self.subTest(command=command):
+                transport = Mock()
+                desktop = DesktopSession(transport, config)
+                with self.assertRaises(ValueError):
+                    desktop.command(command, **args)
+                transport.write.assert_not_called()
+                self.assertFalse(desktop.uncertain)
+
     def test_partial_or_lost_input_acknowledgement_never_repeats_input(self):
         for reply in (dict(state='acknowledged', written=1, effect_verified=False),
                       ValueError('lost')):
