@@ -71,7 +71,7 @@ static void desktop_shm_rule(int ruleset) {
     close(fd);
 }
 
-static void landlock(int loopback, int desktop_shm) {
+static void landlock(int loopback, int desktop_shm, int browser) {
     int abi = syscall(SYS_landlock_create_ruleset, NULL, 0, LANDLOCK_CREATE_RULESET_VERSION);
     if (abi < 5) { errno = ENOTSUP; fail("guard requires Landlock ABI 5"); }
     uint64_t read = LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_READ_DIR;
@@ -91,7 +91,8 @@ static void landlock(int loopback, int desktop_shm) {
     if (loopback) hosts_rule(ruleset);
     if (desktop_shm) desktop_shm_rule(ruleset);
     path_rule(ruleset, "/usr", execute);
-    path_rule(ruleset, "/proc", read);
+    /* Chromium sets UID/GID maps for new processes in its private proc mount. */
+    path_rule(ruleset, "/proc", read | (browser ? LANDLOCK_ACCESS_FS_WRITE_FILE : 0));
     path_rule(ruleset, "/dev", read | LANDLOCK_ACCESS_FS_WRITE_FILE | LANDLOCK_ACCESS_FS_IOCTL_DEV);
     const char *writable[] = { "/workspace", "/task-cwd", "/tmp", "/home/task" };
     for (size_t i = 0; i < sizeof(writable)/sizeof(writable[0]); ++i)
@@ -105,7 +106,7 @@ static void landlock(int loopback, int desktop_shm) {
     fail("guard Landlock denial self-check");
 }
 
-static void filter(int loopback) {
+static void filter(int loopback, int browser) {
     scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_ALLOW);
     if (!ctx) fail("guard seccomp init");
     if (seccomp_attr_set(ctx, SCMP_FLTATR_ACT_BADARCH, SCMP_ACT_KILL_PROCESS) < 0 ||
@@ -114,7 +115,7 @@ static void filter(int loopback) {
         "ptrace", "process_vm_readv", "process_vm_writev", "bpf", "perf_event_open",
         "keyctl", "add_key", "request_key", "io_uring_setup", "io_uring_enter", "io_uring_register",
         "mount", "umount2", "pivot_root", "open_tree", "move_mount", "fsopen", "fsconfig",
-        "fsmount", "fspick", "mount_setattr", "setns", "unshare", "open_by_handle_at",
+        "fsmount", "fspick", "mount_setattr", "setns", "open_by_handle_at",
         "name_to_handle_at", "init_module", "finit_module", "delete_module", "kexec_load",
         "kexec_file_load", "reboot", "swapon", "swapoff", "acct", "mknod", "mknodat",
         "setuid", "setgid", "setreuid", "setregid", "setresuid", "setresgid", "setgroups",
@@ -126,14 +127,24 @@ static void filter(int loopback) {
         if (seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), number, 0) < 0)
             fail("guard seccomp deny rule");
     }
+    int unshare_rule = browser
+        ? seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(unshare), 1,
+                           SCMP_A0(SCMP_CMP_NE, CLONE_NEWUSER))
+        : seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(unshare), 0);
+    if (unshare_rule < 0) fail("guard unshare rule");
     if (seccomp_rule_add(ctx, SCMP_ACT_ERRNO(ENOSYS), SCMP_SYS(clone3), 0) < 0)
         fail("guard clone3 rule"); /* libc can use clone, whose namespace flags are filtered. */
     unsigned long namespaces[] = { CLONE_NEWUSER, CLONE_NEWNS, CLONE_NEWPID, CLONE_NEWNET,
         CLONE_NEWIPC, CLONE_NEWUTS, CLONE_NEWCGROUP };
-    for (size_t i = 0; i < sizeof(namespaces)/sizeof(namespaces[0]); ++i)
+    for (size_t i = 0; i < sizeof(namespaces)/sizeof(namespaces[0]); ++i) {
+        unsigned long flag = namespaces[i];
+        /* Chromium creates a user namespace and isolates its zygote/renderer. */
+        if (browser && (flag == CLONE_NEWUSER || flag == CLONE_NEWPID || flag == CLONE_NEWNET))
+            continue;
         if (seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(clone), 1,
-            SCMP_A0(SCMP_CMP_MASKED_EQ, namespaces[i], namespaces[i])) < 0)
+            SCMP_A0(SCMP_CMP_MASKED_EQ, flag, flag)) < 0)
             fail("guard clone namespace rule");
+    }
     int families[] = { AF_INET, AF_INET6, AF_NETLINK, AF_PACKET };
     for (size_t i = 0; i < sizeof(families)/sizeof(families[0]); ++i) {
         if (loopback && (families[i] == AF_INET || families[i] == AF_INET6)) {
@@ -160,10 +171,27 @@ static unsigned long long decimal(const char *text) {
     char *end = NULL;
     errno = 0;
     if (!text[0] || text[0] < '0' || text[0] > '9' || strlen(text) > 24)
-        { errno = EINVAL; fail("guard network identity"); }
+        { errno = EINVAL; fail("guard namespace identity"); }
     unsigned long long result = strtoull(text, &end, 10);
-    if (errno || !end || *end || !result) { errno = EINVAL; fail("guard network identity"); }
+    if (errno || !end || *end || !result) { errno = EINVAL; fail("guard namespace identity"); }
     return result;
+}
+
+static void private_browser_proc(const char *device, const char *inode) {
+    struct stat current;
+    struct statfs filesystem;
+    unsigned long long outer_device = decimal(device), outer_inode = decimal(inode);
+    char expected[32], observed[32];
+    int length = snprintf(expected, sizeof(expected), "%ld", (long)getpid());
+    ssize_t size = readlink("/proc/self", observed, sizeof(observed));
+    if (length < 1 || size != length || memcmp(observed, expected, (size_t)length) ||
+        statfs("/proc", &filesystem) || filesystem.f_type != PROC_SUPER_MAGIC ||
+        stat("/proc/self/ns/pid", &current) ||
+        ((unsigned long long)current.st_dev == outer_device &&
+         (unsigned long long)current.st_ino == outer_inode)) {
+        errno = EPERM;
+        fail("guard private browser proc namespace required");
+    }
 }
 
 static void private_loopback(const char *device, const char *inode) {
@@ -221,6 +249,13 @@ int main(int argc, char **argv) {
         desktop_shm = 1;
         first++;
     }
+    int browser = 0;
+    if (desktop_shm && first < argc && !strcmp(argv[first], "--desktop-browser")) {
+        if (argc <= first + 3) { errno = EINVAL; fail("guard browser arguments"); }
+        private_browser_proc(argv[first + 1], argv[first + 2]);
+        first += 3;
+        browser = 1;
+    }
     int loopback = 0;
     if (!desktop_shm && first < argc && !strcmp(argv[first], "--private-loopback")) {
         if (argc <= first + 3) { errno = EINVAL; fail("guard loopback arguments"); }
@@ -230,8 +265,8 @@ int main(int argc, char **argv) {
     }
     if (first >= argc || strcmp(argv[first], "--") || ++first >= argc)
         { errno = EINVAL; fail("guard explicit application separator required"); }
-    landlock(loopback, desktop_shm);
-    filter(loopback);
+    landlock(loopback, desktop_shm, browser);
+    filter(loopback, browser);
     execvp(argv[first], &argv[first]);
     fail("guard task exec");
 }

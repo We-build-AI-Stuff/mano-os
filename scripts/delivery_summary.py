@@ -55,13 +55,44 @@ def reported(value, names):
     return type(value) is dict and all(value.get(name) is True for name in names)
 
 
+def website_reported(report):
+    """Require the build, test, and browser observations in the stock VM report."""
+    if not reported(report, ('changed_page_denied', 'descendants_drained')):
+        return False
+    website, status, screenshot = (report.get(key) for key in ('website', 'status', 'screenshot'))
+    if any(type(value) is not dict for value in (website, status, screenshot)):
+        return False
+    browser = status.get('browser')
+    actions = website.get('actions')
+    if not reported(browser, ('local_pipe', 'renderer_filters_verified')):
+        return False
+    if type(actions) is not dict or set(actions) != {'build', 'test'}:
+        return False
+    action_ids = [report.get('action_id')]
+    for step in ('build', 'test'):
+        action = actions[step]
+        if type(action) is not dict or type(action.get('output')) is not dict:
+            return False
+        output = action['output']
+        if (type(output.get('return_code')) is not int or output['return_code'] != 0
+                or output.get('reason') != 'completed'
+                or output.get('action_id') != action.get('action_id')):
+            return False
+        action_ids.append(action.get('action_id'))
+    return (all(type(value) is str and re.fullmatch('[a-f0-9]{32}', value) for value in action_ids)
+            and len(set(action_ids)) == 3
+            and all(type(value) is str and re.fullmatch('[a-f0-9]{64}', value)
+                    for value in (website.get('html_sha256'), screenshot.get('sha256')))
+            and report.get('locator_text') == '42')
+
+
 def render(directory, revision):
     if not re.fullmatch('[a-f0-9]{40}', revision):
         raise ValueError('Exact Git revision required')
     names = ('architecture-audit.json', 'broker-service.json', 'runtime-package.json',
-             'stock-runtime-reboot.json')
+             'stock-runtime-reboot.json', 'stock-private-browser.json')
     reports = {name: load(directory, name) for name in names}
-    architecture, broker, package, reboot = [reports[name][0] for name in names]
+    architecture, broker, package, reboot, website = [reports[name][0] for name in names]
     terminal = broker.get('terminal_execution') if broker else None
     workflow = (terminal.get('recorded_developer_workflow_witness')
                 if type(terminal) is dict else None)
@@ -81,6 +112,8 @@ def render(directory, revision):
          'Lab GO for Phase 1 development; production and physical acceptance separate'),
         ('Workspace create / failing test / fix / passing test', recorded,
          'Recorded plans, four native approvals and exact-file snapshot; no live-model claim'),
+        ('Website build, test, and private Chromium verification', website_reported(website),
+         'Stock Debian with native approvals and a sandboxed browser'),
         ('Protected policy boundary', reported(terminal, (
             'full_workspace_profile_protected_policy_kernel_denial',)),
          'OS-boundary negative fixture'),

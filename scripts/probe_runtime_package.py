@@ -220,7 +220,7 @@ def main():
 from importlib.metadata import version
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-assert Path('/usr/bin/chromium').is_file()
+assert Path('/usr/lib/chromium/chromium').is_file()
 with sync_playwright() as client:
     assert client.chromium.name == 'chromium'
 print(json.dumps(dict(playwright=version('playwright'), driver_pipe_started=True)))
@@ -228,6 +228,9 @@ print(json.dumps(dict(playwright=version('playwright'), driver_pipe_started=True
             actor="mano-human",
         )
         assert browser_driver["playwright"] == "1.63.0"
+        chromium = "/usr/lib/chromium/chromium"
+        assert command("dpkg-query", "-S", chromium).stdout.strip() == f"chromium: {chromium}"
+        browser_driver["chromium_executable"] = chromium
         browser_driver["chromium_package"] = command(
             "dpkg-query", "-W", "-f=${Version}", "chromium"
         ).stdout.strip()

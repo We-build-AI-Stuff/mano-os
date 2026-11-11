@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from contextlib import ExitStack
 from pathlib import Path
 
 
@@ -73,6 +74,13 @@ def save_image(path, data):
         os.close(directory)
 
 
+def process_security(pid):
+    """Read the kernel security status of a process in the private PID namespace."""
+    lines = Path(f'/proc/{pid}/status').read_text().splitlines()
+    status = dict(line.split(':', 1) for line in lines if ':' in line)
+    return tuple(int(status[key]) for key in ('Seccomp', 'NoNewPrivs', 'Seccomp_filters'))
+
+
 class Desktop:
     def __init__(self, config):
         require_task_context()
@@ -85,8 +93,11 @@ class Desktop:
         self.applications = []
         self.images = 0
         self.writer = None
+        self.browser = ExitStack()
         try:
             self.start()
+            if 'browser_path' in self.config:
+                self.start_browser()
         except BaseException as error:
             diagnostic = ''
             log = self.runtime / 'compositor.log'
@@ -134,6 +145,74 @@ class Desktop:
             time.sleep(.05)
         raise TimeoutError('Private compositor did not become ready')
 
+    def start_browser(self):
+        """Launch the package-owned driver on the private Wayland socket."""
+        document = Path('/workspace') / self.config['browser_path']
+        if document.resolve(strict=True) != document or not document.is_file():
+            raise ValueError('Browser requires a regular workspace HTML document')
+        sys.path.append('/usr/lib/mano-runtime/vendor')
+        from playwright.sync_api import Error, sync_playwright
+
+        try:
+            driver = self.browser.enter_context(sync_playwright())
+            browser = driver.chromium.launch(
+                executable_path='/usr/lib/chromium/chromium', headless=False,
+                chromium_sandbox=True, args=['--ozone-platform=wayland'],
+                env={key: value for key, value in self.environment.items() if key != 'SWAYSOCK'},
+                timeout=20000,
+            )
+            self.browser.callback(browser.close)
+            self.page = browser.new_page()
+            self.page.set_default_timeout(2500)
+            self.browser_url = document.as_uri()
+            self.page.goto(self.browser_url, wait_until='domcontentloaded', timeout=8000)
+            if self.page.url != self.browser_url:
+                raise PermissionError('Browser left the approved workspace page')
+            process_info = browser.new_browser_cdp_session().send(
+                'SystemInfo.getProcessInfo')['processInfo']
+        except Error as error:
+            # Preserve the process diagnostics without the lengthy launch command.
+            details = str(error).splitlines()
+            lines = [line for line in details if '[err]' in line]
+            diagnostic = '\n'.join(lines or details)
+            raise RuntimeError(diagnostic[-1500:]) from error
+        browser_pids = [p['id'] for p in process_info if p['type'] == 'browser']
+        if len(browser_pids) != 1:
+            raise PermissionError('Chromium browser process could not be identified')
+        browser_pid = browser_pids[0]
+        browser_status = process_security(browser_pid)
+        flags = Path(f'/proc/{browser_pid}/cmdline').read_bytes().split(b'\0')
+        if (b'--remote-debugging-pipe' not in flags or b'--no-sandbox' in flags
+                or any(flag.startswith(b'--remote-debugging-port') for flag in flags)):
+            raise PermissionError('Chromium local sandboxed pipe could not be verified')
+        for table in ('tcp', 'tcp6'):
+            if any(line.split()[3] == '0A' for line in
+                   Path('/proc/net', table).read_text().splitlines()[1:]):
+                raise PermissionError('Unexpected TCP listener in the private browser')
+        renderers = [process_security(p['id']) for p in process_info if p['type'] == 'renderer']
+        if (not renderers
+                or any(mode != 2 or nnp != 1 or count <= browser_status[2]
+                       for mode, nnp, count in renderers)):
+            raise PermissionError('Chromium renderer sandbox filters could not be verified')
+        self.browser_report = dict(version=browser.version,
+                                   browser_filter_count=browser_status[2],
+                                   renderer_filter_counts=[count for _, _, count in renderers],
+                                   renderer_filters_verified=True, local_pipe=True)
+
+    def browser_control(self, command, args):
+        """Use only bounded semantic operations in the approved private browser."""
+        from playwright.sync_api import Error
+
+        if self.page.url != self.browser_url:
+            raise PermissionError('Browser left the approved workspace page')
+        try:
+            if command == 'browser_click':
+                self.page.get_by_role('button', name=args['name'], exact=True).click()
+                return dict(submitted=True)
+            return dict(text=self.page.get_by_test_id(args['test_id']).inner_text()[:512])
+        except Error as error:
+            raise RuntimeError('Private browser operation failed') from error
+
     def ipc(self, kind, command=None):
         """Send a bounded internal request to the compositor belonging to this desktop."""
         argv = ['/usr/bin/swaymsg', '--socket', str(self.ipc_path), '--raw', '--type', kind]
@@ -173,10 +252,15 @@ class Desktop:
     def dispatch(self, command, args):
         """Perform one validated control using only the owned desktop environment."""
         args = self.protocol.control(command, args, width=self.config['width'],
-                                     height=self.config['height'])
+                                     height=self.config['height'],
+                                     browser='browser_path' in self.config)
         self.canvas()
+        if command in {'browser_click', 'browser_text'}:
+            return self.browser_control(command, args)
         if command == 'status':
             result = dict(canvas=self.canvas(), **self.windows())
+            if 'browser_path' in self.config:
+                result['browser'] = self.browser_report
             if self.writer is not None:
                 with (self.runtime / 'writer.log').open('rb') as log:
                     log.seek(max(0, os.fstat(log.fileno()).st_size - 512))
@@ -270,6 +354,13 @@ class Desktop:
 
     def close(self):
         """Terminate the session-owned processes and remove its private runtime directory."""
+        try:
+            self.browser.close()
+        finally:
+            self.close_desktop()
+
+    def close_desktop(self):
+        """Drain the compositor and its other children even if browser cleanup fails."""
         for child in [*reversed(self.applications), self.compositor]:
             if child is None or child.poll() is not None:
                 continue
@@ -323,7 +414,8 @@ def main():
             if value['schema_version'] != '1.0':
                 raise ValueError('Unsupported desktop protocol')
             canonical = protocol.request(value['id'], value['command'], value['args'],
-                                         width=config['width'], height=config['height'])
+                                         width=config['width'], height=config['height'],
+                                         browser='browser_path' in config)
             old = seen.get(value['id'])
             if old is not None:
                 if old[0] != canonical:

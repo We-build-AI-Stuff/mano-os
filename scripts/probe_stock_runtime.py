@@ -380,6 +380,147 @@ print(json.dumps(proposal(task_id=context['task_id'],resource_id=context['resour
     return report
 
 
+def build_private_website(managed, password, boot, approvals):
+    """Build and test a static site with separate approved terminal actions."""
+    actor = managed['caller_name']
+    context = managed['context']
+    workspace = Path(managed['workspace'])
+    document = workspace / 'private-browser.html'
+    build = """from html import escape
+from pathlib import Path
+title = escape('mano private Chromium')
+page = f'<!doctype html><html><head><title>{title}</title></head><body>'
+page += '<button onclick="this.nextElementSibling.textContent=42">Verify</button>'
+page += '<p data-testid="result">waiting</p></body></html>'
+with Path('private-browser.html').open('x') as stream:
+    stream.write(page)
+print('website built')
+"""
+    test = """from html.parser import HTMLParser
+from pathlib import Path
+class Site(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.elements = {}
+    def handle_starttag(self, tag, attrs):
+        self.elements[tag] = dict(attrs)
+site = Site()
+site.feed(Path('private-browser.html').read_text())
+assert site.elements['p']['data-testid'] == 'result'
+assert 'onclick' in site.elements['button']
+assert {'html', 'head', 'title', 'body'} <= site.elements.keys()
+print('website tests passed')
+"""
+    assert not document.exists()
+    actions = {}
+    for step, program, marker in (('build', build, 'website built'),
+                                  ('test', test, 'website tests passed')):
+        # Exceed this fixture's Auto profile limit to exercise exact native approval.
+        proposal = dict(schema_version='1.0', task_id=context['task_id'],
+                        resource_id=context['resource_id'], capability='terminal.run',
+                        args=dict(argv=['/usr/bin/python3', '-I', '-c', program],
+                                  cwd='.', timeout_seconds=15),
+                        idempotency_key='stock-private-site-' + step,
+                        reason=step.capitalize() + ' the private browser website')
+        grant, view = approvals.approval(managed, proposal, password)
+        assert view['boot_id'] == boot
+        response = public('propose', proposal | dict(grant_id=grant), actor)
+        assert response['ok'] and response['fresh']
+        action_id = response['action']['id']
+        result = python(
+            """import json,sys,time
+from mano_core.broker import BrokerClient,read_terminal_output
+body=json.load(sys.stdin)
+client=BrokerClient()
+try:
+    deadline=time.monotonic()+15
+    while time.monotonic()<deadline:
+        action=client(dict(schema_version='1.0',operation='status',body=body))['action']
+        if action['state'] in {'done','failed','unknown'}:
+            break
+        time.sleep(.15)
+    assert action['state']=='done',action
+    output=read_terminal_output(client,**body)
+    print(json.dumps(dict(metadata=output['metadata'],stdout=output['stdout'].decode())))
+finally:
+    client.close()
+""", dict(task_id=context['task_id'], action_id=action_id), actor)
+        assert result['stdout'] == marker + '\n'
+        assert result['metadata']['return_code'] == 0
+        actions[step] = dict(action_id=action_id, output=result['metadata'])
+    return dict(actions=actions, html_sha256=hashlib.sha256(document.read_bytes()).hexdigest())
+
+
+def packaged_private_browser(managed, password, boot, approvals):
+    """Exercise the approved browser through the installed runtime and Task UID."""
+    actor = managed['caller_name']
+    workspace = Path(managed['workspace'])
+    site = build_private_website(managed, password, boot, approvals)
+    proposed = python(
+        """import json,sys
+from mano_core.desktop import proposal
+context=json.load(sys.stdin)
+print(json.dumps(proposal(task_id=context['task_id'],resource_id=context['resource_id'],
+ key='stock-private-browser',reason='Verify the workspace page in the private browser',
+ browser_path='private-browser.html')))
+""", managed['context'], actor)
+    grant, view = approvals.approval(managed, proposed, password)
+    assert view['boot_id'] == boot
+    assert view['args']['browser_path'] == 'private-browser.html'
+    changed = proposed | dict(grant_id=grant, args=proposed['args'] |
+                              dict(browser_path='different.html'))
+    assert public('propose', changed, actor)['ok'] is False
+    report = python(
+        """import json,sys,time
+from mano_core.broker import BrokerClient
+from mano_core.desktop import DesktopSession
+proposal,grant=json.load(sys.stdin)
+desktop=DesktopSession.open(BrokerClient(), proposal=proposal, grant_id=grant)
+try:
+    desktop.wait_ready(timeout=40)
+    deadline=time.monotonic()+8
+    while time.monotonic()<deadline:
+        status=desktop.command('status')['result']
+        if any('chromium' in w['app_id'].lower() and 'mano private Chromium' in w['title']
+               for w in status['windows']):
+            break
+        time.sleep(.2)
+    else:
+        raise AssertionError('Chromium window was not mapped')
+    browser=status['browser']
+    assert browser['renderer_filters_verified'] is True and browser['local_pipe'] is True
+    assert browser['renderer_filter_counts'] and all(
+        count>browser['browser_filter_count'] for count in browser['renderer_filter_counts'])
+    assert desktop.command('browser_text', test_id='result')['result']['text']=='waiting'
+    desktop.command('browser_click', name='Verify')
+    assert desktop.command('browser_text', test_id='result')['result']['text']=='42'
+    image=desktop.command('screenshot', path='private-browser.png')['result']
+    desktop.command('close')
+    print(json.dumps(dict(action_id=desktop.transport.action_id, status=status,
+                          locator_text='42', screenshot=image)))
+finally:
+    if not desktop.closed:
+        desktop.stop()
+""", [proposed, grant], actor, timeout=70)
+    image = workspace / 'private-browser.png'
+    info = image.lstat()
+    assert stat.S_ISREG(info.st_mode) and info.st_uid == pwd.getpwnam(actor).pw_uid
+    assert info.st_nlink == 1 and 33 <= info.st_size <= 4 * 1024**2
+    pixels = image.read_bytes()
+    assert pixels.startswith(b'\x89PNG\r\n\x1a\n')
+    assert hashlib.sha256(pixels).hexdigest() == report['screenshot']['sha256']
+    assert re.fullmatch(r'[0-9a-f]{32}', report['action_id'])
+    launcher = Path('/sys/fs/cgroup/system.slice/mano-launcher.service')
+    group = launcher / ('task-' + report['action_id'])
+    wait(lambda: not group.exists(), timeout=8)
+    assert hashlib.sha256((workspace / 'private-browser.html').read_bytes()).hexdigest() == (
+        site['html_sha256'])
+    report.update(website=site, changed_page_denied=True, descendants_drained=True)
+    report['summary'] = 'Built and tested the website, then verified its button in Chromium.'
+    (OUT / 'stock-private-browser.png').write_bytes(pixels)
+    (OUT / 'stock-private-browser.json').write_text(json.dumps(report, indent=2) + '\n')
+
+
 def phase(after_reboot):
     if not after_reboot:
         denied_code, denied_output = native_terminal("mano_runtime.recovery", ("create",))
@@ -522,6 +663,7 @@ except PermissionError:
         if not after_reboot:
             saved_source = restoration.before(managed, password)
             packaged_private_desktop(managed, password, label, boot, restoration)
+            packaged_private_browser(managed, password, boot, restoration)
             proposal = dict(
                 schema_version="1.0",
                 task_id=managed["context"]["task_id"],

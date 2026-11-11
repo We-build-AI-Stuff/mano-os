@@ -11,13 +11,16 @@ from .pty import PTYSession
 
 def proposal(*, task_id, resource_id, key, reason, width=1024, height=720,
              timeout_seconds=120, input_limit_bytes=65536,
-             memory_bytes=protocol.MEMORY_MAX, pids=protocol.PIDS_MAX, cpu_percent=50):
+             memory_bytes=protocol.MEMORY_MAX, pids=protocol.PIDS_MAX, cpu_percent=50,
+             browser_path=None):
     """Build the exact request that must be shown through native approval."""
     value = dict(schema_version='1.0', task_id=task_id, resource_id=resource_id,
                  capability='desktop.open', idempotency_key=key, reason=reason,
                  args=dict(width=width, height=height, cwd='.', timeout_seconds=timeout_seconds,
                            input_limit_bytes=input_limit_bytes, memory_bytes=memory_bytes,
                            pids=pids, cpu_percent=cpu_percent))
+    if browser_path is not None:
+        value['args']['browser_path'] = browser_path
     ActionRequest.parse(canonical(value | dict(grant_id='0' * 32)).encode())
     return value
 
@@ -120,9 +123,10 @@ class DesktopSession:
             timeout = 15 if command == 'type' else 5
         # Validation happens before any effect or uncertainty latch.
         identifier = secrets.token_hex(16)
-        raw = protocol.request(identifier, command, args,
-                               width=self.config['width'], height=self.config['height'])
-        self.wait_ready()
+        browser = 'browser_path' in self.config
+        raw = protocol.request(identifier, command, args, width=self.config['width'],
+                               height=self.config['height'], browser=browser)
+        self.wait_ready(timeout=40 if browser else 15)
         try:
             acknowledgement = self.transport.write(raw, key=identifier)
             if (acknowledgement.get('state') != 'acknowledged'

@@ -15,7 +15,7 @@ class DeliverySummaryTests(unittest.TestCase):
     def test_missing_reports_do_not_establish_any_journey_or_phase(self):
         with tempfile.TemporaryDirectory() as directory:
             result = summary.render(Path(directory), 'a'*40)
-        self.assertEqual(result.count('| Not established in collected reports |'), 6)
+        self.assertEqual(result.count('| Not established in collected reports |'), 7)
         self.assertIn('not an independent', result.replace('\n', ' '))
         self.assertIn('physical 8 GB performance', result)
 
@@ -66,6 +66,33 @@ class DeliverySummaryTests(unittest.TestCase):
                 path.write_text(json.dumps(dict(terminal_execution=dict(terminal,
                     recorded_developer_workflow_witness=changed))))
                 self.assertNotIn('| Reported by fixture |', summary.render(root, 'a'*40))
+
+    def test_website_row_requires_successful_separate_actions_and_browser_evidence(self):
+        build = dict(action_id='b'*32, output=dict(
+            action_id='b'*32, return_code=0, reason='completed'))
+        test = dict(action_id='c'*32, output=dict(
+            action_id='c'*32, return_code=0, reason='completed'))
+        report = dict(
+            action_id='d'*32, changed_page_denied=True, descendants_drained=True,
+            website=dict(actions=dict(build=build, test=test), html_sha256='e'*64),
+            status=dict(browser=dict(local_pipe=True, renderer_filters_verified=True)),
+            screenshot=dict(sha256='f'*64), locator_text='42')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / 'stock-private-browser.json'
+            path.write_text(json.dumps(report))
+            result = summary.render(root, 'a'*40)
+            self.assertIn('private Chromium verification | Reported by fixture', result)
+            for changed in (
+                report | dict(action_id=build['action_id']),
+                report | dict(screenshot={}),
+                report | dict(locator_text='waiting'),
+                report | dict(status=dict(browser=dict(
+                    local_pipe=True, renderer_filters_verified=False))),
+            ):
+                path.write_text(json.dumps(changed))
+                self.assertIn('private Chromium verification | Not established',
+                              summary.render(root, 'a'*40))
 
     def test_revision_is_not_untrusted_markdown_or_an_approximate_branch_name(self):
         for value in ('main', 'a'*39, 'a'*40+'\nInjected', '<script>'):
