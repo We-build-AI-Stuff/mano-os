@@ -438,7 +438,8 @@ finally:
     assert pixels.startswith(b'\x89PNG\r\n\x1a\n')
     assert hashlib.sha256(pixels).hexdigest() == report['screenshot']['sha256']
     assert re.fullmatch(r'[0-9a-f]{32}', report['action_id'])
-    group = Path('/sys/fs/cgroup/system.slice/mano-launcher.service') / ('task-' + report['action_id'])
+    launcher = Path('/sys/fs/cgroup/system.slice/mano-launcher.service')
+    group = launcher / ('task-' + report['action_id'])
     wait(lambda: not group.exists(), timeout=8)
     (OUT / 'stock-private-browser.png').write_bytes(pixels)
     (OUT / 'stock-private-browser.json').write_text(json.dumps(report, indent=2) + '\n')

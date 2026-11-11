@@ -74,11 +74,10 @@ def save_image(path, data):
         os.close(directory)
 
 
-
 def process_security(pid):
     """Read the kernel security status of a process in the private PID namespace."""
-    status = dict(line.split(':', 1) for line in Path(f'/proc/{pid}/status').read_text().splitlines()
-                  if ':' in line)
+    lines = Path(f'/proc/{pid}/status').read_text().splitlines()
+    status = dict(line.split(':', 1) for line in lines if ':' in line)
     return tuple(int(status[key]) for key in ('Seccomp', 'NoNewPrivs', 'Seccomp_filters'))
 
 
@@ -253,7 +252,7 @@ class Desktop:
             if command in {'browser_click', 'browser_text'}:
                 return self.browser_control(command, args)
             if command not in {'status', 'screenshot', 'close'}:
-                raise ValueError('Application and raw input controls are unavailable in browser mode')
+                raise ValueError('Browser mode only allows semantic input and observation')
         elif command in {'browser_click', 'browser_text'}:
             raise ValueError('Browser controls require an approved browser document')
         if command == 'status':
