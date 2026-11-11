@@ -22,8 +22,7 @@ jobs:
       - run: python -m pip install 'langgraph==1.2.15' 'langgraph-checkpoint-sqlite==3.1.2' 'jsonschema==4.23.0'
       - name: Compile native approval adapter with strict warnings
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libpam0g-dev libjson-c-dev libsystemd-dev libseccomp-dev
+          bash scripts/install_ci_ubuntu_deps.sh libpam0g-dev libjson-c-dev libsystemd-dev libseccomp-dev
           cc -std=c11 -O2 -Wall -Wextra -Werror -fstack-protector-strong -D_FORTIFY_SOURCE=2 native/mano_approve.c $(pkg-config --cflags --libs json-c libsystemd) -lpam -Wl,-z,relro,-z,now -o /tmp/mano-approve
           cc -std=c11 -O2 -Wall -Wextra -Werror -fPIC -shared native/mano_resources.c -Wl,-z,relro,-z,now -o /tmp/libmano-resources.so
           cc -std=c11 -O2 -Wall -Wextra -Werror -fstack-protector-strong -D_FORTIFY_SOURCE=2 native/mano_sandbox_guard.c -lseccomp -Wl,-z,relro,-z,now -o /tmp/mano-sandbox-guard
@@ -43,8 +42,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - name: Install CI-only VM tooling
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils acl
+          bash scripts/install_ci_ubuntu_deps.sh qemu-system-x86 qemu-utils cloud-image-utils acl
           if [ -e /dev/kvm ]; then
             sudo setfacl -m "u:$(id -un):rw" /dev/kvm
           fi
