@@ -18,19 +18,13 @@ if install_packages "$@"; then
     exit 0
 fi
 
-echo "Runner package sources failed. Retrying with the signed Ubuntu archive." >&2
+echo "Runner package sources failed. Retrying with a signed Ubuntu archive mirror." >&2
 source_dir=$(mktemp -d)
 trap 'rm -rf -- "$source_dir"' EXIT
 cat > "$source_dir/ubuntu.sources" <<'SOURCES'
 Types: deb
-URIs: https://archive.ubuntu.com/ubuntu
-Suites: noble noble-updates
-Components: main universe
-Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-
-Types: deb
-URIs: https://security.ubuntu.com/ubuntu
-Suites: noble-security
+URIs: https://mirrors.edge.kernel.org/ubuntu
+Suites: noble noble-updates noble-security
 Components: main universe
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 SOURCES
