@@ -156,7 +156,7 @@ class Desktop:
         try:
             driver = self.browser.enter_context(sync_playwright())
             browser = driver.chromium.launch(
-                executable_path='/usr/bin/chromium', headless=False,
+                executable_path='/usr/lib/chromium/chromium', headless=False,
                 chromium_sandbox=True, args=['--ozone-platform=wayland'],
                 env={key: value for key, value in self.environment.items() if key != 'SWAYSOCK'},
                 timeout=20000,
@@ -171,7 +171,11 @@ class Desktop:
             process_info = browser.new_browser_cdp_session().send(
                 'SystemInfo.getProcessInfo')['processInfo']
         except Error as error:
-            raise RuntimeError(str(error)[-1800:]) from error
+            # Preserve the process diagnostics without the lengthy launch command.
+            details = str(error).splitlines()
+            lines = [line for line in details if '[err]' in line]
+            diagnostic = '\n'.join(lines or details)
+            raise RuntimeError(diagnostic[-1500:]) from error
         browser_pids = [p['id'] for p in process_info if p['type'] == 'browser']
         if len(browser_pids) != 1:
             raise PermissionError('Chromium browser process could not be identified')
