@@ -5,7 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from mano_desktop import protocol, session
+from mano_desktop import accessibility, protocol, session
 
 
 def configuration():
@@ -67,6 +67,30 @@ class DesktopProtocolTests(unittest.TestCase):
                     b'x'*(protocol.MAX_FRAME+1)):
             with self.assertRaises(ValueError):
                 protocol.decode(bad)
+
+    def test_accessibility_snapshot_bounds_untrusted_names_and_tree_size(self):
+        child = Mock(name='child')
+        child.name = 'entry'
+        child.getRoleName.return_value = 'label'
+        child.childCount = 0
+        root = Mock(name='root')
+        root.name = 'desktop'
+        root.getRoleName.return_value = 'desktop frame'
+        root.childCount = 10000
+        root.getChildAtIndex.return_value = child
+        registry = Mock()
+        registry.getDesktop.return_value = root
+        result = accessibility.snapshot(registry)
+        self.assertTrue(result['truncated'])
+        self.assertEqual(len(result['nodes']), 16)
+        self.assertEqual(root.getChildAtIndex.call_count, 15)
+        child.name = '😀' * 400
+        result = accessibility.snapshot(registry)
+        self.assertTrue(result['truncated'])
+        self.assertLess(len(result['nodes']), 16)
+        self.assertEqual(result['nodes'][-1], dict(name='😀' * 64, role='label'))
+        self.assertLess(len(json.dumps(result).encode()), 7000)
+        child.queryText.assert_not_called()
 
     def test_writer_export_kills_converter_process_group_on_timeout(self):
         with tempfile.TemporaryDirectory() as directory:

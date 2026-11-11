@@ -63,7 +63,7 @@ def control(command, args, *, width, height):
     fields = {
         'status': set(), 'close': set(), 'terminal': {'title'}, 'type': {'text'},
         'writer': {'path'}, 'key': {'key', 'modifiers'}, 'pointer': {'x', 'y', 'button'},
-        'writer_export_pdf': {'path'},
+        'writer_export_pdf': {'path'}, 'accessibility_tree': set(),
         'focus': {'window_id'}, 'screenshot': {'path'},
     }
     if not isinstance(command, str) or command not in fields or set(args) != fields[command]:

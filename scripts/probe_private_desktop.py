@@ -154,6 +154,9 @@ def run(*, rpc, human, password, identity, task, workspace):
     assert 33 <= info.st_size <= 4 * 1024**2
     writer_image_bytes = writer_image.read_bytes()
     assert hashlib.sha256(writer_image_bytes).hexdigest() == report['writer_image']['sha256']
+    accessibility = report['writer_accessibility']
+    assert 0 < len(accessibility['nodes']) <= 16
+    assert any('private-writer' in item['name'].lower() for item in accessibility['nodes'])
     writer_pdf = workspace / 'private-writer.pdf'
     info = writer_pdf.lstat()
     assert stat.S_ISREG(info.st_mode) and info.st_uid == identity.uid and info.st_nlink == 1

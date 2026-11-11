@@ -290,7 +290,7 @@ try:
     desktop_worker = Path('/usr/lib/mano-desktop')
     assert not desktop_worker.exists()
     desktop_worker.mkdir(mode=0o755)
-    for name in ('session.py', 'protocol.py'):
+    for name in ('session.py', 'protocol.py', 'accessibility.py'):
         shutil.copyfile(ROOT / 'src/mano_desktop' / name, desktop_worker / name)
         (desktop_worker / name).chmod(0o444)
     GUARD.parent.mkdir(mode=0o755, exist_ok=True)
