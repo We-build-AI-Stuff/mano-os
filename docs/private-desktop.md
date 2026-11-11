@@ -67,3 +67,9 @@ from the read-only package tree. The SDK can focus the resulting window, type an
 save with Control+S and capture the canvas. The VM fixture verifies the saved
 paragraphs independently and exports the ODT and screenshot for inspection.
 The native integration run verified both saved paragraphs in the exported ODT.
+
+An approved desktop can export its saved Writer document using
+`writer_export_pdf` with a new workspace-relative `.pdf` path. The worker
+converts the document in a fresh LibreOffice profile inside the task sandbox.
+The VM probe compares the exported text with the saved ODT and checks the
+file hash independently.

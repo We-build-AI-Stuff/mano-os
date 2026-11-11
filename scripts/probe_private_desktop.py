@@ -154,7 +154,23 @@ def run(*, rpc, human, password, identity, task, workspace):
     assert 33 <= info.st_size <= 4 * 1024**2
     writer_image_bytes = writer_image.read_bytes()
     assert hashlib.sha256(writer_image_bytes).hexdigest() == report['writer_image']['sha256']
+    writer_pdf = workspace / 'private-writer.pdf'
+    info = writer_pdf.lstat()
+    assert stat.S_ISREG(info.st_mode) and info.st_uid == identity.uid and info.st_nlink == 1
+    assert 0 < info.st_size <= 8 * 1024**2
+    writer_pdf_bytes = writer_pdf.read_bytes()
+    assert len(writer_pdf_bytes) == report['writer_pdf']['bytes']
+    assert hashlib.sha256(writer_pdf_bytes).hexdigest() == report['writer_pdf']['sha256']
+    # Parse untrusted output as the Task UID, outside the worker's conversion process.
+    result = subprocess.run(['/usr/sbin/runuser', '-u', identity.name, '--', 'pdftotext',
+                             str(writer_pdf), '-'], capture_output=True, check=True,
+                            text=True, timeout=5)
+    pdf_paragraphs = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    assert pdf_paragraphs == paragraphs, repr(pdf_paragraphs)[:512]
     evidence = destination.parent
+    with (evidence / 'private-writer.pdf').open('xb') as output:
+        output.write(writer_pdf_bytes)
+    report['writer_pdf']['paragraphs'] = pdf_paragraphs
     with (evidence / 'private-writer.png').open('xb') as output:
         output.write(writer_image_bytes)
     with (evidence / 'private-writer.odt').open('xb') as output:
@@ -164,7 +180,8 @@ def run(*, rpc, human, password, identity, task, workspace):
     return report | dict(native_pam_required=True, changed_args_denied=True,
         workspace_input_independently_observed=True, screenshot_independently_hashed=True,
         replay_did_not_relaunch=True, descendants_drained=True,
-        browser_implemented=False, writer_edit_independently_verified=True, full_mvp_accepted=False)
+        browser_implemented=False, writer_edit_independently_verified=True,
+        writer_pdf_independently_verified=True, full_mvp_accepted=False)
 
 
 def start_for_stop(*, rpc, human, password, identity, task, workspace):

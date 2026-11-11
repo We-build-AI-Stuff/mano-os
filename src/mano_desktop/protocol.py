@@ -63,6 +63,7 @@ def control(command, args, *, width, height):
     fields = {
         'status': set(), 'close': set(), 'terminal': {'title'}, 'type': {'text'},
         'writer': {'path'}, 'key': {'key', 'modifiers'}, 'pointer': {'x', 'y', 'button'},
+        'writer_export_pdf': {'path'},
         'focus': {'window_id'}, 'screenshot': {'path'},
     }
     if not isinstance(command, str) or command not in fields or set(args) != fields[command]:
@@ -86,8 +87,8 @@ def control(command, args, *, width, height):
             raise ValueError('Unknown desktop pointer button')
     elif command == 'focus':
         integer(args['window_id'], 1, (1 << 63) - 1)
-    elif command in {'writer', 'screenshot'}:
-        suffix = '.odt' if command == 'writer' else '.png'
+    elif command in {'writer', 'writer_export_pdf', 'screenshot'}:
+        suffix = {'writer': '.odt', 'writer_export_pdf': '.pdf', 'screenshot': '.png'}[command]
         path = text(args['path'], 256)
         parsed = PurePosixPath(path)
         if (parsed.is_absolute() or '..' in parsed.parts or str(parsed) != path

@@ -36,6 +36,9 @@ class DesktopProtocolTests(unittest.TestCase):
                 ('writer', dict(path='docs/../document.odt')),
                 ('writer', dict(path='docs/document.docm')),
                 ('writer', dict(path='document.odt', flags=['--headless'])),
+                ('writer_export_pdf', dict(path='../document.pdf')),
+                ('writer_export_pdf', dict(path='document.odt')),
+                ('writer_export_pdf', dict(path='document.pdf', source='other.odt')),
                 ('screenshot', dict(path='/home/human/shot.png')),
                 ('screenshot', dict(path='../shot.png')),
                 ('screenshot', dict(path='a/../shot.png')),
@@ -48,6 +51,9 @@ class DesktopProtocolTests(unittest.TestCase):
                                           width=1024, height=720), dict(path='images/shot.png'))
         self.assertEqual(protocol.control('writer', dict(path='docs/report.odt'),
                                           width=1024, height=720), dict(path='docs/report.odt'))
+
+        self.assertEqual(protocol.control('writer_export_pdf', dict(path='docs/report.pdf'),
+                                          width=1024, height=720), dict(path='docs/report.pdf'))
 
     def test_framing_is_complete_bounded_unique_and_round_trips_data(self):
         raw = protocol.request('a'*32, 'type', dict(text='quoted "text" ☃'),

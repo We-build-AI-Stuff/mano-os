@@ -117,7 +117,7 @@ class DesktopSession:
     def command(self, command, *, timeout=None, **args):
         """Send a single validated operation and fail closed on uncertain delivery."""
         if timeout is None:
-            timeout = 15 if command == 'type' else 5
+            timeout = {'type': 15, 'writer_export_pdf': 20}.get(command, 5)
         # Validation happens before any effect or uncertainty latch.
         identifier = secrets.token_hex(16)
         raw = protocol.request(identifier, command, args,
