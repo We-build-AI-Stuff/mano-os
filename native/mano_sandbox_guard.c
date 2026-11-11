@@ -71,7 +71,7 @@ static void desktop_shm_rule(int ruleset) {
     close(fd);
 }
 
-static void landlock(int loopback, int desktop_shm) {
+static void landlock(int loopback, int desktop_shm, int browser) {
     int abi = syscall(SYS_landlock_create_ruleset, NULL, 0, LANDLOCK_CREATE_RULESET_VERSION);
     if (abi < 5) { errno = ENOTSUP; fail("guard requires Landlock ABI 5"); }
     uint64_t read = LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_READ_DIR;
@@ -91,7 +91,8 @@ static void landlock(int loopback, int desktop_shm) {
     if (loopback) hosts_rule(ruleset);
     if (desktop_shm) desktop_shm_rule(ruleset);
     path_rule(ruleset, "/usr", execute);
-    path_rule(ruleset, "/proc", read);
+    /* Chromium sets UID/GID maps for new processes in its private proc mount. */
+    path_rule(ruleset, "/proc", read | (browser ? LANDLOCK_ACCESS_FS_WRITE_FILE : 0));
     path_rule(ruleset, "/dev", read | LANDLOCK_ACCESS_FS_WRITE_FILE | LANDLOCK_ACCESS_FS_IOCTL_DEV);
     const char *writable[] = { "/workspace", "/task-cwd", "/tmp", "/home/task" };
     for (size_t i = 0; i < sizeof(writable)/sizeof(writable[0]); ++i)
@@ -170,10 +171,27 @@ static unsigned long long decimal(const char *text) {
     char *end = NULL;
     errno = 0;
     if (!text[0] || text[0] < '0' || text[0] > '9' || strlen(text) > 24)
-        { errno = EINVAL; fail("guard network identity"); }
+        { errno = EINVAL; fail("guard namespace identity"); }
     unsigned long long result = strtoull(text, &end, 10);
-    if (errno || !end || *end || !result) { errno = EINVAL; fail("guard network identity"); }
+    if (errno || !end || *end || !result) { errno = EINVAL; fail("guard namespace identity"); }
     return result;
+}
+
+static void private_browser_proc(const char *device, const char *inode) {
+    struct stat current;
+    struct statfs filesystem;
+    unsigned long long outer_device = decimal(device), outer_inode = decimal(inode);
+    char expected[32], observed[32];
+    int length = snprintf(expected, sizeof(expected), "%ld", (long)getpid());
+    ssize_t size = readlink("/proc/self", observed, sizeof(observed));
+    if (length < 1 || size != length || memcmp(observed, expected, (size_t)length) ||
+        statfs("/proc", &filesystem) || filesystem.f_type != PROC_SUPER_MAGIC ||
+        stat("/proc/self/ns/pid", &current) ||
+        ((unsigned long long)current.st_dev == outer_device &&
+         (unsigned long long)current.st_ino == outer_inode)) {
+        errno = EPERM;
+        fail("guard private browser proc namespace required");
+    }
 }
 
 static void private_loopback(const char *device, const char *inode) {
@@ -233,8 +251,10 @@ int main(int argc, char **argv) {
     }
     int browser = 0;
     if (desktop_shm && first < argc && !strcmp(argv[first], "--desktop-browser")) {
+        if (argc <= first + 3) { errno = EINVAL; fail("guard browser arguments"); }
+        private_browser_proc(argv[first + 1], argv[first + 2]);
+        first += 3;
         browser = 1;
-        first++;
     }
     int loopback = 0;
     if (!desktop_shm && first < argc && !strcmp(argv[first], "--private-loopback")) {
@@ -245,7 +265,7 @@ int main(int argc, char **argv) {
     }
     if (first >= argc || strcmp(argv[first], "--") || ++first >= argc)
         { errno = EINVAL; fail("guard explicit application separator required"); }
-    landlock(loopback, desktop_shm);
+    landlock(loopback, desktop_shm, browser);
     filter(loopback, browser);
     execvp(argv[first], &argv[first]);
     fail("guard task exec");

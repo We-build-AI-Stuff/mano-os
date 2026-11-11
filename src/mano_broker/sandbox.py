@@ -37,6 +37,7 @@ def command(workspace_fd, cwd_fd, argv, *, task_pty=False, home=None, read_only=
         raise ValueError('Private shared memory requires the desktop PTY profile')
     if type(browser) is not bool or (browser and not desktop):
         raise ValueError('Browser namespaces require the private desktop profile')
+    browser_guard = []
     if browser:
         import json
 
@@ -48,6 +49,10 @@ def command(workspace_fd, cwd_fd, argv, *, task_pty=False, home=None, read_only=
             raise ValueError('Browser namespaces require the fixed desktop worker')
     if sys.platform != "linux" or os.geteuid() == 0:
         raise PermissionError("Unprivileged Linux task identity required")
+    if browser:
+        parent_pid_namespace = os.stat('/proc/self/ns/pid')
+        browser_guard = ['--desktop-browser', str(parent_pid_namespace.st_dev),
+                         str(parent_pid_namespace.st_ino)]
     account = pwd.getpwuid(os.geteuid())
     broker = pwd.getpwnam("mano-broker")
     request = grp.getgrnam("mano-request")
@@ -139,6 +144,11 @@ def command(workspace_fd, cwd_fd, argv, *, task_pty=False, home=None, read_only=
         "/task-guard",
         "--proc",
         "/proc",
+        # Hide non-task proc controls before allowing Chromium to write child UID/GID maps.
+        *(["--tmpfs", "/proc/sys", "--remount-ro", "/proc/sys",
+           "--tmpfs", "/proc/irq", "--remount-ro", "/proc/irq",
+           "--tmpfs", "/proc/bus", "--remount-ro", "/proc/bus",
+           "--ro-bind", "/dev/null", "/proc/sysrq-trigger"] if browser else []),
         "--dev",
         "/dev",
         "--tmpfs",
@@ -185,7 +195,7 @@ def command(workspace_fd, cwd_fd, argv, *, task_pty=False, home=None, read_only=
         "/task-guard",
         *(["--task-pty"] if task_pty else []),
         *(["--desktop-shm"] if desktop else []),
-        *(["--desktop-browser"] if browser else []),
+        *browser_guard,
         *(home.guard_fragment() if home is not None else []),
         "--",
         *argv,
