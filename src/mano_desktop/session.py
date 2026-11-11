@@ -4,12 +4,14 @@ import hashlib
 import importlib.util
 import json
 import os
+import signal
 import stat
 import struct
 import subprocess
 import sys
 import tempfile
 import time
+from contextlib import suppress
 from pathlib import Path
 
 
@@ -47,7 +49,7 @@ def wire():
     return module
 
 
-def save_image(path, data):
+def save_artifact(path, data):
     """Create one new workspace file through pinned, non-symlink directories."""
     parts = Path(path).parts
     directory = os.open('/workspace', os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
@@ -64,7 +66,7 @@ def save_image(path, data):
             while remaining:
                 count = os.write(fd, remaining)
                 if count <= 0:
-                    raise OSError('Incomplete desktop image write')
+                    raise OSError('Incomplete desktop artifact write')
                 remaining = remaining[count:]
             os.fsync(fd)
         finally:
@@ -85,6 +87,7 @@ class Desktop:
         self.applications = []
         self.images = 0
         self.writer = None
+        self.writer_document = None
         try:
             self.start()
         except BaseException as error:
@@ -170,6 +173,43 @@ class Desktop:
             pending.extend(node.get('nodes', []) + node.get('floating_nodes', []))
         return dict(windows=result[:8], total_windows=len(result), truncated=len(result) > 8)
 
+    def export_writer_pdf(self, path):
+        """Convert the saved Writer document in a separate private LibreOffice profile."""
+        document = self.writer_document
+        if document is None:
+            raise ValueError('Open a Writer document before exporting')
+        if document.resolve(strict=True) != document or not document.is_file():
+            raise ValueError('Writer export requires the original workspace document')
+        with tempfile.TemporaryDirectory(prefix='writer-export-', dir=self.runtime) as directory:
+            output = Path(directory)
+            argv = ['/usr/bin/libreoffice', '--headless', '--nologo', '--norestore',
+                    '-env:UserInstallation=' + (output / 'profile').as_uri(),
+                    '--convert-to', 'pdf:writer_pdf_Export', '--outdir', directory, str(document)]
+            with (output / 'converter.log').open('w+b') as log:
+                converter = subprocess.Popen(argv, stdin=subprocess.DEVNULL,
+                    stdout=log, stderr=subprocess.STDOUT, env=self.environment,
+                    start_new_session=True)
+                try:
+                    code = converter.wait(timeout=15)
+                except subprocess.TimeoutExpired:
+                    with suppress(ProcessLookupError):
+                        os.killpg(converter.pid, signal.SIGKILL)
+                    converter.wait(timeout=2)
+                    raise
+                if code:
+                    log.seek(max(0, os.fstat(log.fileno()).st_size - 512))
+                    raise subprocess.CalledProcessError(code, argv, stderr=log.read(512))
+            pdf = output / (document.stem + '.pdf')
+            if not stat.S_ISREG(pdf.lstat().st_mode):
+                raise ValueError('Writer did not produce a regular PDF')
+            with pdf.open('rb') as stream:
+                data = stream.read(8 * 1024**2 + 1)
+        if len(data) > 8 * 1024**2 or not data.startswith(b'%PDF-') \
+                or not data.rstrip().endswith(b'%%EOF'):
+            raise ValueError('Writer did not produce a bounded complete PDF')
+        save_artifact(path, data)
+        return dict(path=path, bytes=len(data), sha256=hashlib.sha256(data).hexdigest())
+
     def dispatch(self, command, args):
         """Perform one validated control using only the owned desktop environment."""
         args = self.protocol.control(command, args, width=self.config['width'],
@@ -204,12 +244,15 @@ class Desktop:
                     self.writer = subprocess.Popen(
                         argv, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
                         env=env, close_fds=True)
+                self.writer_document = document
                 self.applications.append(self.writer)
                 return dict(submitted=True)
             child = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=self.log,
                                      stderr=subprocess.STDOUT, env=self.environment, close_fds=True)
             self.applications.append(child)
             return dict(submitted=True)
+        if command == 'writer_export_pdf':
+            return self.export_writer_pdf(args['path'])
         if command == 'type':
             # wtype 0.4 rejects -d 0 and sleeps 4 ms per character even by default.
             # The maximum 2048 ASCII characters therefore take over eight seconds.
@@ -260,7 +303,7 @@ class Desktop:
                     or struct.unpack('>II', data[16:24]) !=
                     (self.config['width'], self.config['height'])):
                 raise ValueError('Unexpected private desktop image')
-            save_image(args['path'], data)
+            save_artifact(args['path'], data)
             return dict(path=args['path'], bytes=len(data), sha256=hashlib.sha256(data).hexdigest(),
                         width=self.config['width'], height=self.config['height'])
         if command == 'close':

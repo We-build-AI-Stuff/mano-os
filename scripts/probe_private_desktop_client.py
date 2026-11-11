@@ -14,7 +14,7 @@ from mano_core.desktop import DesktopSession
 
 
 def exercise_writer(desktop, document):
-    """Save a keyboard edit and capture the mapped Writer window."""
+    """Save a keyboard edit and export the edited document as a PDF."""
     desktop.command('writer', path='private-writer.odt')
     deadline = time.monotonic() + 20
     writer = None
@@ -52,7 +52,8 @@ def exercise_writer(desktop, document):
     else:
         raise AssertionError('Writer did not save the keyboard edit')
     writer_image = desktop.command('screenshot', path='private-writer.png')['result']
-    return dict(writer_window=writer, writer_image=writer_image)
+    writer_pdf = desktop.command('writer_export_pdf', path='private-writer.pdf')['result']
+    return dict(writer_window=writer, writer_image=writer_image, writer_pdf=writer_pdf)
 
 
 def main():
