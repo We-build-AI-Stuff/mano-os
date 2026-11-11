@@ -32,9 +32,10 @@ def text(value, maximum, *, empty=False):
 
 def opening(value):
     """Validate the exact native approval shape, with no executable or display selector."""
-    if not isinstance(value, dict) or set(value) != {
+    fields = {
             'width', 'height', 'cwd', 'timeout_seconds', 'input_limit_bytes',
-            'memory_bytes', 'pids', 'cpu_percent'}:
+            'memory_bytes', 'pids', 'cpu_percent'}
+    if not isinstance(value, dict) or set(value) not in (fields, fields | {'browser_path'}):
         raise ValueError('Unexpected desktop opening fields')
     integer(value['width'], 320, 1280)
     integer(value['height'], 240, 720)
@@ -45,7 +46,19 @@ def opening(value):
     integer(value['cpu_percent'], 1, CPU_MAX)
     if value['cwd'] != '.':
         raise ValueError('Desktop starts only in the allocated workspace')
+    if 'browser_path' in value:
+        workspace_path(value['browser_path'], '.html')
     return dict(value)
+
+
+def workspace_path(value, suffix):
+    """Validate a workspace-relative path without traversal or hidden components."""
+    path = text(value, 256)
+    parsed = PurePosixPath(path)
+    if (parsed.is_absolute() or '..' in parsed.parts or str(parsed) != path
+            or parsed.suffix != suffix or any(part.startswith('.') for part in parsed.parts)):
+        raise ValueError('Expected a workspace-relative ' + suffix + ' path')
+    return path
 
 
 def launch_arguments(value):
@@ -64,10 +77,13 @@ def control(command, args, *, width, height):
         'status': set(), 'close': set(), 'terminal': {'title'}, 'type': {'text'},
         'writer': {'path'}, 'key': {'key', 'modifiers'}, 'pointer': {'x', 'y', 'button'},
         'focus': {'window_id'}, 'screenshot': {'path'},
+        'browser_click': {'name'}, 'browser_text': {'test_id'},
     }
     if not isinstance(command, str) or command not in fields or set(args) != fields[command]:
         raise ValueError('Unexpected desktop control fields')
-    if command == 'terminal':
+    if command in {'browser_click', 'browser_text'}:
+        text(next(iter(args.values())), 128)
+    elif command == 'terminal':
         text(args['title'], 80)
     elif command == 'type':
         text(args['text'], 2048)
@@ -88,11 +104,7 @@ def control(command, args, *, width, height):
         integer(args['window_id'], 1, (1 << 63) - 1)
     elif command in {'writer', 'screenshot'}:
         suffix = '.odt' if command == 'writer' else '.png'
-        path = text(args['path'], 256)
-        parsed = PurePosixPath(path)
-        if (parsed.is_absolute() or '..' in parsed.parts or str(parsed) != path
-                or parsed.suffix != suffix or any(part.startswith('.') for part in parsed.parts)):
-            raise ValueError('Expected a workspace-relative ' + suffix + ' path')
+        workspace_path(args['path'], suffix)
     return dict(args)
 
 

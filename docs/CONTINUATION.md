@@ -1,3 +1,19 @@
+# Active: approved private Chromium worker
+
+Main 9b246a7 includes the packaged Playwright driver, independent Chromium
+renderer-filter evidence, and the terminal interrupt fixture repair. Its
+post-merge CI run 42999176003 passed.
+
+The browser branch binds one workspace HTML path to the existing exact native
+desktop approval. The browser-only session uses the installed Playwright
+driver and system Chromium with private Wayland, local pipe transport,
+and Chromium renderer sandbox checks. The stock Debian probe exercises
+approval, semantic interaction, screenshot, and cgroup cleanup. Native
+verification for this branch is pending. The wider Phase 3 journey and
+physical hardware acceptance remain open.
+
+--- Previous context ---
+
 # Active: private desktop capability
 
 Branch feat/task-private-desktop is based on main c5cbf083 (merged PR156).

@@ -380,6 +380,70 @@ print(json.dumps(proposal(task_id=context['task_id'],resource_id=context['resour
     return report
 
 
+def packaged_private_browser(managed, password, boot, approvals):
+    """Exercise the approved browser through the installed runtime and Task UID."""
+    actor = managed['caller_name']
+    workspace = Path(managed['workspace'])
+    proposed = python(
+        """import json,sys
+from pathlib import Path
+from mano_core.desktop import proposal
+context, workspace=json.load(sys.stdin)
+page=Path(workspace)/'private-browser.html'
+with page.open('x') as stream:
+    stream.write('<title>mano private Chromium</title>'
+                 '<button onclick="this.nextElementSibling.textContent=42">Verify</button>'
+                 '<p data-testid="result">waiting</p>')
+print(json.dumps(proposal(task_id=context['task_id'],resource_id=context['resource_id'],
+ key='stock-private-browser',reason='Verify the workspace page in the private browser',
+ browser_path=page.name)))
+""", [managed['context'], str(workspace)], actor)
+    grant, view = approvals.approval(managed, proposed, password)
+    assert view['boot_id'] == boot
+    assert view['args']['browser_path'] == 'private-browser.html'
+    report = python(
+        """import json,sys,time
+from mano_core.broker import BrokerClient
+from mano_core.desktop import DesktopSession
+proposal,grant=json.load(sys.stdin)
+desktop=DesktopSession.open(BrokerClient(), proposal=proposal, grant_id=grant)
+try:
+    desktop.wait_ready(timeout=40)
+    deadline=time.monotonic()+8
+    while time.monotonic()<deadline:
+        status=desktop.command('status')['result']
+        if any('chromium' in w['app_id'].lower() and 'mano private Chromium' in w['title']
+               for w in status['windows']):
+            break
+        time.sleep(.2)
+    else:
+        raise AssertionError('Chromium window was not mapped')
+    assert status['browser']['renderer_filters_verified'] is True
+    assert desktop.command('browser_text', test_id='result')['result']['text']=='waiting'
+    desktop.command('browser_click', name='Verify')
+    assert desktop.command('browser_text', test_id='result')['result']['text']=='42'
+    image=desktop.command('screenshot', path='private-browser.png')['result']
+    desktop.command('close')
+    print(json.dumps(dict(action_id=desktop.transport.action_id, status=status,
+                          locator_text='42', screenshot=image)))
+finally:
+    if not desktop.closed:
+        desktop.stop()
+""", [proposed, grant], actor, timeout=70)
+    image = workspace / 'private-browser.png'
+    info = image.lstat()
+    assert stat.S_ISREG(info.st_mode) and info.st_uid == pwd.getpwnam(actor).pw_uid
+    assert info.st_nlink == 1 and 33 <= info.st_size <= 4 * 1024**2
+    pixels = image.read_bytes()
+    assert pixels.startswith(b'\x89PNG\r\n\x1a\n')
+    assert hashlib.sha256(pixels).hexdigest() == report['screenshot']['sha256']
+    assert re.fullmatch(r'[0-9a-f]{32}', report['action_id'])
+    group = Path('/sys/fs/cgroup/system.slice/mano-launcher.service') / ('task-' + report['action_id'])
+    wait(lambda: not group.exists(), timeout=8)
+    (OUT / 'stock-private-browser.png').write_bytes(pixels)
+    (OUT / 'stock-private-browser.json').write_text(json.dumps(report, indent=2) + '\n')
+
+
 def phase(after_reboot):
     if not after_reboot:
         denied_code, denied_output = native_terminal("mano_runtime.recovery", ("create",))
@@ -522,6 +586,7 @@ except PermissionError:
         if not after_reboot:
             saved_source = restoration.before(managed, password)
             packaged_private_desktop(managed, password, label, boot, restoration)
+            packaged_private_browser(managed, password, boot, restoration)
             proposal = dict(
                 schema_version="1.0",
                 task_id=managed["context"]["task_id"],

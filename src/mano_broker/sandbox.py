@@ -30,11 +30,22 @@ def guard():
 
 
 def command(workspace_fd, cwd_fd, argv, *, task_pty=False, home=None, read_only=False,
-            package_catalog_id=None, desktop=False):
+            package_catalog_id=None, desktop=False, browser=False):
     if type(task_pty) is not bool or type(read_only) is not bool:
         raise ValueError('Explicit task PTY mode required')
     if type(desktop) is not bool or (desktop and (not task_pty or read_only)):
         raise ValueError('Private shared memory requires the desktop PTY profile')
+    if type(browser) is not bool or (browser and not desktop):
+        raise ValueError('Browser namespaces require the private desktop profile')
+    if browser:
+        import json
+
+        from mano_desktop.protocol import launch_arguments
+
+        config = json.loads(argv[3]) if isinstance(argv, list) and len(argv) == 4 else {}
+        if not isinstance(config, dict) or 'browser_path' not in config \
+                or argv != launch_arguments(config)['argv']:
+            raise ValueError('Browser namespaces require the fixed desktop worker')
     if sys.platform != "linux" or os.geteuid() == 0:
         raise PermissionError("Unprivileged Linux task identity required")
     account = pwd.getpwuid(os.geteuid())
@@ -96,7 +107,7 @@ def command(workspace_fd, cwd_fd, argv, *, task_pty=False, home=None, read_only=
         "--unshare-all",
         "--unshare-user",
         "--unshare-cgroup",
-        "--disable-userns",
+        *(["--disable-userns"] if not browser else []),
         "--die-with-parent",
         "--new-session",
         "--cap-drop",
@@ -174,6 +185,7 @@ def command(workspace_fd, cwd_fd, argv, *, task_pty=False, home=None, read_only=
         "/task-guard",
         *(["--task-pty"] if task_pty else []),
         *(["--desktop-shm"] if desktop else []),
+        *(["--desktop-browser"] if browser else []),
         *(home.guard_fragment() if home is not None else []),
         "--",
         *argv,

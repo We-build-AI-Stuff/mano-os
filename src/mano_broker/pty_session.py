@@ -35,7 +35,7 @@ def geometry(rows, columns):
 
 class TaskPTY:
     def __init__(self, workspace_fd, cwd_fd, argv, *, timeout, revoked, rows=24, columns=80,
-                 desktop=False):
+                 desktop=False, browser=False):
         size = geometry(rows, columns)
         if type(timeout) is not int or not 1 <= timeout <= 300 or not callable(revoked):
             raise ValueError("Trusted PTY deadline and revocation observer required")
@@ -46,7 +46,8 @@ class TaskPTY:
         # Includes Linux/unprivileged task-account/FD/native guard/package checks.
         home = Home(argv)
         try:
-            args = command(workspace_fd, cwd_fd, argv, task_pty=True, home=home, desktop=desktop)
+            args = command(workspace_fd, cwd_fd, argv, task_pty=True, home=home,
+                           desktop=desktop, browser=browser)
         except BaseException:
             home.close()
             raise

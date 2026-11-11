@@ -80,6 +80,21 @@ class DesktopAuthorityTests(unittest.TestCase):
         self.assertEqual(value.digest, digest)
         self.assertNotIn('argv', value.body()['args'])
 
+    def test_browser_page_is_part_of_the_exact_approval(self):
+        args = dict(task_id='a' * 32, resource_id='b' * 32, key='browser', reason='test')
+        regular = request()
+        first, second = (
+            ActionRequest.parse(canonical(proposal(**args, browser_path=path)
+                                          | dict(grant_id='c' * 32)).encode())
+            for path in ('site/one.html', 'site/two.html')
+        )
+        self.assertNotEqual(first.digest, second.digest)
+        self.assertIn('browser_path', json.loads(first.args_json))
+        self.assertNotIn('browser_path', json.loads(regular.args_json))
+        for path in ('/tmp/page.html', 'site/../page.html', 'site/.hidden.html', 'site/page.txt'):
+            with self.subTest(path=path), self.assertRaises(ValueError):
+                proposal(**args, browser_path=path)
+
     def test_partial_or_lost_input_acknowledgement_never_repeats_input(self):
         for reply in (dict(state='acknowledged', written=1, effect_verified=False),
                       ValueError('lost')):
