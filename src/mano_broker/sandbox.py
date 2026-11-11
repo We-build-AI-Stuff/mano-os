@@ -123,6 +123,9 @@ def command(workspace_fd, cwd_fd, argv, *, task_pty=False, home=None, read_only=
         "/usr/lib/mano-broker",
         "--tmpfs",
         "/usr/libexec",
+        *(["--ro-bind", "/usr/libexec/at-spi-bus-launcher", "/usr/libexec/at-spi-bus-launcher",
+           "--ro-bind", "/usr/libexec/at-spi2-registryd", "/usr/libexec/at-spi2-registryd"]
+          if desktop else []),
         "--ro-bind",
         native,
         "/task-guard",

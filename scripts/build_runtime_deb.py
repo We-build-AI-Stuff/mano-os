@@ -60,7 +60,7 @@ def build(wheelhouse, output, *, revision=None, epoch=None):
         for package in (ROOT / "src").glob("mano_*"):
             for source in package.rglob("*.py"):
                 copy(source, "/usr/lib/mano-os/" + str(source.relative_to(ROOT / "src")))
-        for name in ("session.py", "protocol.py"):
+        for name in ("session.py", "protocol.py", "accessibility.py"):
             copy(ROOT / "src/mano_desktop" / name, "/usr/lib/mano-desktop/" + name)
         binaries = {
             "mano_approve.c": ("/usr/libexec/mano-approve", ["json-c", "libsystemd"], ["-lpam"]),
@@ -243,7 +243,8 @@ def build(wheelhouse, output, *, revision=None, epoch=None):
             "libjson-c5, libsystemd0, libseccomp2, "
             "bubblewrap (>= 0.12.0-1~deb13u1), xdg-dbus-proxy (>= 0.1.6-1+deb13u3), "
             "acl, passwd, util-linux, dbus-user-session, at-spi2-core, sway, foot, grim, wtype, "
-            "chromium, libreoffice-writer, libreoffice-gtk3, fonts-dejavu-core, ca-certificates\n"
+            "python3-pyatspi, chromium, libreoffice-writer, libreoffice-gtk3, "
+            "fonts-dejavu-core, ca-certificates\n"
             "Description: mano prototype trusted broker, prompt and isolated runtime\n"
             " Disabled cloud/controller defaults; explicit Root human enrollment required.\n"
         )

@@ -1,0 +1,39 @@
+"""Read a bounded accessibility snapshot from the task-owned session bus."""
+
+import json
+import os
+from collections import deque
+
+
+def snapshot(registry):
+    """Collect labels and roles without reading document text or invoking actions."""
+    desktop = registry.getDesktop(0)
+    queue = deque([desktop])
+    nodes = []
+    truncated = False
+    while queue and len(nodes) < 16:
+        node = queue.popleft()
+        if node is None:
+            continue
+        nodes.append(dict(name=str(node.name or '')[:64],
+                          role=str(node.getRoleName())[:32]))
+        remaining = 16 - len(nodes) - len(queue)
+        count = min(node.childCount, max(0, remaining))
+        truncated |= count < node.childCount
+        for index in range(count):
+            queue.append(node.getChildAtIndex(index))
+    return dict(nodes=nodes, truncated=truncated)
+
+
+def main():
+    """Use only the explicitly inherited private D-Bus address."""
+    address = os.environ.get('DBUS_SESSION_BUS_ADDRESS', '')
+    if not address.startswith('unix:path=/tmp/mano-desktop-'):
+        raise PermissionError('Private desktop D-Bus address required')
+    import pyatspi
+
+    print(json.dumps(snapshot(pyatspi.Registry), ensure_ascii=False))
+
+
+if __name__ == '__main__':
+    main()

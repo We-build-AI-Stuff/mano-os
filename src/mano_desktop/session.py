@@ -84,6 +84,7 @@ class Desktop:
         self.runtime = Path(self.temporary.name)
         self.log = None
         self.compositor = None
+        self.session_bus = None
         self.applications = []
         self.images = 0
         self.writer = None
@@ -173,6 +174,50 @@ class Desktop:
             pending.extend(node.get('nodes', []) + node.get('floating_nodes', []))
         return dict(windows=result[:8], total_windows=len(result), truncated=len(result) > 8)
 
+    def start_accessibility(self):
+        """Start a task-private session bus with one packaged activation service."""
+        services = self.runtime / 'services'
+        services.mkdir(mode=0o700)
+        entry = 'org.a11y.Bus.service'
+        source = Path('/usr/share/dbus-1/services') / entry
+        (services / entry).write_bytes(source.read_bytes())
+        socket_path = self.runtime / 'session-bus'
+        address = 'unix:path=' + str(socket_path)
+        config = self.runtime / 'dbus.conf'
+        config.write_text(
+            '<busconfig><type>session</type><auth>EXTERNAL</auth>'
+            f'<listen>{address}</listen><servicedir>{services}</servicedir>'
+            '<policy context="default"><allow send_destination="*"/>'
+            '<allow receive_sender="*"/><allow own="*"/></policy></busconfig>')
+        self.session_bus = subprocess.Popen(
+            ['/usr/bin/dbus-daemon', '--nofork', '--config-file=' + str(config)],
+            stdin=subprocess.DEVNULL, stdout=self.log, stderr=subprocess.STDOUT,
+            env=self.environment, close_fds=True)
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline:
+            if self.session_bus.poll() is not None:
+                break
+            if socket_path.exists() and stat.S_ISSOCK(socket_path.lstat().st_mode):
+                subprocess.run(['/usr/bin/busctl', '--address=' + address, 'set-property',
+                    'org.a11y.Bus', '/org/a11y/bus', 'org.a11y.Status', 'IsEnabled', 'b', 'true'],
+                    stdin=subprocess.DEVNULL, capture_output=True, check=True,
+                    env=self.environment, timeout=3)
+                self.environment['DBUS_SESSION_BUS_ADDRESS'] = address
+                return
+            time.sleep(.05)
+        raise RuntimeError('Private accessibility session bus did not start')
+
+    def accessibility(self):
+        """Read only the accessibility tree from the desktop-owned bus."""
+        if self.session_bus is None or self.session_bus.poll() is not None:
+            raise ValueError('Open Writer before reading accessibility')
+        worker = Path(__file__).with_name('accessibility.py')
+        result = subprocess.run(['/usr/bin/python3', '-I', str(worker)], stdin=subprocess.DEVNULL,
+                                capture_output=True, check=True, env=self.environment, timeout=3)
+        if len(result.stdout) > 7000:
+            raise ValueError('Oversized desktop accessibility result')
+        return json.loads(result.stdout)
+
     def export_writer_pdf(self, path):
         """Convert the saved Writer document in a separate private LibreOffice profile."""
         document = self.writer_document
@@ -239,7 +284,9 @@ class Desktop:
                 profile = (self.runtime / 'writer-profile').as_uri()
                 argv = ['/usr/bin/libreoffice', '--writer', '--nologo', '--norestore',
                         '-env:UserInstallation=' + profile, str(document)]
-                env = self.environment | dict(GDK_BACKEND='wayland', SAL_USE_VCLPLUGIN='gtk3')
+                self.start_accessibility()
+                env = self.environment | dict(GDK_BACKEND='wayland', SAL_USE_VCLPLUGIN='gtk3',
+                                              SAL_ACCESSIBILITY_ENABLED='1')
                 with (self.runtime / 'writer.log').open('xb') as log:
                     self.writer = subprocess.Popen(
                         argv, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
@@ -251,6 +298,8 @@ class Desktop:
                                      stderr=subprocess.STDOUT, env=self.environment, close_fds=True)
             self.applications.append(child)
             return dict(submitted=True)
+        if command == 'accessibility_tree':
+            return self.accessibility()
         if command == 'writer_export_pdf':
             return self.export_writer_pdf(args['path'])
         if command == 'type':
@@ -313,7 +362,7 @@ class Desktop:
 
     def close(self):
         """Terminate the session-owned processes and remove its private runtime directory."""
-        for child in [*reversed(self.applications), self.compositor]:
+        for child in [*reversed(self.applications), self.session_bus, self.compositor]:
             if child is None or child.poll() is not None:
                 continue
             child.terminate()

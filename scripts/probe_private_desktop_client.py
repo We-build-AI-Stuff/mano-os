@@ -30,6 +30,14 @@ def exercise_writer(desktop, document):
             break
         time.sleep(.3)
     assert writer is not None, f'Writer did not map the approved document: {observation!r}'
+    deadline = time.monotonic() + 8
+    while time.monotonic() < deadline:
+        accessibility = desktop.command('accessibility_tree')['result']
+        if any('private-writer' in item['name'].lower() for item in accessibility['nodes']):
+            break
+        time.sleep(.2)
+    else:
+        raise AssertionError('Writer document was absent from the private accessibility tree')
     desktop.command('focus', window_id=writer['id'])
     # A mapped window can still be finishing its initial document load.
     time.sleep(.5)
@@ -53,7 +61,8 @@ def exercise_writer(desktop, document):
         raise AssertionError('Writer did not save the keyboard edit')
     writer_image = desktop.command('screenshot', path='private-writer.png')['result']
     writer_pdf = desktop.command('writer_export_pdf', path='private-writer.pdf')['result']
-    return dict(writer_window=writer, writer_image=writer_image, writer_pdf=writer_pdf)
+    return dict(writer_window=writer, writer_image=writer_image, writer_pdf=writer_pdf,
+                writer_accessibility=accessibility)
 
 
 def main():
