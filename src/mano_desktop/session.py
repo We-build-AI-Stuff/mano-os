@@ -176,6 +176,9 @@ class Desktop:
 
     def start_accessibility(self):
         """Start a task-private session bus with one packaged activation service."""
+        with Path('/tmp/mano-desktop-passwd').open('x') as accounts:
+            # D-Bus EXTERNAL resolves the peer's UID against this synthetic account.
+            accounts.write(f'mano-task:x:{os.getuid()}:{os.getgid()}::/home/task:/bin/sh\n')
         services = self.runtime / 'services'
         services.mkdir(mode=0o700)
         entry = 'org.a11y.Bus.service'
@@ -189,21 +192,29 @@ class Desktop:
             f'<listen>{address}</listen><servicedir>{services}</servicedir>'
             '<policy context="default"><allow send_destination="*"/>'
             '<allow receive_sender="*"/><allow own="*"/></policy></busconfig>')
-        self.session_bus = subprocess.Popen(
-            ['/usr/bin/dbus-daemon', '--nofork', '--config-file=' + str(config)],
-            stdin=subprocess.DEVNULL, stdout=self.log, stderr=subprocess.STDOUT,
-            env=self.environment, close_fds=True)
+        log_path = self.runtime / 'accessibility-bus.log'
+        with log_path.open('xb') as log:
+            self.session_bus = subprocess.Popen(
+                ['/usr/bin/dbus-daemon', '--nofork', '--config-file=' + str(config)],
+                stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+                env=self.environment, close_fds=True)
         deadline = time.monotonic() + 3
         while time.monotonic() < deadline:
             if self.session_bus.poll() is not None:
                 break
             if socket_path.exists() and stat.S_ISSOCK(socket_path.lstat().st_mode):
-                subprocess.run(['/usr/bin/busctl', '--address=' + address, 'set-property',
-                    'org.a11y.Bus', '/org/a11y/bus', 'org.a11y.Status', 'IsEnabled', 'b', 'true'],
-                    stdin=subprocess.DEVNULL, capture_output=True, check=True,
+                result = subprocess.run(
+                    ['/usr/bin/busctl', '--address=' + address, 'set-property',
+                     'org.a11y.Bus', '/org/a11y/bus', 'org.a11y.Status', 'IsEnabled', 'b', 'true'],
+                    stdin=subprocess.DEVNULL, capture_output=True,
                     env=self.environment, timeout=3)
-                self.environment['DBUS_SESSION_BUS_ADDRESS'] = address
-                return
+                if result.returncode == 0:
+                    self.environment['DBUS_SESSION_BUS_ADDRESS'] = address
+                    return
+                with log_path.open('rb') as log:
+                    log.seek(max(0, os.fstat(log.fileno()).st_size - 320))
+                    result.stderr = log.read(320) + b'\n' + result.stderr[:160]
+                result.check_returncode()
             time.sleep(.05)
         raise RuntimeError('Private accessibility session bus did not start')
 

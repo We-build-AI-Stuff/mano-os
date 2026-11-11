@@ -143,7 +143,8 @@ def command(workspace_fd, cwd_fd, argv, *, task_pty=False, home=None, read_only=
         # template from the read-only /usr tree inside the sandbox's empty /etc.
         *(["--dir", "/etc/libreoffice/registry",
            "--symlink", "/usr/lib/libreoffice/share/.registry/main.xcd",
-           "/etc/libreoffice/registry/main.xcd"] if desktop else []),
+           "/etc/libreoffice/registry/main.xcd",
+           "--symlink", "/tmp/mano-desktop-passwd", "/etc/passwd"] if desktop else []),
         "--dir",
         "/run",
         "--dir",
